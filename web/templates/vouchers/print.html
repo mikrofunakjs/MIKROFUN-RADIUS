@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Voucher – MikroFun</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+        }
+
+        /* ===== CONTROL PANEL ===== */
+        #controlPanel {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 14px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: center;
+            border-bottom: 3px solid #3b82f6;
+        }
+
+        #controlPanel h2 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .ctrl-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .ctrl-group label {
+            font-size: 10px;
+            opacity: 0.55;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ctrl-group select {
+            background: #334155;
+            color: #fff;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 13px;
+            min-width: 130px;
+        }
+
+        .btn-print {
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-print:hover {
+            background: #2563eb;
+        }
+
+        .btn-back {
+            background: #475569;
+            color: #fff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .vcnt {
+            background: #0f172a;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        /* ===== CUSTOM TEMPLATE ===== */
+        #customBox {
+            display: none;
+        }
+
+        #customBox textarea {
+            background: #1e293b;
+            color: #93c5fd;
+            border: 1px dashed #3b82f6;
+            border-radius: 6px;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            resize: vertical;
+            width: 280px;
+            height: 80px;
+        }
+
+        /* ===== PRINT SHEET ===== */
+        #printSheet {
+            padding: 20px;
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(3, 1fr);
+            max-width: 210mm;
+            margin: 20px auto;
+        }
+
+        /* ===== TEMPLATE: KARTU (default) ===== */
+        .tpl-card {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #eff6ff 0%, #fff 70%);
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            page-break-inside: avoid;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .tpl-card .vl {
+            flex: 1;
+        }
+
+        .tpl-card .vtitle {
+            font-size: 10px;
+            font-weight: 700;
+            color: #1e40af;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tpl-card .vprofile {
+            font-size: 10px;
+            color: #64748b;
+            margin: 2px 0 6px;
+        }
+
+        .tpl-card .vcode {
+            font-family: monospace;
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #1e293b;
+            background: #dbeafe;
+            border-radius: 5px;
+            padding: 4px 8px;
+            display: inline-block;
+        }
+
+        .tpl-card .vmeta {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        .tpl-card .vprice {
+            font-weight: 800;
+            color: #16a34a;
+        }
+
+        .tpl-card .vqr {
+            width: 68px;
+            height: 68px;
+            flex-shrink: 0;
+        }
+
+        /* ===== TEMPLATE: THERMAL ===== */
+        .tpl-thermal {
+            border: 1px dashed #999;
+            border-radius: 4px;
+            background: #fff;
+            padding: 10px;
+            text-align: center;
+            page-break-inside: avoid;
+            font-family: 'Courier New', monospace;
+        }
+
+        .tpl-thermal .vtitle {
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+        }
+
+        .tpl-thermal .vprofile {
+            font-size: 10px;
+            color: #555;
+        }
+
+        .tpl-thermal .vcode {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            border: 2px solid #000;
+            padding: 4px 8px;
+            display: inline-block;
+            margin: 6px 0;
+        }
+
+        .tpl-thermal .vmeta {
+            font-size: 10px;
+            color: #444;
+            margin: 2px 0;
+        }
+
+        .tpl-thermal .vprice {
+            font-size: 15px;
+            font-weight: 900;
+        }
+
+        .tpl-thermal .vqr {
+            display: flex;
+            justify-content: center;
+            margin-top: 6px;
+        }
+
+        .tpl-thermal .vsep {
+            border-top: 1px dashed #bbb;
+            margin: 5px 0;
+        }
+
+        /* ===== TEMPLATE: STIKER ===== */
+        .tpl-sticker {
+            border-radius: 8px;
+            background: linear-gradient(135deg, #1e3a5f, #1d4ed8);
+            color: #fff;
+            padding: 10px 12px;
+            page-break-inside: avoid;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tpl-sticker .vl {
+            flex: 1;
+        }
+
+        .tpl-sticker .vtitle {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            opacity: .75;
+            letter-spacing: 1px;
+        }
+
+        .tpl-sticker .vcode {
+            font-family: monospace;
+            font-size: 17px;
+            font-weight: 900;
+            background: rgba(255, 255, 255, .15);
+            border-radius: 4px;
+            padding: 3px 7px;
+            display: inline-block;
+            margin: 3px 0;
+        }
+
+        .tpl-sticker .vprofile {
+            font-size: 9px;
+            opacity: .7;
+        }
+
+        .tpl-sticker .vmeta {
+            font-size: 8px;
+            opacity: .6;
+            margin-top: 3px;
+        }
+
+        .tpl-sticker .vprice {
+            font-size: 13px;
+            font-weight: 900;
+            color: #fde047;
+        }
+
+        .tpl-sticker .vqr {
+            width: 54px;
+            height: 54px;
+            flex-shrink: 0;
+            filter: invert(1);
+        }
+
+        /* ===== PRINT ===== */
+        @media print {
+            body {
+                background: white !important;
+            }
+
+            #controlPanel,
+            .no-print {
+                display: none !important;
+            }
+
+            #printSheet {
+                margin: 0 !important;
+                padding: 5mm !important;
+                max-width: none !important;
+            }
+
+            .tpl-card {
+                box-shadow: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ===== CONTROL PANEL ===== -->
+    <div id="controlPanel" class="no-print">
+        <h2>🖨️ Print Voucher</h2>
+        <span class="vcnt">{{ vouchers|length }} voucher</span>
+
+        <div class="ctrl-group">
+            <label>Template</label>
+            <select id="tplSel" onchange="rebuild()">
+                <option value="card">🪪 Kartu (Default)</option>
+                <option value="thermal">🧾 Thermal / Struk</option>
+                <option value="sticker">🏷️ Stiker</option>
+                <option value="custom">✏️ Custom HTML</option>
+            </select>
+        </div>
+
+        <div class="ctrl-group">
+            <label>Kolom per Baris</label>
+            <select id="colSel" onchange="applyGrid()">
+                <option value="1">1 Kolom</option>
+                <option value="2">2 Kolom</option>
+                <option value="3" selected>3 Kolom</option>
+                <option value="4">4 Kolom</option>
+            </select>
+        </div>
+
+        <div class="ctrl-group">
+            <label>Jarak</label>
+            <select id="gapSel" onchange="applyGrid()">
+                <option value="4px">Rapat</option>
+                <option value="12px" selected>Normal</option>
+                <option value="22px">Lega</option>
+            </select>
+        </div>
+
+        <div class="ctrl-group">
+            <label>QR Code</label>
+            <select id="qrSel" onchange="rebuild()">
+                <option value="1" selected>Tampilkan</option>
+                <option value="0">Sembunyikan</option>
+            </select>
+        </div>
+
+        <div class="ctrl-group" id="customBox">
+            <label>HTML Template (gunakan variabel di bawah)</label>
+            <textarea id="customTpl" oninput="rebuild()">{% raw %}<div style="border:2px solid #333;border-radius:8px;padding:10px;background:#fff;text-align:center;font-family:Arial,sans-serif">
+  <div style="font-size:10px;font-weight:bold;text-transform:uppercase;color:#555;letter-spacing:1px">🌐 WiFi Voucher - {{profile}}</div>
+  <div style="font-size:24px;font-weight:900;letter-spacing:3px;background:#f0f4ff;border-radius:5px;padding:5px 10px;margin:6px 0;font-family:monospace">{{code}}</div>
+  <div style="font-size:10px;color:#666">⏳ {{validity}} &nbsp;|&nbsp; 💰 {{price}}</div>
+  <div class="vqr" style="display:flex;justify-content:center;margin-top:6px"></div>
+</div>{% endraw %}</textarea>
+            <small style="color:#94a3b8;font-size:10px;">Variabel: {% raw %}{{code}} {{profile}} {{price}} {{validity}}{% endraw %} — tambah
+                &lt;div class="vqr"&gt;&lt;/div&gt; untuk QR</small>
+        </div>
+
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+            <button class="btn-back" onclick="window.history.back()">&#8592; Kembali</button>
+            <button class="btn-print" onclick="window.print()">🖨️ Cetak Sekarang</button>
+        </div>
+    </div>
+
+    <!-- ===== HIDDEN DATA SOURCE (server-rendered, always present) ===== -->
+    <script id="vdata" type="application/json">
+[{% for v in vouchers %}{
+  "id": {{ v.id if v.id else 0 }},
+  "code": {{ v.code | tojson }},
+  "profile": {{ (v.profile_name or 'Voucher') | tojson }},
+  "price": {{ ('Rp {:,.0f}'.format(v.price|float) if v.price else '-') | tojson }},
+  "validity": {{ (v.validity_str or '-') | tojson }}
+}{% if not loop.last %},{% endif %}{% endfor %}]
+</script>
+
+    <!-- ===== PRINT SHEET ===== -->
+    <div id="printSheet">
+        <!-- Filled by JS / fallback below -->
+        <!-- FALLBACK: pure server-side render (hidden, replaced by JS) -->
+        <noscript>
+            {% for v in vouchers %}
+            <div class="tpl-card">
+                <div class="vl">
+                    <div class="vtitle">WiFi Voucher</div>
+                    <div class="vprofile">{{ v.profile_name or 'Voucher' }}</div>
+                    <div class="vcode">{{ v.code }}</div>
+                    <div class="vmeta">&#9203; {{ v.validity_str or '-' }} &nbsp;|&nbsp; <span class="vprice">{% if
+                            v.price %}Rp {{ '{:,.0f}'.format(v.price|float) }}{% else %}-{% endif %}</span></div>
+                </div>
+            </div>
+            {% endfor %}
+        </noscript>
+    </div>
+
+    <script>
+        var VDATA = JSON.parse(document.getElementById('vdata').textContent);
+
+        // ---- renderers ----
+        function cardHtml(v, showQr) {
+            return '<div class="tpl-card">'
+                + '<div class="vl">'
+                + '<div class="vtitle">WiFi Voucher</div>'
+                + '<div class="vprofile">' + v.profile + '</div>'
+                + '<div class="vcode">' + v.code + '</div>'
+                + '<div class="vmeta">&#9203; ' + v.validity + ' &nbsp;|&nbsp; <span class="vprice">' + v.price + '</span></div>'
+                + '</div>'
+                + (showQr ? '<div class="vqr" id="q' + v.id + '"></div>' : '')
+                + '</div>';
+        }
+
+        function thermalHtml(v, showQr) {
+            return '<div class="tpl-thermal">'
+                + '<div class="vtitle">&#128246; WiFi Voucher</div>'
+                + '<div class="vprofile">' + v.profile + '</div>'
+                + '<div class="vcode">' + v.code + '</div>'
+                + '<div class="vsep"></div>'
+                + '<div class="vmeta">Durasi: <b>' + v.validity + '</b></div>'
+                + '<div class="vprice">' + v.price + '</div>'
+                + (showQr ? '<div class="vqr"><div id="q' + v.id + '"></div></div>' : '')
+                + '<div class="vsep"></div>'
+                + '</div>';
+        }
+
+        function stickerHtml(v, showQr) {
+            return '<div class="tpl-sticker">'
+                + '<div class="vl">'
+                + '<div class="vtitle">WiFi Voucher</div>'
+                + '<div class="vcode">' + v.code + '</div>'
+                + '<div class="vprofile">' + v.profile + '</div>'
+                + '<div class="vmeta">&#9203; ' + v.validity + ' &nbsp; <span class="vprice">' + v.price + '</span></div>'
+                + '</div>'
+                + (showQr ? '<div class="vqr" id="q' + v.id + '"></div>' : '')
+                + '</div>';
+        }
+
+        function customHtml(v, showQr, tpl) {
+            return tpl
+                .replace(/\{\{code\}\}/g, v.code)
+                .replace(/\{\{profile\}\}/g, v.profile)
+                .replace(/\{\{price\}\}/g, v.price)
+                .replace(/\{\{validity\}\}/g, v.validity)
+                .replace('class="vqr"', showQr ? 'class="vqr" id="q' + v.id + '"' : 'style="display:none"');
+        }
+
+        function applyGrid() {
+            var sheet = document.getElementById('printSheet');
+            sheet.style.gridTemplateColumns = 'repeat(' + document.getElementById('colSel').value + ', 1fr)';
+            sheet.style.gap = document.getElementById('gapSel').value;
+            savePref();
+        }
+
+        function buildQr() {
+            VDATA.forEach(function (v) {
+                var el = document.getElementById('q' + v.id);
+                if (el && el.children.length === 0) {
+                    new QRCode(el, { text: v.code, width: 62, height: 62, correctLevel: QRCode.CorrectLevel.L });
+                }
+            });
+        }
+
+        function rebuild() {
+            var tpl = document.getElementById('tplSel').value;
+            var showQr = document.getElementById('qrSel').value === '1';
+            var ctpl = document.getElementById('customTpl').value;
+
+            document.getElementById('customBox').style.display = (tpl === 'custom') ? 'flex' : 'none';
+
+            var html = '';
+            VDATA.forEach(function (v) {
+                if (tpl === 'card') html += cardHtml(v, showQr);
+                else if (tpl === 'thermal') html += thermalHtml(v, showQr);
+                else if (tpl === 'sticker') html += stickerHtml(v, showQr);
+                else if (tpl === 'custom') html += ctpl.trim() ? customHtml(v, showQr, ctpl) : cardHtml(v, showQr);
+            });
+
+            document.getElementById('printSheet').innerHTML = html;
+            applyGrid();
+            if (showQr) setTimeout(buildQr, 80);
+            savePref();
+        }
+
+        function savePref() {
+            try {
+                localStorage.setItem('vpref', JSON.stringify({
+                    tpl: document.getElementById('tplSel').value,
+                    col: document.getElementById('colSel').value,
+                    gap: document.getElementById('gapSel').value,
+                    qr: document.getElementById('qrSel').value
+                }));
+            } catch (e) { }
+        }
+
+        function loadPref() {
+            try {
+                var p = JSON.parse(localStorage.getItem('vpref') || '{}');
+                if (p.tpl) document.getElementById('tplSel').value = p.tpl;
+                if (p.col) document.getElementById('colSel').value = p.col;
+                if (p.gap) document.getElementById('gapSel').value = p.gap;
+                if (p.qr) document.getElementById('qrSel').value = p.qr;
+            } catch (e) { }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (VDATA.length === 0) {
+                document.getElementById('printSheet').innerHTML =
+                    '<p style="text-align:center;padding:40px;opacity:0.5;grid-column:1/-1">Tidak ada voucher untuk dicetak.</p>';
+                return;
+            }
+            loadPref();
+            rebuild();
+        });
+    </script>
+</body>
+
+</html>

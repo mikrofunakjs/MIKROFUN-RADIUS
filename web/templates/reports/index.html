@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% block title %}Laporan Keuangan{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- Header + Filter -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-base-content flex items-center gap-2">
+                <i class="bi bi-graph-up-arrow text-success"></i> Laporan Keuangan ISP
+            </h1>
+            <p class="text-sm text-base-content/60 mt-1">Semua sumber pendapatan tercatat otomatis — real-time &amp;
+                detail</p>
+        </div>
+        <form method="GET" class="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="tab" value="{{ source_tab }}">
+            <input type="date" name="start_date" value="{{ start_date }}"
+                class="input input-bordered input-sm font-mono">
+            <input type="date" name="end_date" value="{{ end_date }}" class="input input-bordered input-sm font-mono">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel-fill"></i> Filter</button>
+            <a href="{{ url_for('reports.export', start_date=start_date, end_date=end_date, tab=source_tab) }}"
+                class="btn btn-success btn-sm btn-outline"><i class="bi bi-download"></i> CSV</a>
+        </form>
+    </div>
+
+    <!-- ===== SUMMARY CARDS ===== -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <!-- Bruto -->
+        <div class="stat bg-base-100 shadow rounded-2xl border border-base-200 p-4">
+            <div class="stat-title text-xs font-bold uppercase text-base-content/50">Pemasukan Bruto</div>
+            <div class="stat-value text-primary text-xl font-black">Rp {{ "{:,.0f}".format(gross_total).replace(',','.')
+                }}</div>
+            <div class="stat-desc">Semua sumber</div>
+        </div>
+        <!-- HPP -->
+        <div class="stat bg-base-100 shadow rounded-2xl border border-base-200 p-4">
+            <div class="stat-title text-xs font-bold uppercase text-base-content/50">HPP / Diskon</div>
+            <div class="stat-value text-warning text-xl font-black">Rp {{ "{:,.0f}".format(cost_total).replace(',','.')
+                }}</div>
+            <div class="stat-desc">Biaya voucher mitra</div>
+        </div>
+        <!-- Net Profit -->
+        <div class="stat bg-success/10 shadow rounded-2xl border border-success/30 p-4">
+            <div class="stat-title text-xs font-bold uppercase text-success/70">Net Profit</div>
+            <div class="stat-value text-success text-xl font-black">Rp {{ "{:,.0f}".format(net_total).replace(',','.')
+                }}</div>
+            <div class="stat-desc font-semibold">Bruto - HPP</div>
+        </div>
+        <!-- Pengeluaran -->
+        <div class="stat bg-error/10 shadow rounded-2xl border border-error/30 p-4">
+            <div class="stat-title text-xs font-bold uppercase text-error/70">Pengeluaran</div>
+            <div class="stat-value text-error text-xl font-black">Rp {{ "{:,.0f}".format(expense_total).replace(',','.')
+                }}</div>
+            <div class="stat-desc">Biaya operasional</div>
+        </div>
+        <!-- Real Profit -->
+        <div
+            class="stat {% if real_profit >= 0 %}bg-success/20 border-success/40{% else %}bg-error/20 border-error/40{% endif %} shadow rounded-2xl border p-4">
+            <div
+                class="stat-title text-xs font-bold uppercase {% if real_profit >= 0 %}text-success/80{% else %}text-error/80{% endif %}">
+                Profit Bersih</div>
+            <div
+                class="stat-value {% if real_profit >= 0 %}text-success{% else %}text-error{% endif %} text-xl font-black">
+                Rp {{ "{:,.0f}".format(real_profit).replace(',','.') }}</div>
+            <div class="stat-desc font-bold">Net - Pengeluaran</div>
+        </div>
+    </div>
+
+    <!-- ===== BREAKDOWN CARDS ===== -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {% set src_info = [
+        ('admin_voucher', 'bi bi-ticket-detailed-fill','badge-primary', 'Voucher Admin'),
+        ('mitra_voucher', 'bi bi-shop', 'badge-secondary', 'Voucher Mitra'),
+        ('client_payment', 'bi bi-people-fill', 'badge-info', 'Tagihan Client'),
+        ('mitra_deposit', 'bi bi-wallet2', 'badge-accent', 'Deposit Mitra'),
+        ] %}
+        {% for src_key, icon, badge_cls, label in src_info %}
+        {% set bd = breakdown[src_key] %}
+        <a href="?tab={{ src_key }}&start_date={{ start_date }}&end_date={{ end_date }}"
+            class="card bg-base-100 shadow hover:shadow-lg transition-all border border-base-200 {% if source_tab == src_key %}ring-2 ring-primary{% endif %}">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="badge {{ badge_cls }} badge-sm font-bold">{{ label }}</span>
+                    <i class="{{ icon }} text-base-content/40 text-lg"></i>
+                </div>
+                <div class="text-lg font-extrabold text-base-content">Rp {{ "{:,.0f}".format(bd.net).replace(',','.') }}
+                </div>
+                <div class="text-xs text-base-content/50">Bruto: Rp {{ "{:,.0f}".format(bd.gross).replace(',','.') }}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- ===== CHART ===== -->
+    {% if chart_labels %}
+    <div class="card bg-base-100 shadow-lg border border-base-200">
+        <div class="card-body p-4">
+            <h3 class="font-bold text-base-content/70 mb-2 flex items-center gap-2">
+                <i class="bi bi-bar-chart-fill text-primary"></i> Net Profit Harian
+            </h3>
+            <canvas id="incomeChart" height="70"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== MAIN CARD WITH TABS ===== -->
+    <div class="card bg-base-100 shadow-lg border border-base-200">
+        <div class="card-body p-0">
+
+            <!-- Tab Navigation -->
+            <div class="flex flex-wrap gap-1 p-3 border-b border-base-200 bg-base-200/30 rounded-t-2xl overflow-x-auto">
+                {% set tabs = [
+                ('all', 'bi bi-list-ul', 'Semua Transaksi'),
+                ('admin_voucher', 'bi bi-ticket-detailed-fill', 'Voucher Admin'),
+                ('mitra_voucher', 'bi bi-shop', 'Voucher Mitra'),
+                ('client_payment', 'bi bi-people-fill', 'Tagihan Client'),
+                ('mitra_deposit', 'bi bi-wallet2', 'Deposit Mitra'),
+                ('piutang', 'bi bi-clock-history', 'Piutang'),
+                ('monthly', 'bi bi-calendar3', '12 Bulan'),
+                ('expenses', 'bi bi-receipt-cutoff', 'Pengeluaran'),
+                ] %}
+                {% for tab_key, tab_icon, tab_label in tabs %}
+                <a href="?tab={{ tab_key }}&start_date={{ start_date }}&end_date={{ end_date }}"
+                    class="btn btn-xs {% if source_tab == tab_key %}btn-primary{% else %}btn-ghost{% endif %} gap-1 whitespace-nowrap">
+                    <i class="{{ tab_icon }}"></i> {{ tab_label }}
+                    {% if tab_key == 'piutang' and piutang_list|length > 0 %}
+                    <span class="badge badge-xs badge-error">{{ piutang_list|length }}</span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+
+            <!-- ================================================================== -->
+            <!-- TAB: PIUTANG / OUTSTANDING                                          -->
+            <!-- ================================================================== -->
+            {% if source_tab == 'piutang' %}
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="font-bold text-error flex items-center gap-2">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        Piutang / Tagihan Belum Dibayar
+                    </h4>
+                    <div class="badge badge-error badge-lg font-bold">
+                        Total: Rp {{ "{:,.0f}".format(piutang_total).replace(',','.') }}
+                    </div>
+                </div>
+                {% if piutang_list %}
+                <div class="overflow-x-auto">
+                    <table class="table table-sm table-zebra w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Pelanggan</th>
+                                <th>No. HP</th>
+                                <th>Profil</th>
+                                <th class="text-right">Nominal</th>
+                                <th>Tgl Transaksi</th>
+                                <th>Jatuh Tempo</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in piutang_list %}
+                            {% set today = now() if now is defined else none %}
+                            <tr class="hover:bg-base-200/30">
+                                <td class="font-bold">{{ p.customer_name or '-' }}</td>
+                                <td class="text-xs font-mono">{{ p.customer_phone or '-' }}</td>
+                                <td class="text-xs">{{ p.profile_name or '-' }}</td>
+                                <td class="text-right font-mono font-bold text-error">Rp {{
+                                    "{:,.0f}".format(p.amount|float).replace(',','.') }}</td>
+                                <td class="text-xs text-base-content/60">{{ p.created_at.strftime('%d/%m/%Y') if
+                                    p.created_at else '-' }}</td>
+                                <td
+                                    class="text-xs {% if p.due_date and p.due_date < namespace.today|default('') %}text-error font-bold{% endif %}">
+                                    {{ p.due_date or '-' }}</td>
+                                <td><span class="badge badge-warning badge-sm">Pending</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-12 text-success">
+                    <i class="bi bi-check-circle-fill text-5xl block mb-2"></i>
+                    <p class="font-bold">Tidak ada piutang! Semua tagihan sudah lunas.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ================================================================== -->
+            <!-- TAB: MONTHLY SUMMARY (12 BULAN)                                    -->
+            <!-- ================================================================== -->
+            {% elif source_tab == 'monthly' %}
+            <div class="p-4">
+                <h4 class="font-bold text-base-content/70 mb-4 flex items-center gap-2">
+                    <i class="bi bi-calendar3-range text-primary"></i> Ringkasan 12 Bulan Terakhir
+                </h4>
+                {% if monthly_summary %}
+                <div class="overflow-x-auto">
+                    <table class="table table-sm w-full text-sm">
+                        <thead class="bg-base-200/50">
+                            <tr>
+                                <th>Bulan</th>
+                                <th class="text-right">Jml Transaksi</th>
+                                <th class="text-right">Pemasukan Bruto</th>
+                                <th class="text-right">HPP</th>
+                                <th class="text-right">Net Profit</th>
+                                <th class="text-right text-error">Pengeluaran</th>
+                                <th class="text-right text-success">Profit Bersih</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in monthly_summary %}
+                            <tr class="hover:bg-base-200/30">
+                                <td class="font-bold font-mono">{{ m.month }}</td>
+                                <td class="text-right">{{ m.tx_count }}</td>
+                                <td class="text-right font-mono">Rp {{ "{:,.0f}".format(m.gross|float).replace(',','.')
+                                    }}</td>
+                                <td class="text-right font-mono text-warning">Rp {{
+                                    "{:,.0f}".format(m.cost|float).replace(',','.') }}</td>
+                                <td class="text-right font-mono font-bold">Rp {{
+                                    "{:,.0f}".format(m.net|float).replace(',','.') }}</td>
+                                <td class="text-right font-mono text-error">Rp {{
+                                    "{:,.0f}".format(m.expense|float).replace(',','.') }}</td>
+                                <td
+                                    class="text-right font-mono font-extrabold {% if m.real_profit >= 0 %}text-success{% else %}text-error{% endif %}">
+                                    Rp {{ "{:,.0f}".format(m.real_profit).replace(',','.') }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-12 text-base-content/40">
+                    <i class="bi bi-calendar-x text-5xl block mb-2"></i>
+                    <p>Belum ada data keuangan.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ================================================================== -->
+            <!-- TAB: PENGELUARAN / EXPENSES                                         -->
+            <!-- ================================================================== -->
+            {% elif source_tab == 'expenses' %}
+            <div class="p-4 space-y-4">
+                <!-- Add Expense Form -->
+                <div class="card bg-base-200/50 border border-base-300">
+                    <div class="card-body p-4">
+                        <h4 class="font-bold text-base-content/70 mb-3"><i
+                                class="bi bi-plus-circle-fill text-error mr-1"></i> Tambah Pengeluaran</h4>
+                        <form method="POST" action="{{ url_for('reports.expense_add') }}"
+                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                            <input list="cat-list" name="category" placeholder="Kategori" value="Bandwidth"
+                                class="input input-bordered input-sm" required>
+                            <datalist id="cat-list">
+                                <option value="Bandwidth">
+                                <option value="Server/VPS">
+                                <option value="Peralatan">
+                                <option value="Gaji Teknisi">
+                                <option value="Listrik">
+                                <option value="Operasional">
+                                    {% for c in expense_categories %}
+                                <option value="{{ c.category }}">{% endfor %}
+                            </datalist>
+                            <input name="description" placeholder="Keterangan"
+                                class="input input-bordered input-sm sm:col-span-1 lg:col-span-2" required>
+                            <input name="amount" type="number" placeholder="Nominal (Rp)"
+                                class="input input-bordered input-sm" required min="1">
+                            <input name="expense_date" type="date" class="input input-bordered input-sm"
+                                value="{{ end_date }}">
+                            <button type="submit" class="btn btn-error btn-sm"><i class="bi bi-save"></i>
+                                Simpan</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Expense List -->
+                {% if expenses_list %}
+                <div class="overflow-x-auto">
+                    <table class="table table-sm table-zebra w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Kategori</th>
+                                <th>Keterangan</th>
+                                <th class="text-right">Nominal</th>
+                                <th>Dicatat Oleh</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in expenses_list %}
+                            <tr class="hover:bg-base-200/30">
+                                <td class="font-mono text-xs">{{ e.expense_date }}</td>
+                                <td><span class="badge badge-outline badge-sm">{{ e.category }}</span></td>
+                                <td>{{ e.description }}</td>
+                                <td class="text-right font-mono font-bold text-error">Rp {{
+                                    "{:,.0f}".format(e.amount|float).replace(',','.') }}</td>
+                                <td class="text-xs text-base-content/60">{{ e.recorded_by }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('reports.expense_delete', id=e.id) }}"
+                                        onsubmit="return confirm('Hapus pengeluaran ini?')">
+                                        <button type="submit" class="btn btn-ghost btn-xs text-error"><i
+                                                class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-12 text-base-content/40">
+                    <i class="bi bi-receipt text-5xl block mb-2"></i>
+                    <p>Belum ada catatan pengeluaran pada periode ini.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ================================================================== -->
+            <!-- TAB: MITRA DETAIL                                                   -->
+            <!-- ================================================================== -->
+            {% elif source_tab == 'mitra_voucher' and mitra_summary %}
+            <div class="p-4 border-b border-base-200">
+                <h4 class="font-bold text-sm text-base-content/70 mb-3">
+                    <i class="bi bi-trophy-fill text-warning"></i> Ringkasan Per Mitra
+                </h4>
+                <div class="overflow-x-auto">
+                    <table class="table table-sm table-zebra w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Nama Mitra</th>
+                                <th class="text-right">Transaksi</th>
+                                <th class="text-right">Bruto</th>
+                                <th class="text-right">HPP</th>
+                                <th class="text-right text-success">Net Profit ISP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in mitra_summary %}
+                            <tr>
+                                <td class="font-bold"><i class="bi bi-person-fill-check text-secondary mr-1"></i>{{
+                                    m.party_name }}</td>
+                                <td class="text-right">{{ m.tx_count }}</td>
+                                <td class="text-right font-mono">Rp {{ "{:,.0f}".format(m.gross|float).replace(',','.')
+                                    }}</td>
+                                <td class="text-right font-mono text-warning">Rp {{
+                                    "{:,.0f}".format(m.cost|float).replace(',','.') }}</td>
+                                <td class="text-right font-mono font-bold text-success">Rp {{
+                                    "{:,.0f}".format(m.net|float).replace(',','.') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% set show_transactions = true %}
+            {% else %}
+            {% set show_transactions = true %}
+            {% endif %}
+
+            <!-- ================================================================== -->
+            <!-- TRANSACTION TABLE (for all/admin/client/deposit/mitra tabs)         -->
+            <!-- ================================================================== -->
+            {% if source_tab not in ('piutang', 'monthly', 'expenses') %}
+            <div class="overflow-x-auto p-2">
+                {% if transactions %}
+                <table class="table table-sm w-full text-sm">
+                    <thead class="bg-base-200/50">
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Jenis</th>
+                            <th>Keterangan</th>
+                            <th>Pihak</th>
+                            <th class="text-right">Bruto</th>
+                            <th class="text-right">HPP</th>
+                            <th class="text-right">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        {% set badge_map = {
+                        'admin_voucher': ('badge-primary', 'Voucher Admin'),
+                        'mitra_voucher': ('badge-secondary', 'Voucher Mitra'),
+                        'client_payment': ('badge-info', 'Tagihan Client'),
+                        'mitra_deposit': ('badge-accent', 'Deposit Mitra'),
+                        } %}
+                        {% set bc, bl = badge_map.get(tx.source_type, ('badge-neutral', tx.source_type)) %}
+                        <tr class="hover:bg-base-200/30 transition-colors">
+                            <td class="text-xs text-base-content/60 whitespace-nowrap font-mono">
+                                {{ tx.created_at.strftime('%d/%m/%y %H:%M') if tx.created_at else '-' }}
+                            </td>
+                            <td><span class="badge {{ bc }} badge-sm font-semibold">{{ bl }}</span></td>
+                            <td class="max-w-xs">
+                                <div class="truncate text-xs">{{ tx.description }}</div>
+                                {% if tx.ref_number %}<div class="font-mono text-xs text-base-content/40">{{
+                                    tx.ref_number }}</div>{% endif %}
+                            </td>
+                            <td class="text-xs text-base-content/70">{{ tx.party_name or '-' }}</td>
+                            <td class="text-right font-mono text-sm font-bold">Rp {{
+                                "{:,.0f}".format(tx.gross_amount|float).replace(',','.') }}</td>
+                            <td class="text-right font-mono text-sm text-warning">
+                                {% if tx.cost_amount|float > 0 %}Rp {{
+                                "{:,.0f}".format(tx.cost_amount|float).replace(',','.') }}
+                                {% else %}<span class="text-base-content/30">-</span>{% endif %}
+                            </td>
+                            <td class="text-right font-mono font-extrabold text-success">Rp {{
+                                "{:,.0f}".format(tx.net_profit|float).replace(',','.') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-16 text-base-content/40">
+                    <i class="bi bi-inbox text-5xl block mb-3"></i>
+                    <p class="font-semibold">Belum ada catatan keuangan pada periode ini.</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+{% if chart_labels %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    new Chart(document.getElementById('incomeChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels | tojson }},
+        datasets: [{
+            label: 'Net Profit (Rp)',
+            data: {{ chart_values | tojson }},
+        backgroundColor: 'rgba(34,197,94,0.25)',
+        borderColor: 'rgba(34,197,94,0.9)',
+        borderWidth: 2, borderRadius: 6,
+        hoverBackgroundColor: 'rgba(34,197,94,0.5)',
+    }]
+  },
+        options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: function (c) { return 'Rp ' + c.parsed.y.toLocaleString('id-ID'); } } }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { callback: v => 'Rp ' + v.toLocaleString('id-ID') } }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

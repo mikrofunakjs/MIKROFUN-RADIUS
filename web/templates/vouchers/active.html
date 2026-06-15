@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex flex-wrap justify-between items-center mb-5 gap-3">
+    <div>
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
+            </span>
+            Voucher Aktif
+        </h2>
+        <p class="text-xs opacity-50">Sesi voucher yang sedang berjalan — realtime</p>
+    </div>
+    <div class="flex gap-2 items-center">
+        <!-- Router Filter -->
+        <select id="routerFilter" class="select select-sm select-bordered max-w-xs" onchange="filterTable()">
+            <option value="all">Semua Router</option>
+            {% for rname in active_routers %}
+            <option value="{{ rname }}">{{ rname }}</option>
+            {% endfor %}
+        </select>
+
+        <button onclick="location.reload()" class="btn btn-ghost btn-sm gap-1">
+            <i class="bi bi-arrow-repeat"></i> Refresh
+        </button>
+        <a href="{{ url_for('vouchers.index') }}" class="btn btn-ghost btn-sm">
+            <i class="bi bi-list-ul"></i> Semua Voucher
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+    <div class="stat bg-base-100 rounded-xl border border-success/30 shadow-sm py-3">
+        <div class="stat-title text-xs">Sesi Aktif</div>
+        <div class="stat-value text-2xl text-success" id="activeCount">{{ vouchers|length }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm py-3">
+        <div class="stat-title text-xs">Dipantau Sejak</div>
+        <div class="stat-value text-sm" id="monitorSince">-</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl border border-warning/30 shadow-sm py-3">
+        <div class="stat-title text-xs">Auto Refresh</div>
+        <div class="stat-value text-sm">60 detik</div>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="table table-sm" id="activeTable">
+                <thead class="bg-base-200 uppercase text-xs">
+                    <tr>
+                        <th>Kode Voucher</th>
+                        <th>Profil</th>
+                        <th>Router / NAS</th>
+                        <th>Mulai</th>
+                        <th>Durasi</th>
+                        <th>⏳ Sisa Waktu</th>
+                        <th class="text-end">Disconnect</th>
+                    </tr>
+                </thead>
+                <tbody id="activeBody">
+                    {% for v in vouchers %}
+                    <tr class="hover cursor-pointer voucher-row" data-router="{{ v.router_name or '' }}"
+                        id="row-{{ v.id }}">
+                        <td class="font-mono font-bold text-primary tracking-wider">
+                            {{ v.code }}
+                            {% if v.session_id %}
+                            <div class="text-xs opacity-40 font-normal">Session: {{ v.session_id[:16] }}…</div>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge badge-outline badge-sm">{{ v.profile_name or '-' }}</span></td>
+                        <td class="text-xs">{{ v.router_name or '-' }}</td>
+                        <td class="text-xs opacity-70">
+                            {% if v.activated_at %}
+                            {{ v.activated_at.strftime('%d/%m %H:%M') }}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-sm">{{ v.validity_str }}</td>
+                        <td>
+                            {% if v.remaining_sec is not none %}
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold countdown-timer
+                                    {{ 'text-error' if v.remaining_sec < 600 else
+                                       'text-warning' if v.remaining_sec < 3600 else 'text-success' }}"
+                                    data-remaining="{{ v.remaining_sec }}" id="timer-{{ v.id }}">
+                                    {% if v.remaining_sec >= 86400 %}
+                                        {{ '%d Hari %02d:%02d:%02d' | format(
+                                            v.remaining_sec // 86400,
+                                            (v.remaining_sec % 86400) // 3600,
+                                            (v.remaining_sec % 3600) // 60,
+                                            v.remaining_sec % 60
+                                        ) }}
+                                    {% else %}
+                                        {{ '%02d:%02d:%02d' | format(
+                                            v.remaining_sec // 3600,
+                                            (v.remaining_sec % 3600) // 60,
+                                            v.remaining_sec % 60
+                                        ) }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if v.duration_hours %}
+                            {% set pct = [((v.remaining_sec / (v.duration_hours * 3600)) * 100) | int, 100] | min %}
+                            <progress
+                                class="progress w-20 h-1
+                                {{ 'progress-error' if pct < 15 else 'progress-warning' if pct < 40 else 'progress-success' }}"
+                                value="{{ pct }}" max="100"></progress>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-xs opacity-40">Tidak diketahui</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="flex gap-1 justify-end">
+                                <!-- Soft Disconnect -->
+                                <form method="POST" action="{{ url_for('vouchers.disconnect', id=v.id) }}"
+                                    onsubmit="return confirm('Non-aktifkan voucher {{ v.code }}? Session putus saat RADIUS check berikutnya.')">
+                                    <button type="submit" class="btn btn-xs btn-warning gap-1"
+                                        title="Soft Disconnect (RADIUS expire)">
+                                        <i class="bi bi-pause-circle"></i> Soft
+                                    </button>
+                                </form>
+                                <!-- Hard Disconnect (CoA) -->
+                                <form method="POST" action="{{ url_for('vouchers.coa_disconnect', id=v.id) }}"
+                                    onsubmit="return confirm('Kirim CoA Disconnect ke router? Sesi {{ v.code }} akan diputus SEKARANG.')">
+                                    <button type="submit" class="btn btn-xs btn-error gap-1"
+                                        title="Hard Disconnect (CoA & Mikrotik API)">
+                                        <i class="bi bi-x-circle"></i> Hard Disconnect
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not vouchers %}
+                    <tr id="emptyRow">
+                        <td colspan="7" class="text-center py-16 opacity-40">
+                            <i class="bi bi-check-circle text-success text-4xl block mb-2"></i>
+                            Tidak ada voucher yang aktif saat ini.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="text-center text-xs opacity-30 mt-3">
+    Auto-refresh setiap 60 detik. Timer countdown berjalan realtime di browser.
+</div>
+
+<script>
+    function filterTable() {
+        const selectedRouter = document.getElementById('routerFilter').value;
+        const rows = document.querySelectorAll('.voucher-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const routerMatch = selectedRouter === 'all' || row.dataset.router === selectedRouter;
+            if (routerMatch) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        refreshIn--;
+        if (refreshIn < 0) {
+            location.reload();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Set monitor since time
+        var now = new Date();
+        var el = document.getElementById('monitorSince');
+        if (el) el.textContent = now.toLocaleTimeString('id-ID');
+
+        startCountdowns();
+        setInterval(updateMonitorLabel, 1000);
+        refreshIn = 60;
+    });
+</script>
+{% endblock %}

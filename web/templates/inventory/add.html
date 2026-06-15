@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Tambah Aset Baru{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6 flex items-center gap-4">
+        <a href="{{ url_for('inventory.index') }}" class="btn btn-sm btn-ghost btn-circle">
+            <i class="bi bi-arrow-left text-xl"></i>
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Tambah Aset Baru</h1>
+            <p class="text-sm text-gray-500">Masukkan detail alat ke dalam inventaris gudang</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <form method="POST" action="">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Nama Barang <span
+                                class="text-error">*</span></span></label>
+                    <input type="text" name="name" class="input input-bordered bg-gray-50 focus:bg-white"
+                        placeholder="Contoh: ZTE F609 / Splicer Fujikura" required>
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Kategori</span></label>
+                    <select name="category" class="select select-bordered bg-gray-50 focus:bg-white" required>
+                        <option value="modem">Modem / ONT</option>
+                        <option value="router">Router / Switch</option>
+                        <option value="tool">Alat Kerja (Splicer/Tang)</option>
+                        <option value="other">Lainnya</option>
+                    </select>
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Merk / Brand</span></label>
+                    <input type="text" name="brand" class="input input-bordered bg-gray-50 focus:bg-white"
+                        placeholder="ZTE / Huawei / Mikrotik">
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Serial Number (SN)</span></label>
+                    <input type="text" name="serial_number"
+                        class="input input-bordered bg-gray-50 focus:bg-white font-mono" placeholder="ZTEGC123...">
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">MAC Address</span></label>
+                    <input type="text" name="mac_address"
+                        class="input input-bordered bg-gray-50 focus:bg-white font-mono"
+                        placeholder="00:11:22:33:44:55">
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Harga Pembelian (Rp)</span></label>
+                    <input type="number" name="purchase_price" class="input input-bordered bg-gray-50 focus:bg-white"
+                        value="0" min="0">
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Tanggal Pembelian</span></label>
+                    <input type="date" name="purchase_date" class="input input-bordered bg-gray-50 focus:bg-white">
+                </div>
+
+                <div class="form-control md:col-span-2">
+                    <label class="label"><span class="label-text font-bold">Catatan Tambahan
+                            (Kondisi/Sumber)</span></label>
+                    <textarea name="notes" class="textarea textarea-bordered bg-gray-50 focus:bg-white h-24"
+                        placeholder="Kondisi bekas, dibeli dari..."></textarea>
+                </div>
+
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-100">
+                <a href="{{ url_for('inventory.index') }}" class="btn btn-ghost">Batal</a>
+                <button type="submit" class="btn btn-primary px-8">Simpan Aset</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

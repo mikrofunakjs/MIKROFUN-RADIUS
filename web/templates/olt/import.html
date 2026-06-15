@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto py-8">
+    <div class="mb-8 flex items-center gap-4">
+        <a href="{{ url_for('olt.index') }}" class="btn btn-ghost btn-circle shadow-sm border-base-200">
+            <i class="bi bi-arrow-left text-xl"></i>
+        </a>
+        <div>
+            <h2 class="text-3xl font-black text-primary">Bulk OLT Import</h2>
+            <p class="text-sm opacity-60 font-medium">Batch registration of FTTH hardware infrastructure</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- FORM COLUMN -->
+        <div class="md:col-span-2 order-2 md:order-1">
+            <div class="card bg-base-100 shadow-2xl border border-base-200">
+                <div class="card-body p-8 text-left">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="form-control mb-8">
+                            <label class="label">
+                                <span
+                                    class="label-text font-black uppercase text-[10px] tracking-widest opacity-60">Source
+                                    File Selection</span>
+                            </label>
+                            <label
+                                class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-base-300 rounded-2xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <i
+                                        class="bi bi-cloud-arrow-up text-5xl text-base-300 group-hover:text-primary transition-colors mb-3"></i>
+                                    <p class="text-sm font-bold opacity-60" id="filename-preview">Drag & drop your .XLSX
+                                        file here</p>
+                                    <p class="text-[10px] opacity-40 uppercase font-black mt-2">Maximum file size: 5MB
+                                    </p>
+                                </div>
+                                <input type="file" name="file" class="hidden" id="file-input" accept=".xlsx" required
+                                    onchange="document.getElementById('filename-preview').innerText = this.files[0].name" />
+                            </label>
+                        </div>
+
+                        <div class="flex flex-col-reverse md:flex-row justify-end gap-3">
+                            <a href="{{ url_for('olt.index') }}" class="btn btn-ghost px-8">Discard</a>
+                            <button type="submit" class="btn btn-primary px-10 shadow-lg shadow-primary/30">
+                                <i class="bi bi-lightning-charge-fill animate-pulse"></i> Begin Import
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- GUIDE COLUMN -->
+        <div class="order-1 md:order-2">
+            <div class="space-y-6">
+                <div class="card bg-primary text-primary-content shadow-lg p-6">
+                    <h3 class="font-black text-sm mb-3 uppercase tracking-tighter">Documentation Guide</h3>
+                    <ul class="space-y-3 text-sm opacity-90">
+                        <li class="flex gap-2 font-medium">
+                            <i class="bi bi-check-circle-fill"></i> Row 1 used as Header
+                        </li>
+                        <li class="flex gap-2 font-medium">
+                            <i class="bi bi-check-circle-fill"></i> Support conflict update (Duplicate Name)
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card bg-base-100 border border-base-200 shadow p-6">
+                    <h4 class="text-[10px] font-black uppercase opacity-40 mb-4 tracking-widest">Required Columns</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="badge badge-outline border-base-300 font-bold">Nama OLT</span>
+                        <span class="badge badge-outline border-base-300 font-bold">Brand</span>
+                        <span class="badge badge-outline border-base-300 font-bold">IP Management</span>
+                        <span class="badge badge-outline border-base-300 font-bold">Total Port</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

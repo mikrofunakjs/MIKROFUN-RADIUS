@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-terminal"></i> Mikrotik Script: {{ router_name }}</h2>
+</div>
+<div class="card">
+    <div class="card-body">
+        <div class="alert" style="background:rgba(0,212,170,0.1);border-color:#00d4aa;color:#00d4aa;">
+            <i class="bi bi-info-circle"></i> Copy script di bawah ini dan paste ke <strong>Mikrotik Terminal</strong>.
+        </div>
+        <pre
+            style="background:#12151a;padding:16px;border-radius:8px;color:#00d4aa;font-size:0.85rem;overflow-x:auto;white-space:pre-wrap;">{{ script }}</pre>
+        <button class="btn btn-primary" onclick="copyScript()"><i class="bi bi-clipboard"></i> Copy Script</button>
+        <a href="{{ url_for('routers.index') }}" class="btn btn-secondary">Kembali</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyScript() {
+        const text = document.querySelector('pre').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Script berhasil dicopy!');
+        });
+    }
+</script>
+{% endblock %}

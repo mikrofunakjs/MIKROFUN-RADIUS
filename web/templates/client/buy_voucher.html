@@ -1,0 +1,340 @@
+{% extends "client/base_app.html" %}
+
+{% block content %}
+<div
+    class="bg-gradient-to-br from-warning to-orange-500 text-white sticky top-0 z-40 px-6 py-5 shadow-lg flex items-center gap-3">
+    <a href="{{ url_for('client.dashboard') }}" class="btn btn-circle btn-ghost btn-sm text-white"><i
+            class="bi bi-arrow-left text-xl"></i></a>
+    <div>
+        <h1 class="text-lg font-bold leading-tight">Beli Voucher Hotspot</h1>
+        <p class="text-xs text-white/80">Pilih paket akses internet Anda.</p>
+    </div>
+</div>
+
+<div class="p-6 space-y-6">
+
+    {% if profiles %}
+    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Pilihan Paket</h2>
+    <div class="grid grid-cols-1 gap-4">
+        {% for profile in profiles %}
+        <div
+            class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:border-warning hover:shadow-md transition-all relative overflow-hidden group">
+            <div
+                class="absolute top-0 right-0 w-16 h-16 bg-warning/10 rounded-bl-[2rem] -mr-4 -mt-4 transition-all group-hover:scale-150 group-hover:bg-warning/20">
+            </div>
+
+            <div class="flex justify-between items-start relative z-10">
+                <div>
+                    <h3 class="font-bold text-lg text-gray-800">{{ profile.name }}</h3>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="badge badge-warning badge-sm border-0 font-bold"><i
+                                class="bi bi-speedometer2 me-1"></i> {{ profile.get('rate_limit', 'Unlimited') or
+                            'Unlimited' }}</span>
+                        {% if profile.get('shared_users', 1) and profile.get('shared_users', 1) > 1 %}
+                        <span class="badge badge-ghost badge-sm text-gray-500"><i class="bi bi-people-fill me-1"></i> {{
+                            profile.get('shared_users', 1) }} Devices</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-black text-warning">Rp {{ "{:,.0f}".format(profile.price) }}</p>
+                </div>
+            </div>
+
+            <div class="divider my-3"></div>
+
+            <button onclick='openCheckoutModal("{{ profile.id }}", {{ profile.name|tojson }}, {{ profile.price }})'
+                class="btn w-full rounded-xl bg-orange-50 hover:bg-warning hover:text-white border-0 text-orange-600">
+                Beli Sekarang <i class="bi bi-cart-fill ms-1"></i>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+            <i class="bi bi-emoji-frown text-2xl"></i>
+        </div>
+        <h3 class="font-bold text-gray-700">Belum Ada Paket</h3>
+        <p class="text-sm text-gray-400 mt-1">Admin belum membuat paket voucher.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Checkout Modal -->
+<dialog id="checkout_modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box bg-white p-0 overflow-hidden relative">
+        <!-- Header -->
+        <div class="bg-gray-50 p-5 px-6 border-b border-gray-100 flex justify-between items-center">
+            <div>
+                <h3 class="font-bold text-lg text-gray-800">Checkout Voucher</h3>
+                <p class="text-xs text-gray-500" id="modal-profile-name">Paket Name</p>
+            </div>
+            <p class="text-xl font-black text-primary" id="modal-price-display">Rp 0</p>
+        </div>
+
+        <div class="p-6">
+            <form method="POST" action="{{ url_for('client.buy_voucher_checkout') }}" enctype="multipart/form-data"
+                id="checkout-form">
+                <input type="hidden" name="profile_id" id="modal-profile-id" value="">
+
+                <!-- Manual Payment Options (Moota / Manual Upload) -->
+                {% if active_gateway == 'manual' %}
+                <div class="alert alert-warning shadow-sm mb-4">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <span class="text-xs font-bold text-left">Pembayaran otomatis (Payment Gateway) sedang
+                        dinonaktifkan. Anda hanya bisa menggunakan Transfer Manual.</span>
+                </div>
+                <input type="hidden" id="manual-method-input" name="payment_method" value="manual">
+
+                {% if settings.get('moota_api_key') %}
+                <div class="alert alert-info shadow-sm mb-4">
+                    <i class="bi bi-robot text-xl"></i>
+                    <div class="text-[10px] leading-tight text-left">
+                        <span class="font-bold text-xs block mb-1">Transfer Otomatis (Moota) Aktif!</span>
+                        Pilih metode ini, maka nominal bayar akan ditambah 3 kode unik. Pastikan transfer TEPAT sejumlah
+                        total tagihan nanti agar otomatis lunas tanpa upload bukti!
+                    </div>
+                </div>
+
+                <div class="form-control w-full mb-3">
+                    <label class="label"><span class="label-text text-xs font-bold">Pilih Tipe Transfer</span></label>
+                    <div class="flex gap-4">
+                        <label class="cursor-pointer flex items-center gap-2">
+                            <input type="radio" name="manual_type" value="moota" class="radio radio-primary radio-sm"
+                                checked
+                                onchange="document.getElementById('manual-method-input').value='moota'; document.getElementById('proof-upload-div').classList.add('hidden');">
+                            <span class="text-xs font-bold">Otomatis (Moota)</span>
+                        </label>
+                        <label class="cursor-pointer flex items-center gap-2">
+                            <input type="radio" name="manual_type" value="manual" class="radio radio-primary radio-sm"
+                                onchange="document.getElementById('manual-method-input').value='manual'; document.getElementById('proof-upload-div').classList.remove('hidden');">
+                            <span class="text-xs">Manual (Upload)</span>
+                        </label>
+                    </div>
+                </div>
+                {% else %}
+                <input type="hidden" name="manual_type" value="manual">
+                {% endif %}
+
+                <div class="form-control w-full mb-3">
+                    <label class="label"><span class="label-text text-xs font-bold">Dari Bank / E-Wallet</span></label>
+                    <input type="text" name="sender_bank" class="input input-bordered w-full bg-gray-50"
+                        placeholder="Contoh: BCA / DANA" required />
+                </div>
+                <div class="form-control w-full mb-3">
+                    <label class="label"><span class="label-text text-xs font-bold">Nama Pengirim</span></label>
+                    <input type="text" name="sender_name" class="input input-bordered w-full bg-gray-50"
+                        placeholder="Nama pemilik rekening" required />
+                </div>
+                <div id="proof-upload-div"
+                    class="form-control w-full mb-3 {{ 'hidden' if settings.get('moota_api_key') else '' }}">
+                    <label class="label"><span class="label-text text-xs font-bold">Upload Bukti Transfer</span></label>
+                    <input type="file" name="proof_image" class="file-input file-input-bordered w-full" accept="image/*"
+                        {{ 'required' if not settings.get('moota_api_key') else '' }} />
+                </div>
+                <p class="text-xs text-error mt-1 italic">Voucher akan aktif setelah Admin memverifikasi bukti transfer.
+                </p>
+                <div class="modal-action mt-6">
+                    <button type="button" class="btn btn-ghost"
+                        onclick="document.getElementById('checkout_modal').close()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Kirim Bukti</button>
+                </div>
+
+                <!-- Online Payment Options (Gateway) -->
+                {% elif active_gateway != 'manual' %}
+                <input type="hidden" name="payment_method"
+                    value="{{ active_gateway if active_gateway != 'both' else 'tripay' }}" id="gateway-method">
+
+                <h4 class="font-bold text-xs uppercase tracking-widest text-gray-500 mb-3 block">Pilih Metode Pembayaran
+                </h4>
+
+                {% if active_gateway == 'both' %}
+                <select id="gateway_selector" class="select select-bordered w-full mb-4 bg-gray-50 text-sm font-bold"
+                    onchange="toggleGatewayChannels()">
+                    <option value="tripay">Tripay (QRIS / VA / Retail)</option>
+                    <option value="midtrans">Midtrans (Instant / E-Wallet / VA)</option>
+                </select>
+                {% endif %}
+
+                <!-- Tripay Channels -->
+                <div id="tripay_container"
+                    class="grid grid-cols-2 gap-3 mb-6 max-h-48 overflow-y-auto p-1 {{ 'hidden' if active_gateway not in ['tripay', 'both'] else '' }}">
+                    {% for ch in tripay_channels %}
+                    <label class="cursor-pointer">
+                        <input type="radio" name="method_code" value="{{ ch.code }}" class="peer sr-only tripay-radio"
+                            onchange="document.getElementById('gateway-method').value='tripay'; document.getElementById('btn-checkout').disabled=false;">
+                        <div
+                            class="rounded-xl border border-gray-200 p-3 hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-2 ring-primary/30 transition-all text-center h-full flex flex-col items-center justify-center gap-2">
+                            <img src="{{ ch.icon_url }}" class="h-6 object-contain" alt="{{ ch.name }}">
+                            <span class="text-[10px] font-bold leading-tight">{{ ch.name }}</span>
+                            <span class="text-[9px] text-gray-500">+Rp{{ "{:,.0f}".format(ch.total_fee.flat|float)
+                                }}</span>
+                        </div>
+                    </label>
+                    {% else %}
+                    {% if active_gateway in ['tripay', 'both'] %}
+                    <div class="col-span-2 py-4 text-center text-xs opacity-50 italic">Saluran Tripay tidak tersedia.
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Duitku Channels -->
+                <div id="duitku_container"
+                    class="grid grid-cols-2 gap-3 mb-6 max-h-48 overflow-y-auto p-1 {% if active_gateway != 'duitku' and active_gateway != 'both' %}hidden{% endif %}">
+                    {% for ch in duitku_channels %}
+                    <label class="cursor-pointer">
+                        <input type="radio" name="method_code" value="{{ ch.paymentMethod }}"
+                            class="peer sr-only duitku-radio"
+                            onchange="document.getElementById('gateway-method').value='duitku'; document.getElementById('btn-checkout').disabled=false;">
+                        <div
+                            class="rounded-xl border border-gray-200 p-3 hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-2 ring-primary/30 transition-all text-center h-full flex flex-col items-center justify-center gap-2">
+                            <img src="{{ ch.paymentImage }}" class="h-6 object-contain" alt="{{ ch.paymentName }}">
+                            <span class="text-[10px] font-bold leading-tight">{{ ch.paymentName }}</span>
+                            <span class="text-[9px] text-gray-500">+Rp{{ "{:,.0f}".format(ch.totalFee|float) }}</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                <!-- Midtrans Option -->
+                <div id="midtrans_container" class="mb-4 {{ 'hidden' if active_gateway != 'midtrans' else '' }}">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="method_code" value="midtrans" class="peer sr-only midtrans-radio"
+                            onchange="document.getElementById('gateway-method').value='midtrans'; document.getElementById('btn-checkout').disabled=false;">
+                        <div
+                            class="rounded-2xl border border-gray-200 p-4 hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-2 ring-primary/30 transition-all flex items-center gap-4">
+                            <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                                <i class="bi bi-shield-check text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm text-gray-800">Midtrans Snap</h4>
+                                <p class="text-[10px] text-gray-500">Bayar instan via Gopay, QRIS, atau Virtual Account
+                                </p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="modal-action border-t border-gray-100 pt-5 mt-6">
+                    <button type="button" class="btn btn-ghost"
+                        onclick="document.getElementById('checkout_modal').close()">Batal</button>
+                    <!-- Midtrans handler or Tripay Submit -->
+                    <button type="button" id="btn-checkout" class="btn btn-primary" disabled
+                        onclick="executeCheckout()">Bayar & Dapatkan Voucher</button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+{% if settings.get('midtrans_mode') == 'production' %}
+<script src="https://app.midtrans.com/snap/snap.js"
+    data-client-key="{{ settings.get('midtrans_client_key') }}"></script>
+{% elif settings.get('midtrans_client_key') %}
+<script src="https://app.sandbox.midtrans.com/snap/snap.js"
+    data-client-key="{{ settings.get('midtrans_client_key') }}"></script>
+{% endif %}
+
+<script>
+    function openCheckoutModal(id, name, price) {
+        document.getElementById('modal-profile-id').value = id;
+        document.getElementById('modal-profile-name').innerText = name;
+        document.getElementById('modal-price-display').innerText = 'Rp ' + price.toLocaleString('id-ID');
+        document.getElementById('checkout_modal').showModal();
+
+        // Reset selections
+        const radios = document.querySelectorAll('input[name="method_code"]');
+        radios.forEach(r => r.checked = false);
+        const btn = document.getElementById('btn-checkout');
+        if (btn) btn.disabled = true;
+    }
+
+    async function executeCheckout() {
+        const method = document.getElementById('gateway-method').value;
+        const form = document.getElementById('checkout-form');
+
+        if (method === 'tripay' || method === 'duitku') {
+            // For Tripay/Duitku, we submit the form so backend creates transaction and redirects
+            form.submit();
+        } else if (method === 'midtrans') {
+            // Midtrans Logic via AJAX
+            const btn = document.getElementById('btn-checkout');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Memproses...';
+            btn.disabled = true;
+
+            try {
+                const profileId = document.getElementById('modal-profile-id').value;
+                const res = await fetch("{{ url_for('client.buy_voucher_midtrans_token') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: profileId })
+                });
+                const data = await res.json();
+
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else if (data.token) {
+                    // Fallback to snap if no redirect_url for some reason (rare in production Snap API v1)
+                    snap.pay(data.token, {
+                        onSuccess: function (result) { window.location.href = "{{ url_for('client.history') }}"; },
+                        onPending: function (result) { window.location.href = "{{ url_for('client.history') }}"; },
+                        onError: function (result) {
+                            alert("Payment Failed!"); console.log(result);
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        },
+                        onClose: function () {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }
+                    });
+                } else {
+                    alert('Gagal mendapatkan token Midtrans: ' + (data.error || 'Unknown Error'));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Terjadi kesalahan jaringan.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    }
+    function toggleGatewayChannels() {
+        const val = document.getElementById('gateway_selector').value;
+        const tripay = document.getElementById('tripay_container');
+        const duitku = document.getElementById('duitku_container');
+        const midtrans = document.getElementById('midtrans_container');
+
+        if (val === 'tripay') {
+            if (tripay) tripay.classList.remove('hidden');
+            if (duitku) duitku.classList.add('hidden');
+            if (midtrans) midtrans.classList.add('hidden');
+            document.getElementById('gateway-method').value = 'tripay';
+        } else if (val === 'midtrans') {
+            if (tripay) tripay.classList.add('hidden');
+            if (duitku) duitku.classList.add('hidden');
+            if (midtrans) midtrans.classList.remove('hidden');
+            document.getElementById('gateway-method').value = 'midtrans';
+        } else {
+            if (tripay) tripay.classList.add('hidden');
+            if (duitku) duitku.classList.remove('hidden');
+            if (midtrans) midtrans.classList.add('hidden');
+            document.getElementById('gateway-method').value = 'duitku';
+        }
+        // Reset radio buttons
+        const radios = document.querySelectorAll('input[name="method_code"]');
+        radios.forEach(r => r.checked = false);
+        document.getElementById('btn-checkout').disabled = true;
+    }
+</script>
+{% endblock %}

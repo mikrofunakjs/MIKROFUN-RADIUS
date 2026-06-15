@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ========================================== -->
+<!-- MOBILE APP DASHBOARD (Compact Monitor)     -->
+<!-- ========================================== -->
+<div class="block lg:hidden">
+    <!-- Mobile Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-xl font-bold tracking-tight">Halo, Admin! 👋</h2>
+            <p class="text-xs opacity-60">Status jaringan hari ini</p>
+        </div>
+        <div class="avatar placeholder">
+            <div class="bg-primary text-neutral-content rounded-full w-10 shadow-md">
+                <span class="text-sm font-bold">AD</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Grid -->
+    <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="card shadow-sm bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative overflow-hidden rounded-2xl">
+            <div class="absolute -right-2 -bottom-2 opacity-10"><i class="bi bi-broadcast text-6xl"></i></div>
+            <div class="card-body p-3">
+                <div class="flex items-center gap-1 mb-1">
+                    <i class="bi bi-activity text-sm opacity-80"></i>
+                    <span class="text-[10px] font-medium opacity-90 leading-tight">Hotspot Aktif</span>
+                </div>
+                <h3 class="text-2xl font-extrabold tracking-tight">{{ stats.active_customers }}</h3>
+            </div>
+        </div>
+
+        <div class="card shadow-sm bg-gradient-to-br from-emerald-500 to-green-600 text-white relative overflow-hidden rounded-2xl">
+            <div class="absolute -right-2 -bottom-2 opacity-10"><i class="bi bi-people text-6xl"></i></div>
+            <div class="card-body p-3">
+                <div class="flex items-center gap-1 mb-1">
+                    <i class="bi bi-router text-sm opacity-80"></i>
+                    <span class="text-[10px] font-medium opacity-90 leading-tight">Pelanggan Lunas</span>
+                </div>
+                <h3 class="text-2xl font-extrabold tracking-tight">{{ stats.total_customers - stats.nunggak_customers }}</h3>
+            </div>
+        </div>
+
+        <div class="card shadow-sm bg-gradient-to-br from-rose-500 to-red-600 text-white relative overflow-hidden rounded-2xl">
+            <div class="absolute -right-2 -bottom-2 opacity-10"><i class="bi bi-exclamation-triangle text-6xl"></i></div>
+            <div class="card-body p-3">
+                <div class="flex items-center gap-1 mb-1">
+                    <i class="bi bi-exclamation-triangle text-sm opacity-80"></i>
+                    <span class="text-[10px] font-medium opacity-90 leading-tight">Nunggak</span>
+                </div>
+                <h3 class="text-2xl font-extrabold tracking-tight">{{ stats.nunggak_customers }}</h3>
+            </div>
+        </div>
+
+        <div class="card shadow-sm bg-gradient-to-br from-indigo-600 to-purple-800 text-white relative overflow-hidden rounded-2xl">
+            <div class="absolute -right-2 -bottom-2 opacity-10"><i class="bi bi-graph-up text-6xl"></i></div>
+            <div class="card-body p-3">
+                <div class="flex items-center gap-1 mb-1">
+                    <i class="bi bi-bullseye text-sm opacity-80"></i>
+                    <span class="text-[10px] font-medium opacity-90 leading-tight">Estimasi Omzet</span>
+                </div>
+                <h3 class="text-xl font-extrabold tracking-tight truncate">Rp {{ stats.est_omset|currency }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions (Shortcut Portal) -->
+    <div class="bg-white rounded-2xl shadow-sm border border-base-200 p-5 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-sm text-gray-800">Akses Portal</h3>
+            <i class="bi bi-box-arrow-up-right text-primary"></i>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <a href="/client/login" target="_blank" class="btn btn-outline btn-sm normal-case text-xs justify-start h-auto py-3 rounded-xl border-base-300">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mr-2">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                Portal Client
+            </a>
+            <a href="/tech/dashboard" target="_blank" class="btn btn-outline btn-sm normal-case text-xs justify-start h-auto py-3 rounded-xl border-base-300">
+                <div class="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center mr-2">
+                    <i class="bi bi-phone-fill"></i>
+                </div>
+                Portal Teknisi
+            </a>
+            <a href="/reseller/dashboard" target="_blank" class="btn btn-outline btn-sm normal-case text-xs justify-start h-auto py-3 rounded-xl border-base-300">
+                <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mr-2">
+                    <i class="bi bi-shop"></i>
+                </div>
+                Portal Mitra
+            </a>
+            <a href="/landing-page" target="_blank" class="btn btn-outline btn-sm normal-case text-xs justify-start h-auto py-3 rounded-xl border-base-300">
+                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mr-2">
+                    <i class="bi bi-globe"></i>
+                </div>
+                Landing Page
+            </a>
+        </div>
+    </div>
+
+    <!-- Mini Info Server -->
+    <div class="bg-white rounded-2xl shadow-sm border border-base-200 p-5 mb-4">
+        <h3 class="font-bold text-sm mb-4">Sistem & Jaringan</h3>
+        <div class="flex justify-between items-center text-xs pb-3 mb-3 border-b border-base-100">
+            <span class="opacity-70 flex items-center gap-2 font-medium"><i class="bi bi-hdd-network text-primary"></i> RADIUS Server</span>
+            <span class="badge badge-success badge-sm badge-outline">Online</span>
+        </div>
+        <div class="flex justify-between items-center text-xs pb-3 mb-3 border-b border-base-100">
+            <span class="opacity-70 flex items-center gap-2 font-medium"><i class="bi bi-router text-warning"></i> Router Terhubung</span>
+            <span class="font-bold text-sm">{{ stats.online_routers }} Unit</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+            <span class="opacity-70 flex items-center gap-2 font-medium"><i class="bi bi-ticket-perforated text-secondary"></i> Stok Voucher</span>
+            <span class="font-bold text-sm">{{ stats.available_vouchers }} Pcs</span>
+        </div>
+    </div>
+
+    <!-- Mobile Chart -->
+    <div class="bg-white rounded-2xl shadow-sm border border-base-200 p-5 mb-4">
+        <h3 class="font-bold text-sm mb-4 flex items-center gap-2"><i class="bi bi-graph-up-arrow text-primary"></i> Pendapatan 7 Hari</h3>
+        <div style="position: relative; height: 180px; width: 100%;">
+            <canvas id="incomeChartMob"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- DESKTOP DASHBOARD (Original Layout)        -->
+<!-- ========================================== -->
+<div class="hidden lg:block">
+
+    <!-- Header -->
+    {% if update_available %}
+    <div class="alert alert-info shadow-sm mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <i class="bi bi-cloud-arrow-down-fill text-2xl"></i>
+        <div class="flex-1">
+            <h3 class="font-bold">Update Tersedia! Versi {{ update_available.version }}</h3>
+            <p class="text-sm opacity-90">Versi baru telah dirilis. Silakan update sistem Anda.</p>
+            <div class="mt-2">
+                <p class="text-xs opacity-70 mb-1">Jalankan perintah ini di Terminal VPS:</p>
+                <div class="mockup-code bg-black text-white p-3 text-xs w-full max-w-lg">
+                    <pre data-prefix="$"><code>curl -s https://mikrofun.site/updates/install.sh | bash</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h2 class="text-2xl font-bold">Dashboard Overview</h2>
+            <p class="text-sm opacity-60">Radius Panel Monitor</p>
+        </div>
+        <a href="/customers/add" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Add Customer
+        </a>
+    </div>
+
+    <!-- Stats Row (DaisyUI Stats) -->
+    <div class="stats stats-vertical lg:stats-horizontal shadow bg-base-100 w-full mb-8">
+
+        <!-- Total Customers -->
+        <div class="stat">
+            <div class="stat-figure text-primary">
+                <i class="bi bi-people text-3xl"></i>
+            </div>
+            <div class="stat-title">Total Customers</div>
+            <div class="stat-value text-primary">{{ stats.total_customers }}</div>
+            <div class="stat-desc">Registered Users</div>
+        </div>
+
+        <!-- Active Sessions -->
+        <div class="stat">
+            <div class="stat-figure text-success">
+                <i class="bi bi-activity text-3xl"></i>
+            </div>
+            <div class="stat-title">Active Sessions</div>
+            <div class="stat-value text-success">{{ stats.active_customers }}</div>
+            <div class="stat-desc">Online Users</div>
+        </div>
+
+        <!-- Routers -->
+        <div class="stat">
+            <div class="stat-figure text-warning">
+                <i class="bi bi-router text-3xl"></i>
+            </div>
+            <div class="stat-title">Routers Online</div>
+            <div class="stat-value text-warning">{{ stats.online_routers }}</div>
+            <div class="stat-desc">Connected NAS</div>
+        </div>
+
+        <!-- Vouchers -->
+        <div class="stat">
+            <div class="stat-figure text-secondary">
+                <i class="bi bi-ticket-perforated text-3xl"></i>
+            </div>
+            <div class="stat-title">Voucher Pool</div>
+            <div class="stat-value text-secondary">{{ stats.available_vouchers }}</div>
+            <div class="stat-desc">Ready to use</div>
+        </div>
+    </div>
+
+    <!-- Billing & Extras Stats Row -->
+    <div class="stats stats-vertical lg:stats-horizontal shadow bg-base-100 w-full mb-8">
+
+        <!-- Monthly Income -->
+        <div class="stat">
+            <div class="stat-figure text-emerald-600">
+                <i class="bi bi-cash-stack text-3xl"></i>
+            </div>
+            <div class="stat-title">Pendapatan (Bulan Ini)</div>
+            <div class="stat-value text-emerald-600 text-3xl">Rp {{ stats.monthly_income|currency }}</div>
+            <div class="stat-desc">Transaksi Approved</div>
+        </div>
+
+        <!-- Potential Omset -->
+        <div class="stat">
+            <div class="stat-figure text-indigo-600">
+                <i class="bi bi-graph-up-arrow text-3xl"></i>
+            </div>
+            <div class="stat-title text-indigo-600 font-bold italic">Estimasi Potensi Omzet</div>
+            <div class="stat-value text-indigo-600 text-3xl">Rp {{ stats.est_omset|currency }}</div>
+            <div class="stat-desc">Target dari {{ stats.active_customers }} User Aktif</div>
+        </div>
+
+        <!-- Pending Payments -->
+        <div class="stat">
+            <div class="stat-figure text-orange-500">
+                <i class="bi bi-clock-history text-3xl"></i>
+            </div>
+            <div class="stat-title">Menunggu Pembayaran</div>
+            <div class="stat-value text-orange-500">{{ stats.pending_payments }}</div>
+            <div class="stat-desc">Tagihan belum Lunas</div>
+        </div>
+
+        <!-- Total ODP -->
+        <div class="stat">
+            <div class="stat-figure text-slate-500">
+                <i class="bi bi-geo-alt text-3xl"></i>
+            </div>
+            <div class="stat-title">Total ODP</div>
+            <div class="stat-value text-slate-600">{{ stats.total_odp }}</div>
+            <div class="stat-desc">Titik Distribusi Fiber</div>
+        </div>
+
+    </div>
+
+    <!-- Desktop Charts & Online Status -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Chart 1: Income 7 Days -->
+        <div class="col-span-1 lg:col-span-2 card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <h3 class="card-title text-base opacity-80 mb-4"><i class="bi bi-graph-up-arrow text-primary"></i>
+                    Pendapatan 7 Hari Terakhir</h3>
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="incomeChartDesk"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Online Status & Source -->
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <h3 class="card-title text-base opacity-80 mb-4"><i class="bi bi-broadcast text-success"></i> Status
+                    Klien Online</h3>
+
+                <div class="flex justify-between items-center text-sm mb-1">
+                    <span class="font-bold text-base-content/70">PPPoE</span>
+                    <div>
+                        <span class="badge badge-success badge-sm font-bold">{{ stats.on_p }} On</span>
+                        <span class="badge badge-neutral badge-sm">{{ stats.off_p }} Off</span>
+                    </div>
+                </div>
+                <progress class="progress progress-success w-full h-3 mb-5" value="{{ stats.on_p }}"
+                    max="{{ stats.tot_p if stats.tot_p > 0 else 1 }}"></progress>
+
+                <div class="flex justify-between items-center text-sm mb-1">
+                    <span class="font-bold text-base-content/70">IP Statis (MAC)</span>
+                    <div>
+                        <span class="badge badge-success badge-sm font-bold">{{ stats.on_s }} On</span>
+                        <span class="badge badge-neutral badge-sm">{{ stats.off_s }} Off</span>
+                    </div>
+                </div>
+                <progress class="progress progress-info w-full h-3 mb-5" value="{{ stats.on_s }}"
+                    max="{{ stats.tot_s if stats.tot_s > 0 else 1 }}"></progress>
+
+                <div class="divider my-1"></div>
+                <h3 class="card-title text-sm opacity-80 mt-1 mb-3"><i class="bi bi-pie-chart text-secondary"></i>
+                    Sumber Penghasilan (30 Hr)</h3>
+                <div style="position: relative; height: 150px; width: 100%;">
+                    <canvas id="sourceChartDesk"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Content -->
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Quick Actions Card -->
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <h3 class="card-title text-base opacity-70 mb-4">
+                    <i class="bi bi-lightning"></i> Quick Actions
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <a href="/customers/add" class="btn btn-outline btn-sm justify-start">
+                        <i class="bi bi-person-plus"></i> Add Customer
+                    </a>
+                    <a href="/routers/add" class="btn btn-outline btn-sm justify-start">
+                        <i class="bi bi-plus-circle"></i> Add Router
+                    </a>
+                    <a href="/vouchers/generate" class="btn btn-outline btn-sm justify-start">
+                        <i class="bi bi-magic"></i> Gen Voucher
+                    </a>
+                    <a href="/profiles/add" class="btn btn-outline btn-sm justify-start">
+                        <i class="bi bi-sliders"></i> Add Profile
+                    </a>
+                    <a href="/landing-page" target="_blank"
+                        class="btn btn-primary btn-outline btn-sm justify-start col-span-2 mt-2">
+                        <i class="bi bi-globe"></i> Lihat Landing Page
+                    </a>
+                    <a href="/client/login" target="_blank"
+                        class="btn btn-secondary btn-outline btn-sm justify-start col-span-2 mt-2">
+                        <i class="bi bi-box-arrow-in-right"></i> Buka Portal Client
+                    </a>
+                    <a href="{{ url_for('dispatch.index') }}"
+                        class="btn btn-accent btn-outline btn-sm justify-start col-span-2 mt-2">
+                        <i class="bi bi-briefcase"></i> Kelola Penugasan Teknisi
+                    </a>
+                    <a href="/tech/dashboard" target="_blank"
+                        class="btn border-emerald-500 text-emerald-600 hover:bg-emerald-500 hover:text-white btn-sm justify-start col-span-2 mt-2 mb-2">
+                        <i class="bi bi-phone"></i> Simulasi Portal Teknisi (Mobile)
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Server Info Card -->
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <h3 class="card-title text-base opacity-70 mb-4">
+                    <i class="bi bi-info-circle"></i> Server Info
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td class="opacity-60">Radius Service</td>
+                                <td>
+                                    <div class="badge badge-success badge-sm gap-2">ACTIVE</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opacity-60">Auth Port</td>
+                                <td class="font-mono">1812 UDP</td>
+                            </tr>
+                            <tr>
+                                <td class="opacity-60">Acct Port</td>
+                                <td class="font-mono">1813 UDP</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card bg-base-100 shadow-sm border border-base-200 mt-6 mb-8">
+        <div class="card-body p-4">
+            <h3 class="card-title text-base opacity-80 mb-3"><i class="bi bi-clock-history text-accent"></i> Transaksi
+                Terakhir</h3>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra table-sm w-full">
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Jenis</th>
+                            <th>Keterangan</th>
+                            <th class="text-right">Nominal (Net)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in stats.recent_tx %}
+                        <tr>
+                            <td class="text-xs opacity-70 font-mono">{{ tx.created_at or '-' }}</td>
+                            <td><span class="badge badge-outline badge-sm">{{ tx.source_type.replace('_',' ').title()
+                                    }}</span></td>
+                            <td class="text-xs truncate max-w-[200px]">{{ tx.description }}</td>
+                            <td class="text-right font-mono font-bold text-success">Rp {{ tx.net_profit|currency }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center opacity-50 py-4">Belum ada transaksi</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div> <!-- End of hidden lg:block wrapper -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const chartLabels = {{ stats.chart_labels | tojson
+    }};
+    const chartValues = {{ stats.chart_values | tojson }};
+    const sourceLabels = {{ stats.source_labels | tojson }};
+    const sourceValues = {{ stats.source_values | tojson }};
+
+    // 1. Line Chart Income 7 Days (Desktop)
+    const ctxDesk = document.getElementById('incomeChartDesk');
+    if (ctxDesk) {
+        new Chart(ctxDesk.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Net Profit (Rp)',
+                    data: chartValues,
+                    borderColor: 'rgba(34,197,94,1)',
+                    backgroundColor: 'rgba(34,197,94,0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: 'rgba(34,197,94,1)',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: v => 'Rp ' + v.toLocaleString('id-ID') } }
+                }
+            }
+        });
+    }
+
+    // 2. Line Chart Income 7 Days (Mobile)
+    const ctxMob = document.getElementById('incomeChartMob');
+    if (ctxMob) {
+        new Chart(ctxMob.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Net Profit (Rp)',
+                    data: chartValues,
+                    borderColor: 'rgba(34,197,94,1)',
+                    backgroundColor: 'rgba(34,197,94,0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: v => (v / 1000) + 'k' } },
+                    x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+    // 3. Doughnut Chart Source (Desktop)
+    const ctxSource = document.getElementById('sourceChartDesk');
+    if (ctxSource) {
+        new Chart(ctxSource.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: sourceLabels,
+                datasets: [{
+                    data: sourceValues,
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+    });
+</script>
+{% endblock %}

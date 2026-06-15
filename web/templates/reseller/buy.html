@@ -1,0 +1,144 @@
+{% extends "reseller/base.html" %}
+
+{% block content %}
+<div class="mb-5">
+    <h3 class="font-bold text-gray-800 text-xl">Pilih Paket Internet</h3>
+    <p class="text-xs text-gray-500 mt-1">Saldo Anda akan dipotong sesuai harga modal setelah diskon keagenan.</p>
+</div>
+
+<form method="POST" id="buyForm" onsubmit="return validateBuy()">
+    <!-- Profile Cards -->
+    <div class="space-y-3 mb-32">
+        {% for p in profiles %}
+        <label class="cursor-pointer block"
+            onclick="selectProfile(this, {{ p.id }}, '{{ p.name }}', {{ p.price - (p.price * discount_percent / 100) }})">
+            <input type="radio" name="profile_id" value="{{ p.id }}" class="sr-only" required
+                data-profile-name="{{ p.name }}" data-normal-price="{{ p.price }}"
+                data-buy-price="{{ p.price - (p.price * discount_percent / 100) }}">
+
+            <div id="card-{{ p.id }}"
+                class="bg-white rounded-2xl border-2 border-gray-100 p-4 transition-all duration-200 shadow-sm hover:border-gray-300">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="font-bold text-gray-800">{{ p.name }}</h4>
+                        <div class="flex flex-wrap gap-2 mt-1">
+                            <span class="badge badge-sm badge-neutral">{{ p.validity }} Jam</span>
+                            {% if p.rate_limit %}
+                            <span class="badge badge-sm badge-outline">{{ p.rate_limit }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <!-- Radio Circle Indicator -->
+                    <div id="indicator-{{ p.id }}"
+                        class="h-6 w-6 flex-shrink-0 rounded-full border-2 border-gray-300 flex items-center justify-center transition-all">
+                        <i class="fas fa-check text-white text-xs opacity-0" id="check-{{ p.id }}"></i>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-3 border-t border-gray-100 flex justify-between items-end">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block line-through">
+                            Normal: Rp {{ "{:,.0f}".format(p.price).replace(',', '.') }}
+                        </span>
+                        <span class="text-xs font-semibold text-gray-600">Harga Anda (Diskon {{ discount_percent
+                            }}%)</span>
+                    </div>
+                    <div class="text-lg font-extrabold font-mono" style="color: {{ reseller_theme_color }};">
+                        Rp {{ "{:,.0f}".format(p.price - (p.price * discount_percent / 100)).replace(',', '.') }}
+                    </div>
+                </div>
+            </div>
+        </label>
+        {% else %}
+        <div class="bg-amber-50 text-amber-800 p-5 rounded-2xl text-center border border-amber-200">
+            <i class="fas fa-exclamation-triangle text-3xl mb-2 block"></i>
+            <p class="text-sm font-semibold">Belum ada paket Voucher yang tersedia.</p>
+            <p class="text-xs mt-1 opacity-70">Hubungi Admin ISP untuk mengaktifkan paket.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Sticky Checkout Bar — above bottom nav (80px nav height) -->
+    <div class="fixed left-0 w-full bg-white border-t border-gray-200 z-40 transition-transform duration-300 shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.12)]"
+        id="checkoutBar" style="bottom: 80px; transform: translateY(100%);">
+        <div class="max-w-[480px] mx-auto px-4 py-3 flex justify-between items-center gap-3">
+            <div class="min-w-0">
+                <p class="text-[10px] text-gray-400 font-bold uppercase truncate" id="selectedProfileName">Pilih Paket
+                </p>
+                <div class="text-xl font-extrabold font-mono" id="selectedBuyPrice"
+                    style="color: {{ reseller_theme_color }};">Rp 0</div>
+            </div>
+            <button type="submit" id="btnSubmit" disabled
+                class="btn btn-md rounded-full px-6 shadow-lg flex-shrink-0 text-white"
+                style="background-color: {{ reseller_theme_color }}; min-width: 148px;">
+                Pilih Dulu <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+</form>
+
+<script>
+    const THEME_COLOR = "{{ reseller_theme_color }}";
+    const currentBalance = parseFloat("{{ balance|default(0) }}");
+    let selectedCardId = null;
+
+    function selectProfile(label, profileId, profileName, buyPrice) {
+        // Reset previous card
+        if (selectedCardId && selectedCardId !== profileId) {
+            const prev = document.getElementById('card-' + selectedCardId);
+            const prevInd = document.getElementById('indicator-' + selectedCardId);
+            const prevChk = document.getElementById('check-' + selectedCardId);
+            if (prev) { prev.style.borderColor = '#f3f4f6'; prev.style.background = ''; }
+            if (prevInd) { prevInd.style.borderColor = '#d1d5db'; prevInd.style.backgroundColor = ''; }
+            if (prevChk) prevChk.style.opacity = '0';
+        }
+
+        selectedCardId = profileId;
+
+        // Highlight selected card
+        const card = document.getElementById('card-' + profileId);
+        const ind = document.getElementById('indicator-' + profileId);
+        const chk = document.getElementById('check-' + profileId);
+        if (card) { card.style.borderColor = THEME_COLOR; card.style.background = THEME_COLOR + '08'; }
+        if (ind) { ind.style.borderColor = THEME_COLOR; ind.style.backgroundColor = THEME_COLOR; }
+        if (chk) chk.style.opacity = '1';
+
+        // Update checkout bar
+        const bar = document.getElementById('checkoutBar');
+        const nameEl = document.getElementById('selectedProfileName');
+        const priceEl = document.getElementById('selectedBuyPrice');
+        const btn = document.getElementById('btnSubmit');
+
+        nameEl.textContent = profileName;
+        priceEl.textContent = 'Rp ' + buyPrice.toLocaleString('id-ID');
+        bar.style.transform = 'translateY(0)';
+
+        if (buyPrice > currentBalance) {
+            btn.disabled = true;
+            btn.innerHTML = 'Saldo Kurang <i class="fas fa-times-circle ml-1"></i>';
+            btn.style.backgroundColor = '#ef4444';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = 'Cetak Sekarang <i class="fas fa-bolt ml-1"></i>';
+            btn.style.backgroundColor = THEME_COLOR;
+        }
+    }
+
+    function validateBuy() {
+        const selected = document.querySelector('input[name="profile_id"]:checked');
+        if (!selected) {
+            alert("Pilih paket terlebih dahulu.");
+            return false;
+        }
+        const buyPrice = parseFloat(selected.getAttribute('data-buy-price'));
+        if (buyPrice > currentBalance) {
+            alert('Saldo Anda tidak cukup untuk paket ini.');
+            return false;
+        }
+        const btn = document.getElementById('btnSubmit');
+        btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Memproses...';
+        btn.disabled = true;
+        return true;
+    }
+</script>
+{% endblock %}

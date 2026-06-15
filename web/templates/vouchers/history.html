@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Riwayat Penjualan Voucher{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-end">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Riwayat Penjualan</h1>
+        <p class="text-sm text-gray-500 mt-1">Daftar transaksi pembelian voucher dari Portal Klien</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="table w-full">
+            <thead class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wider">
+                <tr>
+                    <th class="px-6 py-4 rounded-tl-xl text-center">Tanggal</th>
+                    <th class="px-6 py-4">Pelanggan</th>
+                    <th class="px-6 py-4">Paket Voucher</th>
+                    <th class="px-6 py-4">Total</th>
+                    <th class="px-6 py-4 text-center">Metode</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4 text-center rounded-tr-xl">Kode Voucher</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for tx in transactions %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                        {{ tx.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-bold text-gray-800">{{ tx.customer_name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-gray-600">{{ tx.profile_name or '-' }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-bold text-gray-800">Rp {{ "{:,.0f}".format(tx.amount) }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                        {% if not tx.payment_channel or tx.payment_channel == '' %}
+                        <span class="text-gray-500"><i class="bi bi-bank me-1"></i> Manual</span>
+                        {% elif tx.payment_channel == 'MIDTRANS' %}
+                        <span class="text-blue-500"><i class="bi bi-lightning-fill me-1"></i> Midtrans</span>
+                        {% else %}
+                        <span class="text-orange-500"><i class="bi bi-credit-card-2-front me-1"></i> {{
+                            tx.payment_channel }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if tx.status == 'approved' %}
+                        <span class="badge badge-success text-white font-bold badge-sm gap-1"><i
+                                class="bi bi-check-circle-fill"></i> Selesai</span>
+                        {% elif tx.status == 'pending' %}
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-warning text-white font-bold badge-sm gap-1"><i
+                                    class="bi bi-clock-fill"></i> Pending</span>
+                            <form action="{{ url_for('vouchers.history_approve', payment_id=tx.id) }}" method="POST"
+                                class="inline"
+                                onsubmit="return confirm('Apakah Anda yakin ingin memproses/mencetak Voucher untuk transaksi ini secara manual?');">
+                                <button type="submit" class="btn btn-xs btn-success text-white tooltip"
+                                    data-tip="Approve & Generate Kode">
+                                    <i class="bi bi-check-lg"></i> Setujui
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <span class="badge badge-error text-white font-bold badge-sm gap-1"><i
+                                class="bi bi-x-circle-fill"></i> Ditolak</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        {% if tx.voucher_code %}
+                        <span class="badge badge-ghost badge-sm font-mono text-gray-800 font-bold tracking-widest">{{
+                            tx.voucher_code }}</span>
+                        {% else %}
+                        <span class="text-gray-400 text-xs italic">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                <i class="bi bi-receipt text-3xl text-gray-300"></i>
+                            </div>
+                            <p class="font-medium text-gray-600">Belum Ada Riwayat Transaksi Voucher</p>
+                            <p class="text-xs text-gray-400 mt-1">Transaksi pembelian voucher di portal klien akan
+                                muncul di sini.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

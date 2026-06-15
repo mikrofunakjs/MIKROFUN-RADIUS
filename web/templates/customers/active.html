@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-bold">Pelanggan PPPoE Aktif</h1>
+            <p class="text-sm opacity-60">Daftar pelanggan rumahan yang masa aktifnya masih berjalan.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('customers.index') }}" class="btn btn-ghost btn-sm">
+                <i class="bi bi-people"></i> Semua Customer
+            </a>
+        </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr>
+                        <th class="bg-base-200/50">Pelanggan</th>
+                        <th class="bg-base-200/50">Paket / Router</th>
+                        <th class="bg-base-200/50">Jatuh Tempo</th>
+                        <th class="bg-base-200/50">Sisa Hari</th>
+                        <th class="bg-base-200/50 text-center">Status</th>
+                        <th class="bg-base-200/50 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in customers %}
+                    <tr class="hover">
+                        <td>
+                            <div class="font-bold">{{ c.name }}</div>
+                            <div class="text-xs opacity-50 font-mono">{{ c.username }}</div>
+                        </td>
+                        <td>
+                            <div class="text-sm">{{ c.profile_name or 'No Profile' }}</div>
+                            <div class="text-[10px] opacity-60 uppercase font-black"><i class="bi bi-router"></i> {{ c.router_name or '-' }}</div>
+                        </td>
+                        <td>
+                            <div class="text-sm">{{ c.due_date or '-' }}</div>
+                        </td>
+                        <td>
+                            {% if c.days_left is not none %}
+                                {% if c.days_left < 0 %}
+                                    <span class="badge badge-error badge-sm font-bold">Expired {{ c.days_left|abs }} Hari</span>
+                                {% elif c.days_left <= 3 %}
+                                    <span class="badge badge-warning badge-sm font-bold text-black">{{ c.days_left }} Hari</span>
+                                {% else %}
+                                    <span class="badge badge-success badge-sm font-bold">{{ c.days_left }} Hari</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="opacity-30">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if c.is_online %}
+                                <div class="badge badge-success badge-outline gap-1 animate-pulse">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-success"></span> Online
+                                </div>
+                            {% else %}
+                                <div class="badge badge-ghost badge-outline opacity-40 text-[10px]">Offline</div>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            <div class="flex justify-end gap-1">
+                                {% if c.is_online %}
+                                <button onclick="kickUser('{{ c.id }}', '{{ c.username }}')" class="btn btn-square btn-ghost btn-sm text-error" title="Kick Session">
+                                    <i class="bi bi-lightning-charge-fill"></i>
+                                </button>
+                                {% endif %}
+                                <button onclick="confirmIsolir('{{ c.id }}', '{{ c.name }}')" class="btn btn-square btn-ghost btn-sm text-warning" title="Hentikan / Isolir">
+                                    <i class="bi bi-stop-circle-fill"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-10 opacity-40 italic">Tidak ada pelanggan aktif saat ini.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function kickUser(id, username) {
+    if(!confirm(`Putus koneksi ${username} sekarang?`)) return;
+    
+    fetch(`{{ url_for('customers.kick_session', id=0) }}`.replace('0', id), {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert("Gagal: " + data.message);
+        }
+    })
+    .catch(err => alert("Terjadi kesalahan: " + err));
+}
+
+function confirmIsolir(id, name) {
+    if(confirm(`Yakin ingin mengisolir ${name}? User akan otomatis terputus dari internet.`)) {
+        location.href = `{{ url_for('customers.isolir', id=0) }}`.replace('0', id);
+    }
+}
+
+function syncOnlineData() {
+    console.log('Smart Sync: Global sync via API...');
+    fetch("{{ url_for('customers.sync_online') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log('Sync result:', data);
+    })
+    .catch(err => console.error('Sync error:', err));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    syncOnlineData();
+});
+</script>
+{% endblock %}

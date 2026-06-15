@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-8 flex justify-between items-center">
+    <div>
+        <h2 class="text-2xl font-bold">WhatsApp Gateway</h2>
+        <p class="text-sm opacity-60">Pilih dan konfigurasikan provider WhatsApp untuk pengiriman notifikasi.</p>
+    </div>
+    <a href="{{ url_for('wa_gateway.templates') }}" class="btn btn-primary btn-sm rounded-xl">
+        <i class="bi bi-chat-quote"></i> Custom Chat
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Pengaturan Provider -->
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body">
+            <h3 class="card-title text-base opacity-70 mb-4">
+                <i class="bi bi-gear"></i> Konfigurasi Gateway
+            </h3>
+
+            <form method="POST" action="{{ url_for('wa_gateway.index') }}">
+                <div class="form-control mb-4">
+                    <label class="label"><span class="label-text font-bold">Pilih Provider WA:</span></label>
+                    <div class="flex gap-4">
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="wa_provider" value="fonnte" class="radio radio-primary radio-sm"
+                                {% if settings.get('wa_provider', 'fonnte' )=='fonnte' %}checked{% endif %}
+                                onchange="toggleProviderSettings()" />
+                            <span class="label-text">Fonnte API (Cloud)</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="wa_provider" value="baileys" class="radio radio-error radio-sm" {%
+                                if settings.get('wa_provider', 'fonnte' )=='baileys' %}checked{% endif %}
+                                onchange="toggleProviderSettings()" />
+                            <span class="label-text">Mikrofun Node (Local)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Fonnte Settings -->
+                <div id="fonnteSettings" class="{{ 'hidden' if settings.get('wa_provider') == 'baileys' else '' }}">
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text">Fonnte API Token</span>
+                            <a href="https://fonnte.com" target="_blank" class="text-xs text-primary">Dapatkan Token</a>
+                        </label>
+                        <input type="text" name="fonnte_token" value="{{ settings.get('fonnte_token', '') }}"
+                            class="input input-sm border-base-300 w-full font-mono bg-base-50"
+                            placeholder="Masukkan token Fonnte" />
+                    </div>
+                </div>
+
+                <!-- Baileys Settings -->
+                <div id="baileysSettings"
+                    class="{{ 'hidden' if settings.get('wa_provider', 'fonnte') == 'fonnte' else '' }}">
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text">Node.js Endpoint</span>
+                            <span class="label-text-alt text-info"><i class="bi bi-info-circle"></i> URL Service
+                                Lokal</span>
+                        </label>
+                        <input type="text" name="wa_baileys_endpoint"
+                            value="{{ settings.get('wa_baileys_endpoint', 'http://127.0.0.1:3000') }}"
+                            class="input input-sm border-base-300 w-full font-mono bg-base-50"
+                            placeholder="http://127.0.0.1:3000" />
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button type="submit" class="btn btn-primary btn-sm px-6">
+                        <i class="bi bi-save"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Status Mikrofun Node (Baileys) -->
+    <div class="card bg-base-100 shadow-sm border border-base-200" id="baileysStatusCard"
+        style="{{ 'opacity: 0.5; pointer-events: none;' if settings.get('wa_provider') != 'baileys' else '' }}">
+        <div class="card-body">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="card-title text-base opacity-70">
+                    <i class="bi bi-whatsapp text-error"></i> Status Mikrofun Node
+                </h3>
+                <span id="waStatusBadge" class="badge badge-lg">Memeriksa...</span>
+            </div>
+
+            <div
+                class="flex-1 flex flex-col items-center justify-center p-4 bg-base-50 rounded-xl border border-dashed border-base-300">
+                <!-- QR Code (Connecting) -->
+                <div id="statusQR" class="text-center w-full max-w-[240px] hidden">
+                    <p class="font-bold text-gray-700 mb-2">Scan untuk Menghubungkan</p>
+                    <div class="bg-white p-2 rounded-xl shadow-sm mb-3">
+                        <img id="qrImage" src="" alt="WhatsApp QR Code"
+                            class="w-full aspect-square opacity-20 blur-sm mix-blend-multiply" />
+                    </div>
+                    <p class="text-xs opacity-60">Buka WhatsApp > Perangkat Taut > Scan QR Code</p>
+                    <div class="mt-2 text-center text-[10px] text-warning flex items-center justify-center gap-1">
+                        <span class="loading loading-spinner loading-xs"></span> Menunggu scan...
+                    </div>
+                </div>
+
+                <!-- Offline State -->
+                <div id="statusOffline" class="hidden text-center justify-center items-center py-6">
+                    <span class="icon-[tabler--wifi-off] text-5xl text-error mb-2 drop-shadow-sm"></span>
+                    <div class="text-base font-bold text-base-content mt-2">Koneksi Terputus</div>
+                    <div id="offlineErrorText" class="text-xs text-base-content/60 mt-1 max-w-sm mx-auto">Pastikan
+                        service PM2 NodeJS mikrofun-wa berjalan di VPS Anda.</div>
+                    <button onclick="pollStatus()" class="btn btn-sm btn-outline btn-error mt-4">
+                        <span class="icon-[tabler--refresh]"></span> Cek Ulang
+                    </button>
+                </div>
+
+                <!-- Connected -->
+                <div id="statusConnected" class="text-center hidden">
+                    <i class="bi bi-phone-vibrate text-5xl text-success mb-2"></i>
+                    <p class="font-bold text-gray-700">WhatsApp Terhubung!</p>
+                    <p class="text-xs opacity-60 mb-4">Gateway Mikrofun Node siap mengirim notifikasi.</p>
+                    <button type="button" onclick="logoutWa()" class="btn btn-error btn-outline btn-sm">
+                        <i class="bi bi-box-arrow-right"></i> Putuskan Tautan
+                    </button>
+                </div>
+
+                <!-- Initializing -->
+                <div id="statusInit" class="text-center">
+                    <span class="loading loading-spinner text-error loading-lg mb-2"></span>
+                    <p class="text-sm opacity-60">Memuat status Node.js...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Message Sender -->
+    <div class="card bg-base-100 shadow-sm border border-base-200 lg:col-span-2">
+        <div class="card-body">
+            <h3 class="card-title text-base opacity-80 mb-2">
+                <i class="bi bi-send text-primary"></i> Uji Coba Pengiriman
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Nomor Tujuan (Ex: 0812...)</span></label>
+                    <input type="text" id="testTarget" class="input flex-1 input-bordered w-full input-sm"
+                        placeholder="Mulai dengan 08" />
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Pesan Uji Coba</span></label>
+                    <div class="flex gap-2">
+                        <input type="text" id="testMessage" class="input flex-1 input-bordered w-full input-sm"
+                            value="Halo! Ini pesan tes dari Mikrofun." />
+                        <button onclick="sendTestWA()" id="btnTestWa" class="btn btn-primary btn-sm px-6">
+                            Kirim <i class="bi bi-cursor"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <p id="testWaResult" class="text-xs mt-2 font-mono hidden"></p>
+        </div>
+    </div>
+
+    <!-- Pengingat Tagihan Otomatis -->
+    <div class="card bg-base-100 shadow-sm border border-base-200 lg:col-span-2" id="reminder">
+        <div class="card-body">
+            <h3 class="card-title text-base opacity-70 mb-4">
+                <i class="bi bi-bell text-warning"></i> Pengingat Tagihan Otomatis
+            </h3>
+            <p class="text-xs opacity-60 mb-4">
+                Kirim notifikasi WA otomatis ke pelanggan yang masa aktifnya akan segera berakhir.
+                Jalankan script <code class="font-mono bg-base-200 px-1 rounded">wa_reminder.py</code> via cron setiap hari.
+            </p>
+
+            <form method="POST" action="{{ url_for('wa_gateway.save_reminder') }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <label class="label cursor-pointer gap-3 border border-base-300 rounded-xl p-4">
+                        <input type="checkbox" name="wa_reminder_enabled" value="1"
+                            class="checkbox checkbox-primary checkbox-sm"
+                            {% if reminder.get('wa_reminder_enabled', '1') == '1' %}checked{% endif %} />
+                        <span class="label-text font-bold">Aktifkan Pengingat Tagihan</span>
+                    </label>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Kirim pengingat <b class="text-primary">{{ reminder.get('wa_reminder_days', '3') }}</b> hari sebelum jatuh tempo</span>
+                        </label>
+                        <input type="range" name="wa_reminder_days" min="1" max="14" value="{{ reminder.get('wa_reminder_days', '3') }}"
+                            class="range range-primary range-sm"
+                            oninput="document.getElementById('daysVal').innerText = this.value" />
+                        <div class="flex justify-between text-xs opacity-50 mt-1">
+                            <span>1 hari</span>
+                            <span id="daysVal">{{ reminder.get('wa_reminder_days', '3') }}</span>
+                            <span>14 hari</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="text-xs opacity-60">
+                        <i class="bi bi-terminal"></i> Cron: <code class="font-mono bg-base-200 px-1 rounded text-xs">
+                            0 8 * * * /opt/mikrofun/venv/bin/python /opt/mikrofun/wa_reminder.py
+                        </code>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm px-6">
+                        <i class="bi bi-save"></i> Simpan Pengingat
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Panduan & Manfaat WhatsApp Gateway -->
+    <div class="card bg-base-100 shadow-sm border border-base-200 lg:col-span-2 mt-2">
+        <div class="card-body">
+            <h3 class="card-title text-base opacity-70 mb-4">
+                <i class="bi bi-book"></i> Panduan & Manfaat WhatsApp Gateway
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Panduan -->
+                <div>
+                    <h4 class="font-bold mb-3 border-b pb-2">Panduan Setup Mikrofun Node (Lokal)</h4>
+                    <ul class="steps steps-vertical text-sm">
+                        <li class="step step-primary">
+                            <div class="text-left ml-2">
+                                <h5 class="font-bold">Pastikan Service Berjalan</h5>
+                                <p class="text-xs text-gray-500 mt-1">Pilih Layanan Mikrofun Node. Status di atas harus
+                                    menunjukkan "Scan untuk Menghubungkan".</p>
+                            </div>
+                        </li>
+                        <li class="step step-primary">
+                            <div class="text-left ml-2">
+                                <h5 class="font-bold">Scan QR Code</h5>
+                                <p class="text-xs text-gray-500 mt-1">Buka aplikasi WhatsApp di HP Anda (Pilih Setting >
+                                    Perangkat Taut > Tautkan Perangkat). Scan barcode yang muncul.</p>
+                            </div>
+                        </li>
+                        <li class="step step-primary">
+                            <div class="text-left ml-2">
+                                <h5 class="font-bold">Selesai</h5>
+                                <p class="text-xs text-gray-500 mt-1">Setelah status berubah menjadi "Terhubung", sistem
+                                    sudah siap mengirimkan pesan tagihan WA dari Dashboard Pelanggan.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Manfaat -->
+                <div>
+                    <h4 class="font-bold mb-3 border-b pb-2">Manfaat Fitur Gateway</h4>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-start gap-3">
+                            <i class="bi bi-send-check text-2xl text-success flex-shrink-0"></i>
+                            <div>
+                                <h5 class="font-bold text-sm">Kirim Tagihan Otomatis</h5>
+                                <p class="text-xs text-gray-500">Kirim nota perpanjangan atau peringatan isolir langsung
+                                    ke nomor WA pelanggan secara satu persatu melalui tabel data.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i class="bi bi-shield-check text-2xl text-info flex-shrink-0"></i>
+                            <div>
+                                <h5 class="font-bold text-sm">Tanpa Biaya Langganan API Fonnte</h5>
+                                <p class="text-xs text-gray-500">Dengan menggunakan opsi Mikrofun Node (Baileys), Anda
+                                    tidak perlu membayar layanan bulanan/tahunan kepada Fonnte karena pengiriman
+                                    berjalan mandiri di VPS.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i class="bi bi-speedometer2 text-2xl text-primary flex-shrink-0"></i>
+                            <div>
+                                <h5 class="font-bold text-sm">Pengiriman Super Cepat</h5>
+                                <p class="text-xs text-gray-500">Karena engine WA terinstall secara lokal bersamaan
+                                    dengan Mikrofun, tidak ada latensi dan jeda jaringan saat tombol 'Kirim WA' ditekan.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleProviderSettings() {
+        const provider = document.querySelector('input[name="wa_provider"]:checked').value;
+        const fonnte = document.getElementById('fonnteSettings');
+        const baileys = document.getElementById('baileysSettings');
+        const statusCard = document.getElementById('baileysStatusCard');
+
+        if (provider === 'fonnte') {
+            fonnte.classList.remove('hidden');
+            baileys.classList.add('hidden');
+            statusCard.style.opacity = '0.5';
+            statusCard.style.pointerEvents = 'none';
+        } else {
+            fonnte.classList.add('hidden');
+            baileys.classList.remove('hidden');
+            statusCard.style.opacity = '1';
+            statusCard.style.pointerEvents = 'auto';
+            pollStatus(); // Start polling immediately when selected
+        }
+    }
+
+    // Polling logic for Baileys Node
+    let pollingInterval;
+
+    function updateStatusUI(data) {
+        document.getElementById('statusInit').classList.add('hidden');
+        document.getElementById('statusOffline').classList.add('hidden');
+        document.getElementById('statusQR').classList.add('hidden');
+        document.getElementById('statusConnected').classList.add('hidden');
+        const badge = document.getElementById('waStatusBadge');
+
+        if (data.status === 'offline') {
+            document.getElementById('statusOffline').classList.remove('hidden');
+            badge.className = 'badge badge-lg badge-error font-bold';
+            badge.innerText = 'OFFLINE';
+
+            // Display specific error if provided by Node.js backend
+            const errorText = document.getElementById('offlineErrorText');
+            if (errorText && data.error) {
+                errorText.innerText = data.error;
+            } else if (errorText) {
+                errorText.innerText = "Koneksi terputus. Pastikan service PM2 NodeJS berjalan.";
+            }
+
+        } else if (data.status === 'qr') {
+            document.getElementById('statusQR').classList.remove('hidden');
+            const img = document.getElementById('qrImage');
+            img.src = data.qr;
+            if (data.qr) {
+                img.classList.remove('opacity-20', 'blur-sm'); // Reveal when ready
+            }
+            badge.className = 'badge badge-lg badge-warning font-bold';
+            badge.innerText = 'PENDING';
+        } else if (data.status === 'connected') {
+            document.getElementById('statusConnected').classList.remove('hidden');
+            badge.className = 'badge badge-lg badge-success font-bold text-white';
+            badge.innerText = 'CONNECTED';
+        } else {
+            // Initializing / Disconnected
+            document.getElementById('statusInit').classList.remove('hidden');
+            badge.className = 'badge badge-lg badge-neutral font-bold';
+            badge.innerText = 'WAITING';
+        }
+    }
+
+    function pollStatus() {
+        if (document.querySelector('input[name="wa_provider"]:checked').value !== 'baileys') return;
+
+        fetch("{{ url_for('wa_gateway.get_wa_status') }}")
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then(data => updateStatusUI(data))
+            .catch(err => {
+                console.error('Status poll error:', err);
+                updateStatusUI({ status: 'offline', error: 'Gagal cek status: ' + err.message });
+            });
+    }
+
+    function logoutWa() {
+        if (confirm("Anda yakin ingin memutuskan tautan WhatsApp? Anda harus scan Ulang QR Code.")) {
+            fetch("{{ url_for('wa_gateway.logout_wa') }}", { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Berhasil terputus!');
+                        pollStatus();
+                    } else {
+                        alert('Gagal: ' + data.error);
+                    }
+                });
+        }
+    }
+
+    // Start polling if Baileys is active on load
+    document.addEventListener('DOMContentLoaded', () => {
+        if (document.querySelector('input[name="wa_provider"]:checked').value === 'baileys') {
+            // Poll every 3 seconds
+            pollStatus();
+            pollingInterval = setInterval(pollStatus, 3000);
+        }
+    });
+
+    document.querySelectorAll('input[name="wa_provider"]').forEach(r => {
+        r.addEventListener('change', () => {
+            clearInterval(pollingInterval);
+            if (r.value === 'baileys') {
+                pollStatus();
+                pollingInterval = setInterval(pollStatus, 3000);
+            }
+        });
+    });
+
+    function sendTestWA() {
+        const target = document.getElementById('testTarget').value;
+        const msg = document.getElementById('testMessage').value;
+        const resultLabel = document.getElementById('testWaResult');
+        const btn = document.getElementById('btnTestWa');
+
+        if (!target) return alert('Silakan isi nomor tujuan');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Mengirim...';
+        resultLabel.classList.remove('hidden', 'text-success', 'text-error');
+        resultLabel.className = 'text-xs mt-2 font-mono text-info';
+        resultLabel.innerText = 'Mengirim pesan ke API...';
+
+        fetch("{{ url_for('wa_gateway.test_send') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: target, message: msg })
+        })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = 'Kirim <i class="bi bi-cursor"></i>';
+                if (data.success) {
+                    resultLabel.classList.add('text-success');
+                    resultLabel.innerText = '✅ ' + data.message;
+                } else {
+                    resultLabel.classList.add('text-error');
+                    resultLabel.innerText = '❌ Gagal: ' + data.error;
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = 'Kirim <i class="bi bi-cursor"></i>';
+                resultLabel.classList.add('text-error');
+                resultLabel.innerText = '❌ Gagal: ' + (err.message || err);
+            });
+    }
+</script>
+{% endblock %}

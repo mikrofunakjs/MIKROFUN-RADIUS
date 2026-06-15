@@ -1,0 +1,276 @@
+{% extends "reseller/base.html" %}
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-xl font-bold">Isi Saldo Deposit</h2>
+    <p class="text-sm opacity-70">Top-up saldo Anda secara otomatis via Payment Gateway.</p>
+</div>
+
+<div class="card bg-base-100 shadow-md border-t-4" style="border-top-color: {{ reseller_theme_color }}">
+    <div class="card-body">
+        <form method="POST" id="topupForm">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Nominal Top-Up (Rp)</span></label>
+                <input type="number" name="amount" id="amountInput" class="input input-bordered text-lg font-bold"
+                    value="50000" min="10000" required />
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-xs btn-outline" onclick="setAmount(20000)">20rb</button>
+                    <button type="button" class="btn btn-xs btn-outline" onclick="setAmount(50000)">50rb</button>
+                    <button type="button" class="btn btn-xs btn-outline" onclick="setAmount(100000)">100rb</button>
+                    <button type="button" class="btn btn-xs btn-outline" onclick="setAmount(200000)">200rb</button>
+                </div>
+            </div>
+
+            <div class="form-control mb-6">
+                <label class="label"><span class="label-text font-bold">Pilih Layanan & Metode</span></label>
+
+                {% if active_gateway == 'both' %}
+                <div class="flex gap-2 mb-4 p-1 bg-base-200 rounded-xl">
+                    <button type="button" id="tab-tripay" class="btn btn-sm flex-1 rounded-lg"
+                        onclick="switchGateway('tripay')">Tripay</button>
+                    <button type="button" id="tab-midtrans" class="btn btn-sm flex-1 rounded-lg"
+                        onclick="switchGateway('midtrans')">Midtrans</button>
+                </div>
+                {% endif %}
+
+                <div id="methodList" class="grid grid-cols-1 gap-2 max-h-80 overflow-y-auto p-1">
+                    <!-- Methods will be loaded here -->
+                </div>
+                <input type="hidden" name="method_code" id="methodCodeInput" required>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn btn-primary w-full" disabled>
+                Cek Out Sekarang
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentGateway = "{{ 'tripay' if active_gateway in ['tripay', 'both'] else ('midtrans' if active_gateway == 'midtrans' else 'duitku') }}";
+    const activeGatewayMode = "{{ active_gateway }}";
+
+    function setAmount(val) {
+        document.getElementById('amountInput').value = val;
+        fetchMethods();
+    }
+
+    function switchGateway(gw) {
+        currentGateway = gw;
+        if (activeGatewayMode === 'both') {
+            if (document.getElementById('tab-tripay')) {
+                document.getElementById('tab-tripay').className = gw === 'tripay' ? 'btn btn-sm btn-primary flex-1 shadow-sm' : 'btn btn-sm btn-ghost flex-1';
+            }
+            if (document.getElementById('tab-midtrans')) {
+                document.getElementById('tab-midtrans').className = gw === 'midtrans' ? 'btn btn-sm btn-primary flex-1 shadow-sm' : 'btn btn-sm btn-ghost flex-1';
+            }
+        }
+        fetchMethods();
+    }
+
+    let timeout = null;
+    document.getElementById('amountInput').addEventListener('input', function () {
+        clearTimeout(timeout);
+        timeout = setTimeout(fetchMethods, 500);
+    });
+
+    // Data passed from backend for Tripay
+    const tripayChannels = {{ tripay_channels| tojson if tripay_channels else '[]' }};
+
+    async function fetchMethods() {
+        const amount = document.getElementById('amountInput').value;
+        const list = document.getElementById('methodList');
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (amount < 10000) {
+            list.innerHTML = '<div class="text-error text-center text-xs p-4">Minimal Top-Up Rp 10.000</div>';
+            submitBtn.disabled = true;
+            return;
+        }
+
+        if (currentGateway === 'tripay') {
+            renderTripayMethods(tripayChannels);
+        } else if (currentGateway === 'midtrans') {
+            renderMidtransMethods();
+        } else {
+            fetchDuitkuMethods(amount);
+        }
+    }
+
+    function renderTripayMethods(channels) {
+        const list = document.getElementById('methodList');
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.onclick = null; // Reset to default form submit
+        submitBtn.type = "submit";
+
+        if (!channels || channels.length === 0) {
+            list.innerHTML = '<div class="text-error text-center text-xs p-4">Gagal memuat metode Tripay.</div>';
+            return;
+        }
+        list.innerHTML = '';
+        channels.forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-3 border rounded-xl cursor-pointer hover:bg-base-200 transition-colors method-item';
+            div.onclick = () => selectMethod('TRIPAY_' + m.code, div);
+            div.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <img src="${m.icon_url}" class="h-6 w-auto object-contain bg-white rounded p-0.5" alt="${m.name}">
+                    <div>
+                        <div class="text-sm font-bold">${m.name}</div>
+                        <div class="text-[10px] opacity-50">Layanan Tripay</div>
+                    </div>
+                </div>
+                <i class="bi bi-circle check-icon text-gray-300"></i>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function renderMidtransMethods() {
+        const list = document.getElementById('methodList');
+        const submitBtn = document.getElementById('submitBtn');
+
+        list.innerHTML = `
+            <div class="border-2 border-dashed border-info/30 rounded-2xl p-6 text-center bg-info/5">
+                <i class="bi bi-lightning-charge-fill text-4xl text-info mb-3"></i>
+                <div class="font-bold text-info">Midtrans Snap</div>
+                <div class="text-xs opacity-60">Bayar instan via QRIS, E-Wallet, atau VA</div>
+            </div>
+            <input type="hidden" id="methodCodeInput" value="MIDTRANS">
+        `;
+
+        submitBtn.disabled = false;
+        submitBtn.type = "button";
+        submitBtn.onclick = payMidtrans;
+    }
+
+    async function payMidtrans() {
+        const amount = document.getElementById('amountInput').value;
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (!amount || amount < 10000) {
+            alert('Minimal Top-Up Rp 10.000');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="loading loading-spinner"></span> Menyiapkan Pembayaran...';
+
+        try {
+            const res = await fetch("/reseller/topup/midtrans-token", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: amount })
+            });
+            const data = await res.json();
+
+            if (data.token) {
+                snap.pay(data.token, {
+                    onSuccess: function (result) { window.location.href = "{{ url_for('reseller.dashboard') }}"; },
+                    onPending: function (result) { window.location.href = "{{ url_for('reseller.dashboard') }}"; },
+                    onError: function (result) { alert("Pembayaran Gagal!"); console.error(result); submitBtn.disabled = false; submitBtn.innerHTML = 'Cek Out Sekarang'; }
+                });
+            } else {
+                alert('Gagal mendapatkan token Midtrans: ' + (data.error || 'Unknown Error'));
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Cek Out Sekarang';
+            }
+        } catch (e) {
+            alert('Error: ' + e);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Cek Out Sekarang';
+        }
+    }
+
+    async function fetchDuitkuMethods(amount) {
+        const list = document.getElementById('methodList');
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.onclick = null; // Reset
+        submitBtn.type = "submit";
+
+        list.innerHTML = '<div class="text-center py-4"><span class="loading loading-spinner loading-sm"></span></div>';
+        try {
+            const res = await fetch(`/api/duitku_methods?amount=${amount}`);
+            const data = await res.json();
+            if (data.success && data.methods) {
+                list.innerHTML = '';
+                data.methods.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-3 border rounded-xl cursor-pointer hover:bg-base-200 transition-colors method-item';
+                    div.onclick = () => selectMethod(m.paymentMethod, div);
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <img src="${m.paymentImage}" class="h-6 w-auto object-contain bg-white rounded p-0.5" alt="${m.paymentName}">
+                            <div>
+                                <div class="text-sm font-bold">${m.paymentName}</div>
+                                <div class="text-[10px] opacity-50">Layanan Duitku</div>
+                            </div>
+                        </div>
+                        <i class="bi bi-circle check-icon text-gray-300"></i>
+                    `;
+                    list.appendChild(div);
+                });
+            } else {
+                list.innerHTML = '<div class="text-error text-center text-xs p-4">Gagal mengambil metode Duitku</div>';
+            }
+        } catch (e) {
+            list.innerHTML = '<div class="text-error text-center text-xs p-4">Error koneksi Duitku</div>';
+        }
+    }
+
+    function selectMethod(code, el) {
+        document.querySelectorAll('.method-item').forEach(item => {
+            item.classList.remove('border-primary', 'bg-blue-50');
+            item.querySelector('.check-icon').className = 'bi bi-circle check-icon text-gray-300';
+        });
+
+        el.classList.add('border-primary', 'bg-blue-50');
+        el.querySelector('.check-icon').className = 'bi bi-check-circle-fill check-icon text-primary';
+
+        document.getElementById('methodCodeInput').value = code;
+        document.getElementById('submitBtn').disabled = false;
+    }
+
+    // Initial load
+    switchGateway(currentGateway);
+</script>
+
+{% if settings.get('midtrans_mode') == 'production' %}
+<script src="https://app.midtrans.com/snap/snap.js"
+    data-client-key="{{ settings.get('midtrans_client_key') }}"></script>
+{% else %}
+<script src="https://app.sandbox.midtrans.com/snap/snap.js"
+    data-client-key="{{ settings.get('midtrans_client_key') }}"></script>
+{% endif %}
+
+<style>
+    .method-item.border-primary {
+        border-color: {
+                {
+                reseller_theme_color
+            }
+        }
+
+        !important;
+    }
+
+    .method-item.bg-blue-50 {
+        background-color: {
+                {
+                reseller_theme_color
+            }
+        }
+
+        10 !important;
+    }
+
+    .text-primary {
+        color: {
+                {
+                reseller_theme_color
+            }
+        }
+
+        !important;
+    }
+</style>
+{% endblock %}

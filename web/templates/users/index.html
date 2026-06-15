@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Manajemen Staff & Teknisi{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold">Manajemen Staff & Teknisi</h1>
+        <p class="text-base-content/70">Kelola akun Admin dan Teknisi Lapangan untuk mengakses sistem.</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('add_user_modal').showModal()">
+        <i class="bi bi-person-plus"></i> Tambah Staff
+    </button>
+</div>
+
+<div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead class="bg-base-200 text-base-content">
+                    <tr>
+                        <th class="w-16">ID</th>
+                        <th>Username</th>
+                        <th>Role Akses</th>
+                        <th>Ditambahkan Pada</th>
+                        <th class="text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>{{ u.id }}</td>
+                        <td class="font-semibold">{{ u.username }} {% if u.username == 'admin' %}<span
+                                class="badge badge-sm badge-ghost ml-2">Default</span>{% endif %}</td>
+                        <td>
+                            {% if u.role == 'admin' %}
+                            <span class="badge badge-primary gap-1"><i class="bi bi-shield-lock"></i>
+                                Administrator</span>
+                            {% elif u.role == 'cs' %}
+                            <span class="badge badge-accent gap-1 text-white"><i class="bi bi-headset"></i> Customer
+                                Service</span>
+                            {% else %}
+                            <span class="badge badge-secondary gap-1"><i class="bi bi-tools"></i> Teknisi
+                                Lapangan</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-sm opacity-70">{{ u.created_at.strftime('%d %b %Y, %H:%M') if u.created_at else
+                            '-' }}</td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-ghost text-info"
+                                onclick="openEditModal('{{ u.id }}', '{{ u.username }}', '{{ u.role }}')">
+                                <i class="bi bi-pencil-square"></i> Edit
+                            </button>
+                            {% if u.username != 'admin' %}
+                            <form action="{{ url_for('users.index') }}" method="POST" class="inline"
+                                onsubmit="return confirm('Yakin ingin menghapus staff ini? Seluruh riwayat kerjanya mungkin akan menjadi N/A.')">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <button type="submit" class="btn btn-sm btn-ghost text-error">
+                                    <i class="bi bi-trash"></i> Hapus
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Add -->
+<dialog id="add_user_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4"><i class="bi bi-person-plus"></i> Tambah Staff Baru</h3>
+        <form method="POST" action="{{ url_for('users.index') }}">
+            <input type="hidden" name="action" value="add">
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text">Username (Akses Login)</span></label>
+                <input type="text" name="username" class="input input-bordered" required
+                    placeholder="Contoh: agus_teknisi">
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text">Password Default</span></label>
+                <input type="text" name="password" class="input input-bordered" required
+                    placeholder="minimal 6 karakter">
+            </div>
+
+            <div class="form-control mb-6">
+                <label class="label"><span class="label-text font-bold">Role / Hak Akses</span></label>
+                <select name="role" class="select select-bordered bg-gray-50" required>
+                    <option value="technician" selected>Teknisi Lapangan (Hanya akses mobile portal)</option>
+                    <option value="cs">Customer Service (Akses web operasional klien)</option>
+                    <option value="admin">Administrator (Akses Penuh / SuperAdmin)</option>
+                </select>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn"
+                    onclick="document.getElementById('add_user_modal').close()">Batal</button>
+                <button type="submit" class="btn btn-primary">Simpan Staff</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Modal Edit -->
+<dialog id="edit_user_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4"><i class="bi bi-pencil-square"></i> Edit Data Staff</h3>
+        <form method="POST" action="{{ url_for('users.index') }}">
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="user_id" id="edit_user_id">
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text">Username</span></label>
+                <input type="text" name="username" id="edit_username" class="input input-bordered" required>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Ganti Password (Opsional)</span>
+                    <span class="label-text-alt text-base-content/50">Kosongkan jika tidak diganti</span>
+                </label>
+                <input type="text" name="password" class="input input-bordered" placeholder="Ketikan password baru...">
+            </div>
+
+            <div class="form-control mb-6">
+                <label class="label"><span class="label-text font-bold">Role / Hak Akses</span></label>
+                <select name="role" id="edit_role" class="select select-bordered bg-gray-50" required>
+                    <option value="technician">Teknisi Lapangan (Hanya akses mobile portal)</option>
+                    <option value="cs">Customer Service (Akses web operasional klien)</option>
+                    <option value="admin">Administrator (Akses Penuh / SuperAdmin)</option>
+                </select>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn"
+                    onclick="document.getElementById('edit_user_modal').close()">Batal</button>
+                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+    function openEditModal(id, username, role) {
+        document.getElementById('edit_user_id').value = id;
+        document.getElementById('edit_username').value = username;
+        document.getElementById('edit_role').value = role;
+
+        // Disable role change if admin
+        if (username === 'admin') {
+            document.getElementById('edit_role').disabled = true;
+        } else {
+            document.getElementById('edit_role').disabled = false;
+        }
+
+        document.getElementById('edit_user_modal').showModal();
+    }
+</script>
+{% endblock %}

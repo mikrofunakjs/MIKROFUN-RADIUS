@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div>
+        <h2 class="text-3xl font-black flex items-center gap-3 text-primary">
+            <i class="bi bi-geo-alt-fill"></i> Peta ODP / Fiber
+        </h2>
+        <p class="text-sm opacity-60 font-medium">Optical Distribution Point - Titik Penyalur ke Pelanggan</p>
+    </div>
+    <div class="flex gap-2 w-full md:w-auto">
+        <a href="{{ url_for('odp.map_view') }}" class="btn btn-secondary btn-sm gap-2">
+            <i class="bi bi-map-fill"></i> View Map
+        </a>
+        <a href="{{ url_for('odp.import_excel') }}" class="btn btn-outline btn-sm gap-2">
+            <i class="bi bi-file-earmark-excel"></i> Import XLSX
+        </a>
+        <a href="{{ url_for('odp.add') }}" class="btn btn-primary btn-sm gap-2 shadow-lg shadow-primary/20">
+            <i class="bi bi-plus-circle-fill"></i> Tambah ODP
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for o in odps %}
+    <div
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary/30 transition-all group overflow-hidden">
+        <div class="h-1.5 w-full bg-primary/10 group-hover:bg-primary transition-colors"></div>
+        <div class="card-body p-6">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary text-xl font-black">
+                        {{ o.name[0]|upper }}
+                    </div>
+                    <div>
+                        <h3 class="font-black text-lg leading-tight">{{ o.name }}</h3>
+                        <p class="text-[10px] uppercase font-bold opacity-40 tracking-widest">ODP BOX</p>
+                    </div>
+                </div>
+                {% if o.coordinates %}
+                <a href="https://www.google.com/maps?q={{ o.coordinates }}" target="_blank"
+                    class="btn btn-ghost btn-xs text-info gap-1 p-0 h-auto min-h-0">
+                    <i class="bi bi-geo-alt"></i> Pin
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2 opacity-70">
+                        <i class="bi bi-map"></i>
+                        <span class="font-medium">Alamat</span>
+                    </div>
+                    <span class="text-xs font-bold truncate max-w-[150px]">{{ o.address }}</span>
+                </div>
+
+                <!-- Capacity Progress -->
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-[10px] font-black uppercase opacity-40">Port Utilization</span>
+                        <span class="text-xs font-bold text-primary">{{ o.used_ports }}/{{ o.capacity }}</span>
+                    </div>
+                    <div class="w-full bg-base-200 h-2 rounded-full overflow-hidden">
+                        <div class="bg-primary h-full transition-all duration-1000"
+                            style="width: {{ (o.used_ports / o.capacity * 100)|round if o.capacity > 0 else 0 }}%">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-4 border-t border-base-100">
+                <div class="flex gap-1">
+                    <a href="{{ url_for('odp.edit', id=o.id) }}" class="btn btn-ghost btn-sm btn-square" title="Edit">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <a href="{{ url_for('odp.delete', id=o.id) }}" class="btn btn-ghost btn-sm btn-square text-error"
+                        onclick="return confirm('Hapus ODP ini?')" title="Hapus">
+                        <i class="bi bi-trash-fill"></i>
+                    </a>
+                </div>
+                <a href="{{ url_for('customers.index') }}?odp_id={{ o.id }}"
+                    class="btn btn-primary btn-sm px-4 rounded-xl">
+                    View Customers <i class="bi bi-arrow-right-short"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-span-full">
+        <div class="card bg-base-100 border-2 border-dashed border-base-300 py-16 text-center">
+            <h3 class="text-xl font-bold opacity-60">Belum ada data ODP</h3>
+            <p class="text-sm opacity-40 mt-1">Daftarkan titik ODP untuk mempermudah pemasangan pelanggan baru.</p>
+            <div class="mt-6">
+                <a href="{{ url_for('odp.add') }}" class="btn btn-primary btn-sm px-8">Tambah ODP</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

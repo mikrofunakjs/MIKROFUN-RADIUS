@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-credit-card-2-front"></i> Konfigurasi Payment Gateway
+        </h2>
+        <p class="text-sm opacity-60">Atur metode pembayaran otomatis untuk Client Portal.</p>
+    </div>
+
+    <!-- Webhook Info Alert -->
+    <div class="alert alert-info shadow-sm mb-6 flex-col sm:flex-row items-start">
+        <i class="bi bi-link-45deg text-2xl"></i>
+        <div class="flex-1 w-full">
+            <h3 class="font-bold">URL Callback / Webhook</h3>
+            <p class="text-xs mb-3">Copy URL di bawah ini dan paste ke pengaturan Callback di Dashboard Payment Gateway
+                Anda agar sistem bisa memproses pembayaran (LUNAS) secara otomatis.</p>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="bg-base-100/50 p-3 rounded-lg border border-info/20">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-sky-800 mb-1">Callback URL Tripay</p>
+                    <div class="join w-full">
+                        <input type="text"
+                            value="{{ request.url_root.rstrip('/') }}{{ url_for('api.callback_tripay') }}"
+                            class="input input-sm input-bordered join-item w-full font-mono text-xs bg-white text-gray-600"
+                            readonly id="url-tripay">
+                        <button type="button" class="btn btn-sm btn-primary join-item"
+                            onclick="navigator.clipboard.writeText(document.getElementById('url-tripay').value); alert('URL Tripay Disalin!')"><i
+                                class="bi bi-clipboard"></i></button>
+                    </div>
+                </div>
+
+                <div class="bg-base-100/50 p-3 rounded-lg border border-info/20">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-sky-800 mb-1">Notification URL
+                        Midtrans</p>
+                    <div class="join w-full">
+                        <input type="text"
+                            value="{{ request.url_root.rstrip('/') }}{{ url_for('api.callback_midtrans') }}"
+                            class="input input-sm input-bordered join-item w-full font-mono text-xs bg-white text-gray-600"
+                            readonly id="url-midtrans">
+                        <button type="button" class="btn btn-sm btn-primary join-item"
+                            onclick="navigator.clipboard.writeText(document.getElementById('url-midtrans').value); alert('URL Midtrans Disalin!')"><i
+                                class="bi bi-clipboard"></i></button>
+                    </div>
+                </div>
+
+                <div class="bg-base-100/50 p-3 rounded-lg border border-info/20">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-sky-800 mb-1">Webhook URL Moota</p>
+                    <div class="join w-full">
+                        <input type="text" value="{{ request.url_root.rstrip('/') }}{{ url_for('api.callback_moota') }}"
+                            class="input input-sm input-bordered join-item w-full font-mono text-xs bg-white text-gray-600"
+                            readonly id="url-moota">
+                        <button type="button" class="btn btn-sm btn-primary join-item"
+                            onclick="navigator.clipboard.writeText(document.getElementById('url-moota').value); alert('URL Moota Disalin!')"><i
+                                class="bi bi-clipboard"></i></button>
+                    </div>
+                </div>
+
+                <div class="bg-base-100/50 p-3 rounded-lg border border-info/20">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-sky-800 mb-1">Callback URL Duitku</p>
+                    <div class="join w-full">
+                        <input type="text"
+                            value="{{ request.url_root.rstrip('/') }}{{ url_for('api.callback_duitku') }}"
+                            class="input input-sm input-bordered join-item w-full font-mono text-xs bg-white text-gray-600"
+                            readonly id="url-duitku">
+                        <button type="button" class="btn btn-sm btn-primary join-item"
+                            onclick="navigator.clipboard.writeText(document.getElementById('url-duitku').value); alert('URL Duitku Disalin!')"><i
+                                class="bi bi-clipboard"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST">
+        <!-- Active Gateway Selector -->
+        <div class="card bg-base-100 shadow-sm border border-base-200 mb-6">
+            <div class="card-body">
+                <h3 class="card-title text-lg border-b pb-2 mb-4">Mode Pembayaran Aktif</h3>
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="radio" name="active_gateway" value="manual" class="radio radio-primary"
+                            {{ 'checked' if settings.get('active_gateway', 'manual' )=='manual' else '' }}>
+                        <span class="label-text font-bold">Manual Transfer Only</span>
+                        <span class="text-xs text-gray-500">(Hanya Bank Transfer & Upload Bukti)</span>
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="radio" name="active_gateway" value="tripay" class="radio radio-primary"
+                            {{ 'checked' if settings.get('active_gateway')=='tripay' else '' }}>
+                        <span class="label-text font-bold">Tripay (QRIS, VA, Retail)</span>
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="radio" name="active_gateway" value="midtrans" class="radio radio-primary"
+                            {{ 'checked' if settings.get('active_gateway')=='midtrans' else '' }}>
+                        <span class="label-text font-bold">Midtrans (Snap)</span>
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="radio" name="active_gateway" value="duitku" class="radio radio-primary"
+                            {{ 'checked' if settings.get('active_gateway')=='duitku' else '' }}>
+                        <span class="label-text font-bold">Duitku</span>
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="radio" name="active_gateway" value="both" class="radio radio-primary" {{ 'checked'
+                            if settings.get('active_gateway')=='both' else '' }}>
+                        <span class="label-text font-bold">Dual Gateway (Tripay & Midtrans)</span>
+                    </label>
+                </div>
+                <div class="form-control border-t border-base-200 mt-2 pt-2">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="checkbox" name="enable_moota" value="1" class="checkbox checkbox-primary"
+                            {{ 'checked' if settings.get('moota_api_key') and settings.get('moota_webhook_secret')
+                            else '' }} disabled>
+                        <span class="label-text font-bold text-base-content/70">Moota.co (Aktif Otomatis jika Token
+                            Tersidi)</span>
+                        <span class="text-xs text-gray-500">- Kombinasi Cek Mutasi + QRIS/VA</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- TRIPAY SETTINGS -->
+            <div class="card bg-base-100 shadow-sm border border-base-200">
+                <div class="card-body">
+                    <h3 class="card-title text-lg border-b pb-2 mb-4 flex items-center gap-2">
+                        <i class="bi bi-credit-card-2-front-fill text-sky-500 text-xl"></i>
+                        Tripay Settings
+                    </h3>
+
+                    <div class="form-control w-full mb-2">
+                        <label class="label"><span class="label-text font-bold">Environment Mode</span></label>
+                        <select name="tripay_mode" class="select select-bordered w-full">
+                            <option value="sandbox" {{ 'selected' if settings.get('tripay_mode')=='sandbox' else '' }}>
+                                Sandbox (Test)</option>
+                            <option value="production" {{ 'selected' if settings.get('tripay_mode')=='production'
+                                else '' }}>Production (Live)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control w-full mb-2">
+                        <label class="label"><span class="label-text font-bold">Tripay API Key</span></label>
+                        <input type="password" name="tripay_api_key" class="input input-bordered w-full font-mono"
+                            value="{{ settings.get('tripay_api_key', '') }}">
+                    </div>
+
+                    <div class="form-control w-full mb-2">
+                        <label class="label"><span class="label-text font-bold">Tripay Private Key</span></label>
+                        <input type="password" name="tripay_private_key" class="input input-bordered w-full font-mono"
+                            value="{{ settings.get('tripay_private_key', '') }}">
+                    </div>
+
+                    <div class="form-control w-full mb-2">
+                        <label class="label"><span class="label-text font-bold">Merchant Code</span></label>
+                        <input type="text" name="tripay_merchant_code" class="input input-bordered w-full font-mono"
+                            value="{{ settings.get('tripay_merchant_code', '') }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- MIDTRANS SETTINGS -->
+            <div class="card bg-base-100 shadow-sm border border-base-200">
+                <div class="card-body">
+                    <h3 class="card-title text-lg border-b pb-2 mb-4 flex items-center gap-2">
+                        <img src="https://midtrans.com/assets/images/favicon-32x32.png" class="w-6 h-6 object-contain"
+                            alt="Midtrans"> Midtrans
+                        Settings
+                    </h3>
+
+                    <div class="form-control w-full mb-2">
+                        <label class="label"><span class="label-text font-bold">Environment Mode</span></label>
+                        <select name="midtrans_mode" class="select select-bordered w-full">
+                            <option value="sandbox" {{ 'selected' if settings.get('midtrans_mode')=='sandbox' else ''
+                                }}>Sandbox (Test)</option>
+                            <option value="production" {{ 'selected' if settings.get('midtrans_mode')=='production'
+                                else '' }}>Production (Live)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control w-full mb-2">
+                        <label class="label"><span class="label-text font-bold">Server Key</span></label>
+                        <input type="password" name="midtrans_server_key" class="input input-bordered w-full font-mono"
+                            value="{{ settings.get('midtrans_server_key', '') }}">
+                    </div>
+
+                    <div class="form-control w-full mb-2">
+                        <label class="label"><span class="label-text font-bold">Client Key</span></label>
+                        <input type="text" name="midtrans_client_key" class="input input-bordered w-full font-mono"
+                            value="{{ settings.get('midtrans_client_key', '') }}">
+                    </div>
+
+                    <div class="form-control w-full mb-2">
+                        <label class="label"><span class="label-text font-bold">Merchant ID</span></label>
+                        <input type="text" name="midtrans_merchant_id" class="input input-bordered w-full font-mono"
+                            value="{{ settings.get('midtrans_merchant_id', '') }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- MOOTA SETTINGS -->
+            <div class="card bg-base-100 shadow-sm border border-base-200 md:col-span-2">
+                <div class="card-body">
+                    <h3 class="card-title text-lg border-b pb-2 mb-4 flex items-center gap-2">
+                        <i class="bi bi-bank text-blue-600"></i> Moota.co Settings (Cek Mutasi Otomatis)
+                    </h3>
+                    <p class="text-xs opacity-70 mb-4">Moota akan mengecek mutasi masuk dari BCA, BNI, BRI, Mandiri yang
+                        Anda daftarkan, dan otomatis melunaskan tagihan yang memiliki nominal unik kombinasi kode 3
+                        digit.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-bold">API Key / Token
+                                    (Opsional)</span></label>
+                            <input type="password" name="moota_api_key"
+                                class="input input-bordered w-full font-mono text-sm"
+                                value="{{ settings.get('moota_api_key', '') }}"
+                                placeholder="Kosongi jika hanya butuh Webhook">
+                        </div>
+
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-bold">Webhook Secret *</span></label>
+                            <input type="text" name="moota_webhook_secret"
+                                class="input input-bordered w-full font-mono text-sm"
+                                value="{{ settings.get('moota_webhook_secret', '') }}"
+                                placeholder="Didapat dari dashboard Moota Integrasi">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DUITKU SETTINGS -->
+            <div class="card bg-base-100 shadow-sm border border-base-200 md:col-span-2">
+                <div class="card-body">
+                    <h3 class="card-title text-lg border-b pb-2 mb-4 flex items-center gap-2">
+                        <i class="bi bi-wallet2 text-green-500 text-xl"></i>
+                        Duitku Settings
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-bold">Mode</span></label>
+                            <select name="duitku_mode" class="select select-bordered w-full">
+                                <option value="sandbox" {{ 'selected' if settings.get('duitku_mode')=='sandbox' else ''
+                                    }}>
+                                    Sandbox (Test)</option>
+                                <option value="production" {{ 'selected' if settings.get('duitku_mode')=='production'
+                                    else '' }}>
+                                    Production (Live)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-bold">Merchant Code</span></label>
+                            <input type="text" name="duitku_merchant_code" class="input input-bordered w-full font-mono"
+                                value="{{ settings.get('duitku_merchant_code', '') }}" placeholder="DXXXX">
+                        </div>
+
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-bold">API Key / Merchant
+                                    Key</span></label>
+                            <input type="password" name="duitku_api_key" class="input input-bordered w-full font-mono"
+                                value="{{ settings.get('duitku_api_key', '') }}" placeholder="API Key">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="flex justify-end">
+            <button type="submit" class="btn btn-primary btn-lg shadow-lg">
+                <i class="bi bi-save"></i> Simpan Konfigurasi
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

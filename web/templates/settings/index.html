@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+                <i class="bi bi-gear-fill"></i> Pengaturan Sistem
+            </h2>
+            <p class="text-sm opacity-60">Pusat konfigurasi aplikasi {{ app_name }} Radius</p>
+        </div>
+        <div>
+            {% if is_premium %}
+            <span class="badge badge-warning gap-2 font-bold p-3">
+                <i class="bi bi-star-fill"></i> PREMIUM EDITION
+            </span>
+            {% else %}
+            <span class="badge badge-ghost gap-2 p-3">
+                FREE EDITION
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+
+        <!-- LEFT COLUMN: NAVIGATION -->
+        <div class="md:col-span-3 lg:col-span-3">
+            <div class="card bg-base-100 shadow-sm border border-base-200 sticky top-4">
+                <ul class="menu bg-base-100 w-full rounded-box gap-1">
+                    <li class="menu-title">Umum</li>
+                    <li>
+                        <a onclick="showSection('profile')" id="nav-profile" class="active">
+                            <i class="bi bi-building"></i> Profil Perusahaan
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="showSection('api')" id="nav-api">
+                            <i class="bi bi-hdd-network"></i> Integrasi API
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="showSection('zerotier')" id="nav-zerotier">
+                            <i class="bi bi-grid-3x3-gap"></i> ZeroTier VPN
+                        </a>
+                    </li>
+                    <li class="menu-title mt-2">Dukungan</li>
+                    <li>
+                        <a onclick="showSection('security')" id="nav-security">
+                            <i class="bi bi-shield-lock"></i> Keamanan Akun
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="showSection('backup')" id="nav-backup">
+                            <i class="bi bi-database-fill"></i> Backup & Restore
+                        </a>
+                    </li>
+
+                    <li class="menu-title mt-2">Akun</li>
+                    <li>
+                        <a onclick="showSection('license')" id="nav-license"
+                            class="{{ 'text-warning' if not is_premium else 'text-success' }}">
+                            {% if is_premium %}
+                            <i class="bi bi-check-circle-fill"></i> Status Lisensi
+                            {% else %}
+                            <i class="bi bi-lock-fill"></i> Aktivasi Lisensi
+                            {% endif %}
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: CONTENT -->
+        <div class="md:col-span-9 lg:col-span-9">
+
+            <!-- SECTION: COMPANY PROFILE -->
+            <div id="section-profile" class="settings-section">
+                <div class="card bg-base-100 shadow-sm border border-base-200">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4">
+                            <i class="bi bi-building text-primary"></i> Identitas ISP
+                        </h3>
+                        <form method="POST" enctype="multipart/form-data">
+                            {% if not is_premium %}
+                            <div class="alert alert-warning shadow-sm mb-4">
+                                <i class="bi bi-lock-fill text-xl"></i>
+                                <div>
+                                    <h3 class="font-bold text-xs uppercase">Fitur Terkunci</h3>
+                                    <div class="text-xs">Identitas ISP default (MikroFun) tidak dapat diubah pada versi
+                                        gratis. Silakan aktivasi lisensi Premium.</div>
+                                </div>
+                                <a onclick="showSection('license')" class="btn btn-xs btn-outline">Upgrade</a>
+                            </div>
+                            {% endif %}
+
+                            <div class="grid grid-cols-1 gap-6">
+                                <!-- Logo Upload -->
+                                <div class="flex flex-col md:flex-row items-center gap-6 p-4 rounded-2xl bg-base-200/30 border border-base-200">
+                                    <div class="avatar">
+                                        <div class="w-24 h-24 rounded-2xl border-4 border-base-100 shadow-sm overflow-hidden bg-base-100 flex items-center justify-center">
+                                            {% if settings.get('company_logo') %}
+                                            <img src="{{ settings.get('company_logo') }}" class="object-cover" id="logo-preview" />
+                                            {% else %}
+                                            <div class="text-primary opacity-20"><i class="bi bi-image text-4xl"></i></div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 space-y-2">
+                                        <label class="label p-0"><span class="label-text font-black uppercase text-[10px] opacity-50 tracking-widest">Logo Perusahaan</span></label>
+                                        <input type="file" name="company_logo" accept="image/*" 
+                                            class="file-input file-input-bordered file-input-primary w-full max-w-xs">
+                                        <p class="text-[10px] opacity-40">Format: PNG/JPG (Square 1:1 direkomendasikan)</p>
+                                    </div>
+                                </div>
+
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium">Nama ISP /
+                                            Perusahaan</span></label>
+                                    <input type="text" name="company_name"
+                                        class="input input-bordered w-full {{ 'input-disabled bg-base-200' if not is_premium else '' }}"
+                                        value="{{ settings.get('company_name', 'MikroFun') }}"
+                                        placeholder="Contoh: Maju Jaya Net" {{ 'disabled' if not is_premium else '' }}>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-medium">Email
+                                                Resmi</span></label>
+                                        <input type="email" name="company_email"
+                                            class="input input-bordered w-full"
+                                            value="{{ settings.get('company_email', '') }}">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-medium">WhatsApp /
+                                                HP</span></label>
+                                        <input type="text" name="company_phone"
+                                            class="input input-bordered w-full"
+                                            value="{{ settings.get('company_phone', '') }}">
+                                    </div>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium">Alamat
+                                            Lengkap</span></label>
+                                    <textarea name="company_address"
+                                        class="textarea textarea-bordered h-24"
+                                        >{{ settings.get('company_address', '') }}</textarea>
+                                </div>
+                            </div>
+                            <div class="card-actions justify-end mt-6">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: API -->
+            <div id="section-api" class="settings-section hidden">
+                <div class="card bg-base-100 shadow-sm border border-base-200">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4">
+                            <i class="bi bi-hdd-network text-primary"></i> Integrasi Sistem
+                        </h3>
+                        <form method="POST">
+                            <div class="form-control mb-6">
+                                <label class="label">
+                                    <span class="label-text font-medium flex items-center gap-2">
+                                        Radius Secret
+                                        <span class="badge badge-ghost badge-sm">Mikrotik NAS</span>
+                                    </span>
+                                </label>
+                                <div class="join">
+                                    <input type="password" name="radius_secret"
+                                        class="input input-bordered join-item w-full font-mono"
+                                        value="{{ settings.get('radius_secret', '') }}" id="radiusInput">
+                                    <button type="button" class="btn join-item border-base-300"
+                                        onclick="toggleSecret()">
+                                        <i class="bi bi-eye-slash" id="eyeIcon"></i>
+                                    </button>
+                                </div>
+                                <p class="text-xs opacity-50 mt-1">Secret Key ini harus sama dengan konfigurasi RADIUS
+                                    Client di Mikrotik.</p>
+                            </div>
+
+                            <div class="card-actions justify-end mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Simpan Konfigurasi
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: LICENSE -->
+            <div id="section-license" class="settings-section hidden">
+                <div class="card bg-base-100 shadow-sm border border-base-200">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4">
+                            <i class="bi bi-key text-primary"></i> Manajemen Lisensi
+                        </h3>
+
+                        {% if is_premium %}
+                        <div class="bg-base-200 rounded-xl p-6 text-center mb-6">
+                            <div
+                                class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success/20 text-success mb-4">
+                                <i class="bi bi-check-lg text-3xl"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold mb-2">Lisensi Aktif</h2>
+                            <p class="opacity-70">MikroFun Premium Edition</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="stats shadow border border-base-200">
+                                <div class="stat">
+                                    <div class="stat-title">Status</div>
+                                    <div class="stat-value text-success text-2xl">Activated</div>
+                                    <div class="stat-desc">Full Features Unlocked</div>
+                                </div>
+                            </div>
+                            <!-- Future: Expiry Date -->
+                        </div>
+
+                        <div class="text-center">
+                            <a href="{{ url_for('settings.deactivate_license') }}"
+                                onclick="return confirm('PERINGATAN: Menonaktifkan lisensi akan mengunci fitur Premium (ODP, Maps, Laporan). Lanjutkan?')"
+                                class="btn btn-outline btn-error btn-sm">
+                                <i class="bi bi-power"></i> Nonaktifkan Lisensi
+                            </a>
+                        </div>
+
+                        {% else %}
+                        <div class="bg-warning/10 border border-warning/20 rounded-xl p-6 mb-6">
+                            <div class="flex items-start gap-4">
+                                <i class="bi bi-exclamation-triangle-fill text-warning text-3xl"></i>
+                                <div>
+                                    <h3 class="font-bold text-lg">Mode Gratis (Free Edition)</h3>
+                                    <p class="text-sm opacity-80 mt-1">
+                                        Anda sedang menggunakan versi gratis. Fitur berikut ini dibatasi:
+                                    </p>
+                                    <ul class="list-disc list-inside text-sm mt-2 font-medium">
+                                        <li>Manajemen ODP & Peta Sebaran</li>
+                                        <li>Laporan Keuangan & Billing POS</li>
+                                        <li>Kustomisasi Lanjutan</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form action="{{ url_for('settings.activate_license') }}" method="POST"
+                            class="max-w-lg mx-auto">
+                            <div class="form-control mb-4">
+                                <label class="label"><span class="label-text font-bold">Masukkan Kode Lisensi (Serial
+                                        Number)</span></label>
+                                <div class="join w-full">
+                                    <span class="join-item btn btn-active cursor-default"><i
+                                            class="bi bi-upc-scan"></i></span>
+                                    <input type="text" name="license_key"
+                                        class="input input-bordered join-item w-full font-mono text-center tracking-widest"
+                                        placeholder="XXXX-XXXX-XXXX-XXXX" required>
+                                </div>
+                                <label class="label">
+                                    <span class="label-text-alt text-error" id="license-error"></span>
+                                </label>
+                            </div>
+                            <button type="submit"
+                                class="btn btn-primary w-full shadow-lg hover:shadow-xl transition-all">
+                                <i class="bi bi-unlock-fill"></i> Aktivasi Premium Sekarang
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: SECURITY (ADMIN PROFILE) -->
+            <div id="section-security" class="settings-section hidden">
+                <div class="card bg-base-100 shadow-sm border border-base-200">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4">
+                            <i class="bi bi-shield-lock text-primary"></i> Keamanan Akun
+                        </h3>
+                        <div class="alert alert-info shadow-sm mb-6">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <div>
+                                <h3 class="font-bold text-xs">Informasi</h3>
+                                <div class="text-xs">Ubah username dan password administrator untuk keamanan sistem.
+                                </div>
+                            </div>
+                        </div>
+
+                        <form action="{{ url_for('settings.update_admin') }}" method="POST" class="max-w-xl">
+                            <div class="form-control w-full mb-4">
+                                <label class="label"><span class="label-text font-bold">Username</span></label>
+                                <input type="text" name="username" class="input input-bordered w-full"
+                                    value="{{ session.get('username', 'admin') }}" required />
+                            </div>
+
+                            <div class="divider">Ganti Password (Opsional)</div>
+
+                            <div class="form-control w-full mb-4">
+                                <label class="label"><span class="label-text font-bold">Password Baru</span></label>
+                                <input type="password" name="password" class="input input-bordered w-full"
+                                    placeholder="Kosongkan jika tidak ingin mengubah" />
+                            </div>
+
+                            <div class="form-control w-full mb-6">
+                                <label class="label"><span class="label-text font-bold">Konfirmasi
+                                        Password</span></label>
+                                <input type="password" name="confirm_password" class="input input-bordered w-full"
+                                    placeholder="Ulangi password baru" />
+                            </div>
+
+                            <div class="flex justify-end">
+                                <button type="submit" class="btn btn-primary"
+                                    onclick="return confirm('Simpan perubahan akun admin?')">
+                                    <i class="bi bi-save"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: ZEROTIER -->
+            <div id="section-zerotier" class="settings-section hidden">
+                <div class="card bg-base-100 shadow-sm border border-base-200">
+                    <div class="card-body">
+                        <div class="flex justify-between items-start border-b pb-2 mb-4">
+                            <h3 class="card-title text-lg">
+                                <i class="bi bi-grid-3x3-gap text-primary"></i> Integrasi ZeroTier
+                            </h3>
+                            <div id="zt-badge-container">
+                                <span class="badge badge-ghost">Checking...</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex gap-4 items-start">
+                            <i class="bi bi-info-circle-fill text-blue-500 text-xl"></i>
+                            <div class="text-xs leading-relaxed text-blue-800">
+                                <b>Zero-Touch ZeroTier:</b> Fitur ini memungkinkan VPS dan Mikrotik terhubung dalam
+                                jaringan Mesh VPN tanpa takut terhalang NAT atau ISP. Pastikan paket
+                                <code>zerotier</code> sudah terinstall di Mikrotik v7 Bos.
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Join Form -->
+                            <div class="space-y-4">
+                                <div class="form-control w-full">
+                                    <label class="label"><span class="label-text font-bold">Network ID (16
+                                            Karakter)</span></label>
+                                    <input type="text" id="zt_network_id"
+                                        class="input input-bordered w-full font-mono uppercase"
+                                        placeholder="e.g. 1234567890abcdef" maxlength="16"
+                                        value="{{ settings.get('zt_network_id', '') }}">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="joinZeroTier()" id="btn-zt-join"
+                                        class="btn btn-primary flex-1">Join Network</button>
+                                    <button onclick="leaveZeroTier()" id="btn-zt-leave"
+                                        class="btn btn-outline btn-error">Leave</button>
+                                </div>
+                            </div>
+
+                            <!-- Connection Stats -->
+                            <div class="p-5 bg-base-200/50 rounded-2xl border border-base-300">
+                                <h4 class="text-[10px] font-black uppercase opacity-50 mb-4 tracking-widest">Status
+                                    Koneksi VPS</h4>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs font-bold">Status:</span>
+                                        <span id="zt-status-text" class="text-xs font-black uppercase">Unknown</span>
+                                    </div>
+                                    <div class="flex justify-between items-center border-t border-base-300 pt-3">
+                                        <span class="text-xs font-bold">VPS IP (Virtual):</span>
+                                        <code id="zt-ip-text" class="text-xs text-primary font-bold">Not Assigned</code>
+                                    </div>
+                                    <div id="zt-auth-warning"
+                                        class="hidden mt-4 p-2 bg-warning/10 text-warning text-[10px] rounded-lg border border-warning/20 font-bold">
+                                        ⚠️ VPS sudah join tapi perlu di-AUTHORIZE di panel ZeroTier Central!
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: BACKUP & RESTORE -->
+            <div id="section-backup" class="settings-section hidden">
+                <div class="card bg-base-100 shadow-sm border border-base-200">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4">
+                            <i class="bi bi-database-fill-gear text-primary"></i> Backup & Restore
+                        </h3>
+
+                        <!-- Backup -->
+                        <div class="mb-8">
+                            <h4 class="font-bold text-sm mb-2">Backup Database</h4>
+                            <p class="text-xs text-gray-500 mb-4">Unduh salinan database lengkap (struktur & data) untuk
+                                keamanan. Disarankan dilakukan secara berkala.</p>
+
+                            <div class="flex flex-col md:flex-row gap-3">
+                                <a href="{{ url_for('settings.backup') }}"
+                                    class="btn btn-primary btn-sm flex-1 md:flex-none">
+                                    <i class="bi bi-download"></i> Simpan ke PC (Lokal)
+                                </a>
+
+                                <button type="button" class="btn btn-info btn-outline btn-sm flex-1 md:flex-none"
+                                    onclick="triggerTelegramBackup(this)">
+                                    <i class="bi bi-cloud-arrow-up-fill"></i> Kirim ke Telegram (Cloud)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="divider">Reset & Restore</div>
+
+                        <!-- Restore -->
+                        <div>
+                            <h4 class="font-bold text-sm mb-2 text-error">Restore Database</h4>
+                            <div class="alert alert-warning shadow-sm mb-4">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <div class="text-xs">
+                                    <span class="font-bold">PERINGATAN:</span> Proses ini akan <span
+                                        class="uppercase font-bold underline">menghapus/menimpa</span> data database
+                                    saat ini dengan data dari file backup.
+                                </div>
+                            </div>
+
+                            <form action="{{ url_for('settings.restore') }}" method="POST" enctype="multipart/form-data"
+                                class="flex gap-2 items-center">
+                                <input type="file" name="backup_file" accept=".sql"
+                                    class="file-input file-input-bordered file-input-error w-full max-w-xs block"
+                                    required />
+                                <button type="submit" class="btn btn-error"
+                                    onclick="return confirm('Apakah Anda YAKIN ingin merestore database? Data saat ini akan TIMPA!')">
+                                    <i class="bi bi-arrow-clockwise"></i> Restore
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function showSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.settings-section').forEach(el => el.classList.add('hidden'));
+        // Show target
+        document.getElementById('section-' + sectionId).classList.remove('hidden');
+
+        // Update Nav State
+        document.querySelectorAll('.menu a').forEach(el => el.classList.remove('active'));
+        document.getElementById('nav-' + sectionId).classList.add('active');
+
+        // Save preference logic if needed
+    }
+
+    function toggleSecret() {
+        const input = document.getElementById('radiusInput');
+        const icon = document.getElementById('eyeIcon');
+        if (input.type === 'text') {
+            input.type = 'password';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            input.type = 'text';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    }
+
+    function triggerTelegramBackup(btn) {
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Mengirim Backup...';
+        btn.disabled = true;
+
+        fetch('{{ url_for("settings.backup_telegram") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ BERHASIL: File backup SQL telah dikirim via Telegram Bot.');
+                } else {
+                    alert('❌ GAGAL: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('❌ ERROR: Terjadi kesalahan jaringan.');
+                console.error(err);
+            })
+            .finally(() => {
+                btn.innerHTML = ogText;
+                btn.disabled = false;
+            });
+    }
+
+    function joinZeroTier() {
+        const id = document.getElementById('zt_network_id').value;
+        if (!id || id.length !== 16) return alert("Masukkan 16 karakter Network ID!");
+
+        const btn = document.getElementById('btn-zt-join');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Joining...';
+
+        const formData = new FormData();
+        formData.append('network_id', id);
+
+        fetch('{{ url_for("settings.zerotier_join") }}', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                updateZTStatus();
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = 'Join Network';
+            });
+    }
+
+    function leaveZeroTier() {
+        if (!confirm("Yakin ingin keluar dari jaringan ZeroTier? VPN akan terputus!")) return;
+        fetch('{{ url_for("settings.zerotier_leave") }}', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                updateZTStatus();
+            });
+    }
+
+    function updateZTStatus() {
+        const statusText = document.getElementById('zt-status-text');
+        const ipText = document.getElementById('zt-ip-text');
+        const badgeContainer = document.getElementById('zt-badge-container');
+        const authWarning = document.getElementById('zt-auth-warning');
+
+        fetch('{{ url_for("settings.zerotier_status") }}')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'none') {
+                    statusText.innerText = "No Network";
+                    ipText.innerText = "N/A";
+                    badgeContainer.innerHTML = '<span class="badge badge-ghost">OFF</span>';
+                    authWarning.classList.add('hidden'); // Ensure hidden if no network
+                } else {
+                    statusText.innerText = data.status || "Unknown";
+                    ipText.innerText = data.ip || "Waiting for IP...";
+
+                    if (data.status === 'OK' && data.ip) {
+                        badgeContainer.innerHTML = '<span class="badge badge-success font-bold">CONNECTED</span>';
+                        authWarning.classList.add('hidden');
+                    } else if (data.status === 'ACCESS_DENIED' || (data.status === 'OK' && !data.ip)) {
+                        badgeContainer.innerHTML = '<span class="badge badge-warning font-bold">PENDING AUTH</span>';
+                        authWarning.classList.remove('hidden');
+                    } else {
+                        badgeContainer.innerHTML = `<span class="badge badge-info font-bold">${data.status}</span>`;
+                        authWarning.classList.add('hidden'); // Hide for other statuses
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching ZeroTier status:', error);
+                statusText.innerText = "Error";
+                ipText.innerText = "N/A";
+                badgeContainer.innerHTML = '<span class="badge badge-error">ERROR</span>';
+                authWarning.classList.add('hidden');
+            });
+    }
+
+    // Refresh ZT status every 10 seconds if in section
+    setInterval(() => {
+        if (!document.getElementById('section-zerotier').classList.contains('hidden')) {
+            updateZTStatus();
+        }
+    }, 10000);
+
+    // Initial check
+    updateZTStatus();
+</script>
+{% endblock %}

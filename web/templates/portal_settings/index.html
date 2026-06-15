@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+                <i class="bi bi-gear-wide-connected"></i> Pengaturan Portal Login
+            </h2>
+            <p class="text-sm opacity-60">Kustomisasi halaman login Hotspot (Centralized Portal) untuk pelanggan.</p>
+        </div>
+        <div>
+            <a href="/portal/login?link-login=test" target="_blank" class="btn btn-primary btn-outline">
+                <i class="bi bi-eye"></i> Pratinjau
+            </a>
+        </div>
+    </div>
+
+    <form method="POST">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            <!-- LEFT COLUMN: SETTINGS -->
+            <div class="md:col-span-8">
+
+                <div class="card bg-base-100 shadow-sm border border-base-200 mb-6">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4">
+                            <i class="bi bi-window-stack text-primary"></i> Template & Konten
+                        </h3>
+
+                        <!-- Template Chooser -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <label class="cursor-pointer block relative group">
+                                <input type="radio" name="portal_template" value="default" class="peer sr-only" {% if
+                                    settings.get('portal_template', 'default' )=='default' %}checked{% endif %}>
+                                <div class="card border-2 border-base-200 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 transition-all duration-300 ease-in-out shadow-sm hover:shadow-lg hover:-translate-y-1 p-5 text-center relative overflow-hidden h-full">
+                                    <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                    <i class="bi bi-display text-4xl text-blue-500 mb-3 block transform group-hover:scale-110 transition-transform"></i>
+                                    <h4 class="font-bold text-gray-800">Template Glass</h4>
+                                    <p class="text-[11px] opacity-60 mt-1">Modern & Transparan</p>
+                                    <div class="absolute top-3 right-3 opacity-0 peer-checked:opacity-100 text-primary transition-opacity"><i class="bi bi-check-circle-fill"></i></div>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer block relative group">
+                                <input type="radio" name="portal_template" value="isp_elegant" class="peer sr-only" {% if
+                                    settings.get('portal_template')=='isp_elegant' %}checked{% endif %}>
+                                <div class="card border-2 border-base-200 peer-checked:border-emerald-500 peer-checked:bg-emerald-500/5 hover:border-emerald-500/50 transition-all duration-300 ease-in-out shadow-sm hover:shadow-lg hover:-translate-y-1 p-5 text-center relative overflow-hidden h-full">
+                                    <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                    <i class="bi bi-lightning-charge text-4xl text-emerald-500 mb-3 block transform group-hover:scale-110 transition-transform"></i>
+                                    <h4 class="font-bold text-gray-800">ISP Elegant</h4>
+                                    <p class="text-[11px] opacity-60 mt-1">Premium, Dark & Clean</p>
+                                    <div class="absolute top-3 right-3 opacity-0 peer-checked:opacity-100 text-emerald-500 transition-opacity"><i class="bi bi-check-circle-fill"></i></div>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer block relative group">
+                                <input type="radio" name="portal_template" value="custom" class="peer sr-only" {% if
+                                    settings.get('portal_template')=='custom' %}checked{% endif %}>
+                                <div class="card border-2 border-base-200 peer-checked:border-orange-500 peer-checked:bg-orange-500/5 hover:border-orange-500/50 transition-all duration-300 ease-in-out shadow-sm hover:shadow-lg hover:-translate-y-1 p-5 text-center relative overflow-hidden h-full">
+                                    <div class="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                    <i class="bi bi-code-square text-4xl text-orange-500 mb-3 block transform group-hover:scale-110 transition-transform"></i>
+                                    <h4 class="font-bold text-gray-800">Kustom HTML</h4>
+                                    <p class="text-[11px] opacity-60 mt-1">Pakai Kode Sendiri</p>
+                                    <div class="absolute top-3 right-3 opacity-0 peer-checked:opacity-100 text-orange-500 transition-opacity"><i class="bi bi-check-circle-fill"></i></div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Welcome Texts -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-bold text-gray-700">Judul Selamat Datang</span></label>
+                                <input type="text" name="portal_welcome_title"
+                                    value="{{ settings.get('portal_welcome_title', '') }}" class="input input-bordered w-full"
+                                    placeholder="Default: Nama Aplikasi">
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-bold text-gray-700">Sub-judul</span></label>
+                                <input type="text" name="portal_welcome_subtitle"
+                                    value="{{ settings.get('portal_welcome_subtitle', '') }}" class="input input-bordered w-full"
+                                    placeholder="Contoh: Silakan masukkan kode voucher">
+                            </div>
+                        </div>
+
+                        <!-- Announcement Ticker -->
+                        <div class="form-control mb-4">
+                            <label class="label"><span class="label-text font-bold text-gray-700">Teks Berjalan (Running
+                                    Text)</span></label>
+                            <input type="text" name="portal_ticker_text"
+                                value="{{ settings.get('portal_ticker_text', '') }}" class="input input-bordered w-full"
+                                placeholder="Contoh: Selamat datang! Gunakan internet dengan bijak.">
+                        </div>
+
+                        <!-- Pricing Visibility -->
+                        <div class="form-control mb-4 bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
+                            <label class="label cursor-pointer justify-start gap-4">
+                                <input type="checkbox" name="portal_show_pricing" value="1"
+                                    class="checkbox checkbox-info" {% if settings.get('portal_show_pricing', '1')=='1'
+                                    %}checked{% endif %}>
+                                <span class="label-text font-bold text-gray-700">Tampilkan Daftar Harga Paket Otomatis</span>
+                            </label>
+                            <p class="text-[10px] opacity-60 mt-1 pl-10">Jika aktif, pelanggan dapat melihat daftar harga paket voucher langsung di halaman login.</p>
+                        </div>
+
+                        <!-- Trial Enabled -->
+                        <div class="form-control mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <label class="label cursor-pointer justify-start gap-4">
+                                <input type="checkbox" name="portal_trial_enabled" value="1"
+                                    class="checkbox checkbox-primary" {% if settings.get('portal_trial_enabled')=='1'
+                                    %}checked{% endif %}>
+                                <span class="label-text font-bold text-gray-700">Aktifkan Tombol "Coba Gratis"
+                                    (Trial)</span>
+                            </label>
+                            <p class="text-[10px] opacity-60 mt-1 pl-10">Jika aktif, tombol trial akan muncul dan
+                                mengarahkan user ke login trial otomatis.</p>
+                        </div>
+
+                        <!-- Custom HTML Editor -->
+                        <div id="custom-html-container"
+                            class="form-control mt-4 {% if settings.get('portal_template') != 'custom' %}hidden{% endif %}">
+                            <label class="label"><span class="label-text font-bold text-orange-600">Kode HTML
+                                    Kustom</span></label>
+
+                            <!-- Documentation / Guide -->
+                            <div class="collapse collapse-arrow bg-orange-50 border border-orange-200 mb-4">
+                                <input type="checkbox" />
+                                <div class="collapse-title text-sm font-bold text-orange-800">
+                                    <i class="bi bi-info-circle-fill mr-1"></i> LIHAT PANDUAN VARIABEL (SHORTCODES)
+                                </div>
+                                <div class="collapse-content text-xs text-orange-900 space-y-3">
+                                    <p>Gunakan variabel di bawah ini agar halaman login Bos berfungsi dengan sistem
+                                        MikroTik:</p>
+                                    <div class="grid grid-cols-2 gap-2 font-mono">
+                                        <div class="bg-white p-1 rounded">{% raw %}{{ hotspot_name }}{% endraw %}</div>
+                                        <div class="p-1">Nama Hotspot Anda</div>
+                                        <div class="bg-white p-1 rounded">{% raw %}{{ link_login }}{% endraw %}</div>
+                                        <div class="p-1 text-error font-bold">WAJIB (Alamat Login MikroTik)</div>
+                                        <div class="bg-white p-1 rounded">{% raw %}{{ link_orig }}{% endraw %}</div>
+                                        <div class="p-1">Halaman tujuan asal user</div>
+                                        <div class="bg-white p-1 rounded">{% raw %}{{ error }}{% endraw %}</div>
+                                        <div class="p-1">Pesan error jika login gagal</div>
+                                        <div class="bg-white p-1 rounded">{% raw %}{{ username }}{% endraw %}</div>
+                                        <div class="p-1">Username otomatis terisi</div>
+                                    </div>
+                                    <div class="divider my-1"></div>
+                                    <p class="font-bold">Contoh Form Login Minimalis:</p>
+                                    <pre class="bg-slate-800 text-slate-200 p-3 rounded-lg overflow-x-auto text-[10px]">
+&lt;form action="{% raw %}{{ link_login }}{% endraw %}" method="post"&gt;
+  &lt;input type="hidden" name="dst" value="{% raw %}{{ link_orig }}{% endraw %}" /&gt;
+  &lt;input type="text" name="username" value="{% raw %}{{ username }}{% endraw %}" placeholder="Voucher" /&gt;
+  &lt;input type="password" name="password" placeholder="Password (opsional)" /&gt;
+  &lt;button type="submit"&gt;LOGIN&lt;/button&gt;
+&lt;/form&gt;
+{% raw %}{% if error %}{% endraw %}&lt;p style="color:red"&gt;{% raw %}{{ error }}{% endraw %}&lt;/p&gt;{% raw %}{% endif %}{% endraw %}</pre>
+                                </div>
+                            </div>
+
+                            <textarea name="portal_custom_html"
+                                class="textarea textarea-bordered h-80 font-mono text-sm"
+                                placeholder="<html>...</html>">{{ settings.get('portal_custom_html', '') }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Styles & Asset -->
+                <div class="card bg-base-100 shadow-sm border border-base-200 mb-6">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4">
+                            <i class="bi bi-brush text-primary"></i> Brand & Gaya
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-bold text-gray-700">URL
+                                        Logo</span></label>
+                                <input type="text" name="portal_logo_url"
+                                    value="{{ settings.get('portal_logo_url', '') }}"
+                                    class="input input-bordered w-full" placeholder="https://example.com/logo.png">
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-bold text-gray-700">URL
+                                        Background</span></label>
+                                <input type="text" name="portal_background_url"
+                                    value="{{ settings.get('portal_background_url', '') }}"
+                                    class="input input-bordered w-full" placeholder="https://unsplash.com/...">
+                            </div>
+                        </div>
+
+                        <div class="form-control mb-6">
+                            <label class="label"><span class="label-text font-bold text-green-700">Nomor WhatsApp Admin (CS)</span></label>
+                            <input type="text" name="portal_cs_number"
+                                value="{{ settings.get('portal_cs_number', '') }}"
+                                class="input input-bordered w-full border-green-200 focus:border-green-500" placeholder="Contoh: +628123456789">
+                            <p class="text-[10px] opacity-60 mt-2 px-1 text-green-800">Digunakan untuk tombol "Bantuan" dan "Order WA" di portal login.</p>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-bold text-gray-700">Kustom CSS
+                                    (Portal)</span></label>
+                            <textarea name="portal_custom_css" class="textarea textarea-bordered h-40 font-mono text-sm"
+                                placeholder=".glass-panel { background: red !important; }">{{ settings.get('portal_custom_css', '') }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="md:col-span-4">
+                <div class="card bg-base-100 shadow-sm border border-base-200 sticky top-4 mb-4">
+                    <div class="card-body">
+                        <h3 class="card-title text-base border-b pb-2 mb-4">Publikasi</h3>
+                        <p class="text-xs opacity-70 mb-4">Perubahan pada pengaturan portal akan langsung diterapkan
+                            pada semua router yang menggunakan portal terpusat ini.</p>
+                        <button type="submit" class="btn btn-primary w-full shadow-lg">
+                            <i class="bi bi-cloud-arrow-up"></i> Simpan Pengaturan
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-sm border border-blue-200 bg-blue-50/30 sticky top-48">
+                    <div class="card-body">
+                        <h3 class="card-title text-base border-b border-blue-100 pb-2 mb-2 text-blue-800">
+                            <i class="bi bi-shield-check"></i> Walled Garden (Bypass)
+                        </h3>
+                        <p class="text-[11px] text-blue-700 leading-relaxed mb-4">
+                            Fitur <b>Pembelian Voucher Mandiri</b> di halaman portal login memerlukan *Walled Garden* agar Payment Gateway (Tripay, Midtrans, Gopay, Bank, dll) bisa diakses walau belum login internet.
+                        </p>
+                        <button type="button" onclick="syncWalledGarden(this)" class="btn btn-sm btn-outline btn-info w-full">
+                            <i class="bi bi-arrow-repeat"></i> Sinkronkan ke Router
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function syncWalledGarden(btn) {
+        if(!confirm("Anda yakin ingin menyuntikkan script bypass Payment Gateway ke semua router Mikrotik yang online?")) return;
+        
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Sinkronisasi...';
+        btn.disabled = true;
+        
+        fetch("{{ url_for('portal_settings.sync_walled_garden') }}", {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                alert(data.message + "\n\nDetail:\n" + data.details.join("\n"));
+            } else {
+                alert("Gagal sinkronisasi: " + data.error);
+            }
+        })
+        .catch(err => alert("Terjadi kesalahan jaringan."))
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const radios = document.querySelectorAll('input[name="portal_template"]');
+        const customContainer = document.getElementById('custom-html-container');
+
+        radios.forEach(radio => {
+            radio.addEventListener('change', function () {
+                if (this.value === 'custom') {
+                    customContainer.classList.remove('hidden');
+                } else {
+                    customContainer.classList.add('hidden');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

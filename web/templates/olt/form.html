@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto py-8">
+    <div class="mb-8 flex items-center gap-4">
+        <a href="{{ url_for('olt.index') }}" class="btn btn-ghost btn-circle shadow-sm border-base-200">
+            <i class="bi bi-arrow-left text-xl"></i>
+        </a>
+        <div>
+            <h2 class="text-3xl font-black text-primary">{{ 'Update' if olt else 'Register' }} OLT Device</h2>
+            <p class="text-sm opacity-60 font-medium italic">Konfigurasi parameter teknis untuk infrastruktur FTTH</p>
+        </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-2xl border border-base-200 overflow-hidden">
+        <div class="h-2 w-full bg-gradient-to-r from-primary to-indigo-600"></div>
+        <div class="card-body p-8">
+            <form method="POST">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-control col-span-full">
+                        <label class="label"><span
+                                class="label-text font-black uppercase text-[10px] tracking-widest opacity-60">Device
+                                Name Identification</span></label>
+                        <input type="text" name="name"
+                            class="input input-bordered focus:border-primary font-bold text-lg h-14"
+                            value="{{ olt.name if olt else '' }}" required placeholder="e.g. OLT-STARS-01" />
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-bold text-xs opacity-70">Vendor /
+                                Brand</span></label>
+                        <select name="brand" class="select select-bordered focus:border-primary font-medium">
+                            <option value="ZTE" {{ 'selected' if olt and olt.brand=='ZTE' else '' }}>ZTE</option>
+                            <option value="Huawei" {{ 'selected' if olt and olt.brand=='Huawei' else '' }}>Huawei
+                            </option>
+                            <option value="Nokia" {{ 'selected' if olt and olt.brand=='Nokia' else '' }}>Nokia</option>
+                            <option value="Generic" {{ 'selected' if olt and olt.brand=='Generic' else '' }}>Generic /
+                                Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-bold text-xs opacity-70">Total PON
+                                Ports</span></label>
+                        <input type="number" name="total_ports"
+                            class="input input-bordered focus:border-primary font-bold"
+                            value="{{ olt.total_ports if olt else 8 }}" min="1" max="128" />
+                    </div>
+
+                    <div class="divider col-span-full my-2 text-[10px] font-black opacity-30 tracking-widest uppercase">
+                        Connectivity Matrix</div>
+
+                    <div class="form-control md:col-span-1">
+                        <label class="label"><span class="label-text font-bold text-xs opacity-70">Management
+                                IP</span></label>
+                        <input type="text" name="ip_address" class="input input-bordered font-mono focus:border-primary"
+                            value="{{ olt.ip_address if olt else '' }}" placeholder="10.88.x.x" />
+                    </div>
+
+                    <div class="form-control md:col-span-1">
+                        <label class="label"><span class="label-text font-bold text-xs opacity-70">Port
+                                (API/Telnet)</span></label>
+                        <input type="number" name="api_port" class="input input-bordered font-mono focus:border-primary"
+                            value="{{ olt.api_port if olt else 8728 }}" />
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-bold text-xs opacity-70">Security
+                                Username</span></label>
+                        <input type="text" name="username" class="input input-bordered focus:border-primary"
+                            value="{{ olt.username if olt else '' }}" autocomplete="off" />
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-bold text-xs opacity-70">Security
+                                Password</span></label>
+                        <input type="password" name="password" class="input input-bordered focus:border-primary"
+                            value="{{ olt.password if olt else '' }}" autocomplete="new-password" />
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row justify-end gap-3 mt-10">
+                    <a href="{{ url_for('olt.index') }}" class="btn btn-ghost px-8">Discard</a>
+                    <button type="submit" class="btn btn-primary px-10 shadow-lg shadow-primary/30">
+                        <i class="bi bi-cloud-check-fill text-lg"></i> {{ 'Update Configuration' if olt else 'Finalize
+                        Registration' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

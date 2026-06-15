@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto pb-12">
+    <!-- Header Section -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h2 class="text-3xl font-black flex items-center gap-3 tracking-tight">
+                <i class="bi bi-pencil-square text-primary"></i>
+                Edit Router / NAS
+            </h2>
+            <p class="text-sm opacity-60 mt-1">Perbarui konfigurasi dan kredensial akses untuk node router <b>{{
+                    router.name }}</b>.</p>
+        </div>
+        <a href="{{ url_for('routers.index') }}" class="btn btn-ghost btn-sm">
+            <i class="bi bi-arrow-left"></i> Kembali
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        <!-- Main Configuration Card -->
+        <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+            <div class="card-body p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 border-b border-base-200 pb-4">
+                    <i class="bi bi-gear-fill text-xl text-primary"></i>
+                    <h3 class="font-bold text-lg">Informasi Dasar</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Nama Node Router</span>
+                        </label>
+                        <input type="text" name="name" class="input input-bordered w-full focus:input-primary"
+                            value="{{ router.name }}" required>
+                        <label class="label">
+                            <span class="label-text-alt opacity-50 text-[10px]">Identitas unik untuk router ini di
+                                dashboard.</span>
+                        </label>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Grup / Lokasi</span>
+                        </label>
+                        <input type="text" placeholder="Optional"
+                            class="input input-bordered w-full opacity-50 cursor-not-allowed" disabled>
+                        <label class="label">
+                            <span class="label-text-alt opacity-50 text-[10px]">Fitur Pengelompokan segera hadir.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- VPN Info (Read Only) -->
+                <div class="mt-8 p-6 bg-base-200/50 rounded-2xl border border-base-300">
+                    <label class="label mb-4 p-0">
+                        <span class="label-text font-bold flex items-center gap-2">
+                            <i class="bi bi-shield-lock-fill text-primary"></i>
+                            Informasi Jalur VPN (Read Only)
+                        </span>
+                    </label>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="form-control">
+                            <span class="text-[10px] uppercase font-bold opacity-40 mb-1">Tipe VPN</span>
+                            <div class="flex items-center gap-2 font-mono font-bold text-sm text-primary uppercase">
+                                {% if router.vpn_type == 'wireguard' %}
+                                <i class="bi bi-shield-check"></i> WireGuard
+                                {% elif router.vpn_type == 'l2tp' %}
+                                <i class="bi bi-hdd-network"></i> L2TP/IPSec
+                                {% elif router.vpn_type == 'sstp' %}
+                                <i class="bi bi-lock-fill"></i> SSTP
+                                {% elif router.vpn_type == 'direct_local' %}
+                                <i class="bi bi-ethernet"></i> Local
+                                {% elif router.vpn_type == 'public_ip' %}
+                                <i class="bi bi-globe"></i> Public IP
+                                {% elif router.vpn_type == 'zerotier' %}
+                                <i class="bi bi-grid-3x3-gap"></i> ZeroTier
+                                {% else %}
+                                <i class="bi bi-router"></i> {{ router.vpn_type }}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-control">
+                            <span class="text-[10px] uppercase font-bold opacity-40 mb-1">VPN IP Address</span>
+                            <div class="font-mono font-bold text-sm">{{ router.vpn_ip }}</div>
+                        </div>
+
+                        <div class="form-control">
+                            <span class="text-[10px] uppercase font-bold opacity-40 mb-1">VPN Password</span>
+                            <div class="font-mono font-bold text-sm opacity-60">
+                                {{ router.vpn_password or 'N/A' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-[10px] opacity-40 italic">
+                        * Pengaturan VPN tidak dapat diubah setelah registrasi untuk menjaga stabilitas jalur tunnel.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Integration Card -->
+        <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+            <div class="card-body p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="bi bi-lightning-charge-fill text-xl text-warning"></i>
+                    <h3 class="font-bold text-lg">Mikrotik API Connection</h3>
+                    <span class="badge badge-outline badge-xs opacity-50 uppercase">Kredensial</span>
+                </div>
+                <p class="text-xs opacity-50 mb-6 font-medium">Diperlukan untuk fitur Monitoring, Kill Session, dan
+                    Isolir pelanggan secara realtime.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text text-xs font-bold opacity-70">Username API</span>
+                        </label>
+                        <input type="text" name="api_user"
+                            class="input input-sm input-bordered w-full focus:input-primary"
+                            value="{{ router.api_user or '' }}" placeholder="admin">
+                    </div>
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text text-xs font-bold opacity-70">Password API</span>
+                        </label>
+                        <input type="password" name="api_password"
+                            class="input input-sm input-bordered w-full focus:input-primary"
+                            placeholder="Isi jika ingin diubah">
+                    </div>
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text text-xs font-bold opacity-70">Port API</span>
+                        </label>
+                        <input type="number" name="api_port"
+                            class="input input-sm input-bordered w-full focus:input-primary"
+                            value="{{ router.api_port or 8728 }}">
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-info/5 rounded-xl border border-info/20 flex gap-4 items-start">
+                    <i class="bi bi-info-circle-fill text-info text-xl"></i>
+                    <div class="text-[11px] leading-relaxed opacity-80">
+                        <b class="text-info">Tips Keamanan:</b> Sangat disarankan membuat User khusus di Mikrotik (Group
+                        API) daripada menggunakan user <i>admin</i> utama. Pastikan servis API di Mikrotik aktif di menu
+                        <code>/ip service</code>.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div
+            class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 bg-base-100 rounded-2xl shadow-lg border border-primary/20">
+            <div class="flex items-center gap-4">
+                <div class="bg-primary/10 p-3 rounded-xl">
+                    <i class="bi bi-save2 text-primary text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] max-w-[340px] leading-tight opacity-70">
+                        Pastikan data API Mikrotik valid agar sistem dapat melakukan <b>Sinkronisasi Status</b> secara
+                        berkala.
+                    </p>
+                </div>
+            </div>
+            <div class="flex gap-2 w-full md:w-auto">
+                <button type="submit" class="btn btn-primary flex-1 md:flex-none shadow-xl shadow-primary/30 px-10">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "client/base_app.html" %}
+{% set hide_nav = True %}
+
+{% block content %}
+<div class="bg-white sticky top-0 z-40 px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+    <a href="{{ url_for('client.tickets') }}" class="btn btn-sm btn-circle btn-ghost">
+        <i class="bi bi-arrow-left text-lg"></i>
+    </a>
+    <h1 class="text-lg font-bold">Buat Tiket Baru</h1>
+</div>
+
+<div class="p-6">
+    <form method="POST" class="space-y-4">
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text text-xs font-bold uppercase">Kategori Masalah</span></label>
+            <select name="category" class="select select-bordered w-full bg-white" required>
+                <option value="Internet Mati">Internet Mati / Gangguan</option>
+                <option value="Lambat">Koneksi Lambat</option>
+                <option value="Billing">Pembayaran / Tagihan</option>
+                <option value="Ganti Password">Ganti Password</option>
+                <option value="Lainnya">Lainnya</option>
+            </select>
+        </div>
+
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text text-xs font-bold uppercase">Judul Keluhan</span></label>
+            <input type="text" name="subject" class="input input-bordered w-full bg-white"
+                placeholder="Contoh: Internet mati total" required />
+        </div>
+
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text text-xs font-bold uppercase">Pesan Detail</span></label>
+            <textarea name="message" class="textarea textarea-bordered h-40 bg-white"
+                placeholder="Ceritakan detail masalah yang Anda alami..." required></textarea>
+        </div>
+
+        <div class="pt-4">
+            <button type="submit" class="btn btn-primary w-full rounded-xl shadow-lg shadow-primary/20">
+                <i class="bi bi-send"></i> Kirim Tiket
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

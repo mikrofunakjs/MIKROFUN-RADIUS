@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex items-center gap-3 mb-6">
+    <a href="{{ url_for('acs.index') }}" class="btn btn-ghost btn-sm">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <div>
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-router text-info"></i> {{ device.model or 'Router CPE' }}
+            <span class="badge badge-ghost font-mono text-xs">{{ device.serial_number }}</span>
+        </h2>
+        <p class="text-xs opacity-50">{{ device.vendor or '' }} &nbsp;•&nbsp; IP: {{ device.ip_address or '-' }}
+            &nbsp;•&nbsp;
+            Last inform: {{ device.last_inform.strftime('%d %b %Y %H:%M') if device.last_inform else 'Belum check-in' }}
+        </p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ===== LEFT COLUMN: CONTROLS ===== -->
+    <div class="lg:col-span-2 flex flex-col gap-4">
+
+        <!-- Device Info Card -->
+        <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body py-4">
+                <h3 class="font-bold text-sm uppercase opacity-60 mb-3">Info Device</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <div class="text-xs opacity-50">Model</div>
+                        <div class="font-bold">{{ device.model or '-' }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs opacity-50">Firmware</div>
+                        <div class="font-bold">{{ device.firmware or '-' }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs opacity-50">SSID 2.4GHz</div>
+                        <div class="font-bold">{{ device.ssid_24 or '-' }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs opacity-50">SSID 5GHz</div>
+                        <div class="font-bold">{{ device.ssid_50 or '-' }}</div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button onclick="sendTask('get_info','')" class="btn btn-xs btn-outline gap-1">
+                        <i class="bi bi-arrow-repeat"></i> Refresh Info dari Router
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SSID Control -->
+        <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body">
+                <h3 class="font-bold flex items-center gap-2 mb-4">
+                    <i class="bi bi-wifi text-primary"></i> Ubah Nama WiFi (SSID)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="label"><span class="label-text text-sm font-medium">SSID 2.4GHz</span></label>
+                        <div class="join w-full">
+                            <input type="text" id="ssid24" class="input input-bordered input-sm join-item flex-1"
+                                placeholder="Nama WiFi baru..." value="{{ device.ssid_24 or '' }}">
+                            <button onclick="sendTask('set_ssid_24', document.getElementById('ssid24').value)"
+                                class="btn btn-sm btn-primary join-item">Ubah</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="label"><span class="label-text text-sm font-medium">SSID 5GHz</span></label>
+                        <div class="join w-full">
+                            <input type="text" id="ssid50" class="input input-bordered input-sm join-item flex-1"
+                                placeholder="Nama WiFi 5GHz..." value="{{ device.ssid_50 or '' }}">
+                            <button onclick="sendTask('set_ssid_50', document.getElementById('ssid50').value)"
+                                class="btn btn-sm btn-primary join-item">Ubah</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Control -->
+        <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body">
+                <h3 class="font-bold flex items-center gap-2 mb-4">
+                    <i class="bi bi-key text-warning"></i> Ubah Password WiFi
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="label"><span class="label-text text-sm font-medium">Password 2.4GHz</span></label>
+                        <div class="join w-full">
+                            <input type="text" id="pass24" class="input input-bordered input-sm join-item flex-1"
+                                placeholder="Password baru (min 8 karakter)...">
+                            <button onclick="sendTask('set_pass_24', document.getElementById('pass24').value)"
+                                class="btn btn-sm btn-warning join-item">Ubah</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="label"><span class="label-text text-sm font-medium">Password 5GHz</span></label>
+                        <div class="join w-full">
+                            <input type="text" id="pass50" class="input input-bordered input-sm join-item flex-1"
+                                placeholder="Password baru...">
+                            <button onclick="sendTask('set_pass_50', document.getElementById('pass50').value)"
+                                class="btn btn-sm btn-warning join-item">Ubah</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-warning alert-sm mt-3 text-xs py-2">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Perintah akan dieksekusi saat router melakukan Inform berikutnya (biasanya 1-5 menit).
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced / Custom Param -->
+        <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body">
+                <h3 class="font-bold flex items-center gap-2 mb-4">
+                    <i class="bi bi-terminal text-secondary"></i> Custom Parameter (Advanced)
+                </h3>
+                <div class="flex flex-col gap-3">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text text-xs">TR-069 Parameter Path</span></label>
+                        <input type="text" id="customPath" class="input input-bordered input-sm"
+                            placeholder="InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID">
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text text-xs">Value</span></label>
+                        <div class="join">
+                            <input type="text" id="customValue" class="input input-bordered input-sm join-item flex-1"
+                                placeholder="Nilai baru...">
+                            <button onclick="sendCustomTask()" class="btn btn-sm btn-secondary join-item">Set</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card bg-base-100 shadow border border-error/30">
+            <div class="card-body">
+                <h3 class="font-bold flex items-center gap-2 text-error mb-2">
+                    <i class="bi bi-exclamation-octagon"></i> Aksi Berbahaya
+                </h3>
+                <button onclick="if(confirm('Yakin restart router pelanggan ini?')) sendTask('reboot','')"
+                    class="btn btn-error btn-sm gap-2">
+                    <i class="bi bi-power"></i> Restart Router
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RIGHT COLUMN: INFO + TASKS ===== -->
+    <div class="flex flex-col gap-4">
+
+        <!-- Link to Customer -->
+        <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body py-4">
+                <h3 class="font-bold text-sm mb-3">Hubungkan ke Pelanggan</h3>
+                {% if device.customer_name %}
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="bi bi-person-check text-success"></i>
+                    <span class="font-bold text-sm">{{ device.customer_name }}</span>
+                </div>
+                {% endif %}
+                <form method="POST" action="{{ url_for('acs.link_customer', serial=device.serial_number) }}">
+                    <select name="customer_id" class="select select-bordered select-sm w-full mb-2">
+                        <option value="">-- Lepas Tautan --</option>
+                        {% for c in customers %}
+                        <option value="{{ c.id }}" {{ 'selected' if device.customer_id==c.id else '' }}>
+                            {{ c.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-primary w-full">Simpan</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Task History -->
+        <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body p-0">
+                <div class="px-4 py-3 border-b border-base-200">
+                    <h3 class="font-bold text-sm">Riwayat Task</h3>
+                </div>
+                <div class="divide-y divide-base-200 max-h-96 overflow-y-auto">
+                    {% for t in tasks %}
+                    <div class="px-4 py-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-xs font-mono font-bold">{{ t.task_type }}</span>
+                            {% if t.status == 'done' %}
+                            <span class="badge badge-success badge-xs">Done</span>
+                            {% elif t.status == 'sent' %}
+                            <span class="badge badge-info badge-xs">Sent</span>
+                            {% elif t.status == 'pending' %}
+                            <span class="badge badge-warning badge-xs">Pending</span>
+                            {% else %}
+                            <span class="badge badge-error badge-xs">{{ t.status }}</span>
+                            {% endif %}
+                        </div>
+                        {% if t.value %}
+                        <div class="text-xs opacity-50 truncate">→ {{ t.value }}</div>
+                        {% endif %}
+                        <div class="text-xs opacity-40">{{ t.created_at.strftime('%d/%m %H:%M') if t.created_at else ''
+                            }}</div>
+                    </div>
+                    {% endfor %}
+                    {% if not tasks %}
+                    <div class="px-4 py-8 text-center opacity-40 text-xs">Belum ada task</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" class="toast toast-top toast-end hidden z-50">
+    <div class="alert alert-success text-sm" id="toastMsg"><span></span></div>
+</div>
+
+<script>
+    var SERIAL = {{ device.serial_number | tojson }};
+
+    function sendTask(type, value) {
+        if (!value && type !== 'reboot' && type !== 'get_info') {
+            alert('Masukkan nilai terlebih dahulu!');
+            return;
+        }
+        if (type.includes('pass') && value.length < 8) {
+            alert('Password minimal 8 karakter!');
+            return;
+        }
+        var fd = new FormData();
+        fd.append('serial', SERIAL);
+        fd.append('task_type', type);
+        fd.append('value', value);
+
+        fetch('/acs/api/task', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(d => showToast(d.msg || 'Task dijadwalkan!'))
+            .catch(() => showToast('Error mengirim task', true));
+    }
+
+    function sendCustomTask() {
+        var path = document.getElementById('customPath').value.trim();
+        var value = document.getElementById('customValue').value.trim();
+        if (!path || !value) { alert('Path dan value harus diisi!'); return; }
+        var fd = new FormData();
+        fd.append('serial', SERIAL);
+        fd.append('task_type', 'custom_set');
+        fd.append('value', value);
+        fd.append('param_path', path);
+        fetch('/acs/api/task', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(d => showToast(d.msg || 'Task dijadwalkan!'))
+            .catch(() => showToast('Error', true));
+    }
+
+    function showToast(msg, isError) {
+        var t = document.getElementById('toast');
+        var m = document.getElementById('toastMsg');
+        m.className = 'alert text-sm ' + (isError ? 'alert-error' : 'alert-success');
+        m.innerHTML = '<i class="bi bi-check2-circle"></i> <span>' + msg + '</span>';
+        t.classList.remove('hidden');
+        setTimeout(function () { t.classList.add('hidden'); }, 3500);
+        // Reload task list after 2s
+        if (!isError) setTimeout(function () { location.reload(); }, 2000);
+    }
+</script>
+{% endblock %}

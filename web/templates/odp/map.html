@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<!-- Leaflet Heat Plugin -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<!-- Full Height & GIS Styling -->
+<style>
+    :root {
+        --map-height: calc(100vh - 140px);
+    }
+
+    @media (max-width: 768px) {
+        :root {
+            --map-height: calc(100vh - 100px);
+        }
+
+        .main-container {
+            padding: 0 !important;
+        }
+
+        .card {
+            border-radius: 0;
+            border: none;
+        }
+    }
+
+    #map {
+        height: var(--map-height);
+        width: 100%;
+        z-index: 1;
+        background: #f8fafc;
+    }
+
+    .map-overlay-card {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        width: 320px;
+        max-height: calc(100% - 40px);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+        .map-overlay-card {
+            top: auto;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 40%;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    .status-pulse {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    .pulse-online {
+        animation: pulse-green 2s infinite;
+    }
+
+    .pulse-trouble {
+        animation: pulse-red 1s infinite;
+        background-color: #ef4444 !important;
+        border: 2px solid white !important;
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    @keyframes pulse-green {
+        0% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+    }
+
+    @keyframes pulse-red {
+        0% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            transform: scale(0.95);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            transform: scale(1);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            transform: scale(0.95);
+        }
+    }
+
+    .permanent-tooltip {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: bold;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        pointer-events: none;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
+    .color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    .sig-bar {
+        height: 4px;
+        border-radius: 2px;
+        flex: 1;
+    }
+
+    .sig-bad {
+        background: #ef4444;
+    }
+
+    .sig-warn {
+        background: #f97316;
+    }
+
+    .sig-good {
+        background: #22c55e;
+    }
+</style>
+
+<div class="relative h-full overflow-hidden">
+    <!-- Overlay Search & Info -->
+    <div class="map-overlay-card card shadow-2xl border border-base-200 lg:visible invisible" id="sidebar">
+        <div class="card-body p-4 flex flex-col h-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-black text-lg flex items-center gap-2">
+                    <i class="bi bi-geo-alt-fill text-primary"></i> <span>GIS Explorer v2</span>
+                </h3>
+                <button onclick="toggleSidebar()" class="btn btn-ghost btn-xs lg:hidden"><i
+                        class="bi bi-x-lg"></i></button>
+            </div>
+
+            <div class="join w-full mb-4">
+                <input type="text" id="mapSearchInput" placeholder="Cari ODP / Pelanggan..."
+                    class="input input-bordered input-sm join-item w-full" onkeyup="filterMapData(this.value)">
+                <button class="btn btn-primary btn-sm join-item"><i class="bi bi-search"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-1" id="sidebarList">
+                <!-- Layer Toggles -->
+                <div class="bg-base-200/50 p-3 rounded-xl border border-base-300">
+                    <h4 class="text-[10px] uppercase font-bold opacity-50 mb-3">Layer Controls</h4>
+                    <div class="space-y-2">
+                        <label class="flex justify-between items-center cursor-pointer">
+                            <span class="text-xs font-medium"><i class="bi bi-fire text-error"></i> Heatmap
+                                Kepadatan</span>
+                            <input type="checkbox" class="toggle toggle-error toggle-xs"
+                                onchange="toggleHeatmap(this.checked)">
+                        </label>
+                        <label class="flex justify-between items-center cursor-pointer">
+                            <span class="text-xs font-medium"><i class="bi bi-share text-primary"></i> Garis
+                                Koneksi</span>
+                            <input type="checkbox" class="toggle toggle-primary toggle-xs" checked
+                                onchange="toggleLayer(linesLayer, this.checked)">
+                        </label>
+                        <label class="flex justify-between items-center cursor-pointer">
+                            <span class="text-xs font-medium"><i class="bi bi-chat-left-dots text-info"></i> Label
+                                Permanen</span>
+                            <input type="checkbox" class="toggle toggle-info toggle-xs" id="labelToggle"
+                                onchange="toggleLabels(this.checked)">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Stats Summary -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-primary/5 p-2 rounded-lg border border-primary/20 text-center">
+                        <div class="text-[9px] uppercase font-bold opacity-60">Total ODP</div>
+                        <div class="text-lg font-black text-primary">{{ odps|length }}</div>
+                    </div>
+                    <div class="bg-success/5 p-2 rounded-lg border border-success/20 text-center">
+                        <div class="text-[9px] uppercase font-bold opacity-60">Terpetakan</div>
+                        <div class="text-lg font-black text-success">{{ customers|length }}</div>
+                    </div>
+                </div>
+
+                <div class="divider text-[10px] uppercase font-bold opacity-30 mt-2 mb-2">Quick Access</div>
+
+                <!-- Quick Search List -->
+                <div class="space-y-1" id="accessScroll">
+                    {% for o in odps %}
+                    <button onclick="zoomTo({{ o.id }}, 'odp')"
+                        class="sidebar-item flex items-center justify-between w-full h-10 px-3 py-2 text-xs font-medium text-left bg-base-100 hover:bg-primary/10 rounded-lg transition-all border border-base-200"
+                        data-name="{{ o.name | lower }}">
+                        <span class="truncate"><i class="bi bi-box-seam text-primary"></i> {{ o.name }}</span>
+                        <span class="badge badge-ghost badge-xs">{{ o.used_ports }}/{{ o.capacity }}</span>
+                    </button>
+                    {% endfor %}
+
+                    {% for c in customers %}
+                    <button onclick="zoomTo({{ c.id }}, 'cust')"
+                        class="sidebar-item flex items-center justify-between w-full h-10 px-3 py-2 text-xs font-medium text-left bg-base-100 hover:bg-success/10 rounded-lg transition-all border border-base-200"
+                        data-name="{{ c.name | lower }} {{ c.username | lower }}">
+                        <span class="truncate flex items-center gap-1">
+                            {% if c.open_tickets > 0 %}<i
+                                class="bi bi-exclamation-triangle-fill text-error animate-pulse"></i>{% endif %}
+                            {{ c.name }}
+                        </span>
+                        <div class="flex gap-1 items-center">
+                            <span class="text-[9px] opacity-40 font-mono">{{ c.username }}</span>
+                            <div
+                                class="w-1.5 h-1.5 rounded-full {{ 'bg-success' if c.is_online > 0 else 'bg-base-300' }}">
+                            </div>
+                        </div>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+        <button onclick="toggleMapType()"
+            class="btn btn-circle btn-sm bg-base-100 shadow-lg border-base-300 tooltip tooltip-left"
+            data-tip="Ganti Tampilan"><i class="bi bi-layers-half"></i></button>
+        <button onclick="toggleSidebar()"
+            class="btn btn-circle btn-sm bg-base-100 shadow-lg border-base-300 lg:hidden"><i
+                class="bi bi-list"></i></button>
+    </div>
+
+    <div id="map" class="shadow-inner"></div>
+</div>
+
+<script>
+    // 1. Setup Map
+    var streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+    var map = L.map('map', { center: [-6.200, 106.816], zoom: 13, zoomControl: false, layers: [streetMap] });
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // 2. Data
+    var odpsData = {{ odps | tojson }};
+    var customersData = {{ customers | tojson }};
+
+    var markersLayer = L.layerGroup().addTo(map);
+    var linesLayer = L.layerGroup().addTo(map);
+    var heatmapLayer = L.heatLayer([], { radius: 25, blur: 15, max: 1.0 }).addTo(map);
+    map.removeLayer(heatmapLayer);
+
+    var odpMarkers = {};
+    var custMarkers = {};
+    var odpLocs = {};
+    var connectionLines = {};
+
+    function getOdpIcon(used, capacity) {
+        var ratio = used / capacity;
+        var color = ratio >= 1 ? '#ef4444' : (ratio >= 0.8 ? '#f97316' : (ratio > 0 ? '#22c55e' : '#3b82f6'));
+        return L.divIcon({ html: `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
+    }
+
+    function getCustIcon(c) {
+        if (c.open_tickets > 0) return L.divIcon({ html: `<div class="status-pulse pulse-trouble flex items-center justify-center"><i class="bi bi-exclamation text-[10px] text-white"></i></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
+        var color = c.rx_power ? (c.rx_power >= -25 ? '#22c55e' : (c.rx_power >= -28 ? '#f97316' : '#ef4444')) : (c.is_online > 0 ? '#3b82f6' : '#94a3b8');
+        var pulse = c.is_online > 0 ? 'pulse-online' : '';
+        return L.divIcon({ html: `<div class="status-pulse ${pulse}" style="background-color: ${color}; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></div>`, className: '', iconSize: [10, 10], iconAnchor: [5, 5] });
+    }
+
+    // 3. Plotting
+    var bounds = L.latLngBounds();
+    var heatPoints = [];
+
+    odpsData.forEach(function (o) {
+        if (!o.coordinates) return;
+        var pos = o.coordinates.split(',').map(Number);
+        if (pos.length != 2 || isNaN(pos[0]) || isNaN(pos[1])) return;
+        var latlng = L.latLng(pos[0], pos[1]);
+        odpLocs[o.id] = latlng;
+        var pct = o.capacity > 0 ? Math.round((o.used_ports / o.capacity) * 100) : 0;
+        var barColor = pct >= 100 ? '#ef4444' : (pct >= 80 ? '#f97316' : (pct > 0 ? '#22c55e' : '#3b82f6'));
+        var popup = `<div style="min-width:200px;font-family:sans-serif;font-size:13px">
+            <div style="font-weight:900;color:#4f46e5;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:8px">📦 ${o.name}</div>
+            <div style="font-size:11px;color:#64748b;margin-bottom:8px">📍 ${o.address || '-'}</div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+                <span>Port:</span><strong>${o.used_ports}/${o.capacity} (${pct}%)</strong>
+            </div>
+            <div style="background:#e2e8f0;height:6px;border-radius:4px;overflow:hidden;margin-bottom:10px">
+                <div style="background:${barColor};width:${pct}%;height:100%"></div>
+            </div>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${latlng.lat},${latlng.lng}" target="_blank"
+               style="display:block;text-align:center;background:#4f46e5;color:white;padding:6px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold">
+               🧭 Navigasi ke ODP
+            </a>
+        </div>`;
+        var marker = L.marker(latlng, { icon: getOdpIcon(o.used_ports, o.capacity), draggable: true, title: o.name })
+            .bindPopup(popup)
+            .bindTooltip(o.name, { permanent: true, direction: 'top', className: 'permanent-tooltip', offset: [0, -10] })
+            .addTo(markersLayer);
+        marker.on('dragend', function (e) { saveCoords(o.id, 'odp', e.target.getLatLng()); });
+        odpMarkers[o.id] = marker;
+        bounds.extend(latlng);
+    });
+
+    customersData.forEach(function (c) {
+        if (!c.coordinates || c.coordinates === 'None' || c.coordinates === 'null') return;
+        var coordStr = String(c.coordinates).trim();
+        if (!coordStr) return;
+        var pos = coordStr.split(',').map(function (s) { return Number(s.trim()); });
+        if (pos.length != 2 || isNaN(pos[0]) || isNaN(pos[1]) || pos[0] === 0 || pos[1] === 0) return;
+        var latlng = L.latLng(pos[0], pos[1]);
+        heatPoints.push([latlng.lat, latlng.lng, 1.0]);
+        var typeLabel = c.service_type || 'PPPoE';
+        var onlineBadge = c.is_online > 0
+            ? '<span style="background:#22c55e;color:white;padding:1px 6px;border-radius:999px;font-size:10px">ONLINE</span>'
+            : '<span style="background:#94a3b8;color:white;padding:1px 6px;border-radius:999px;font-size:10px">OFFLINE</span>';
+        var ticketAlert = c.open_tickets > 0
+            ? '<div style="background:#fee2e2;color:#dc2626;padding:6px;border-radius:6px;font-size:11px;margin-bottom:8px">⚠️ Ada Gangguan / Tiket Terbuka!</div>'
+            : '';
+        var popup = `<div style="min-width:210px;font-family:sans-serif;font-size:13px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+                <div>
+                    <div style="font-weight:900;font-size:14px">${c.name}</div>
+                    <div style="font-size:10px;color:#94a3b8;font-family:monospace">${c.username} · ${typeLabel}</div>
+                </div>
+                ${onlineBadge}
+            </div>
+            ${ticketAlert}
+            <div style="background:#f1f5f9;padding:8px;border-radius:6px;margin-bottom:8px;font-size:11px">
+                <div style="display:flex;justify-content:space-between;font-weight:bold;margin-bottom:4px">
+                    <span>Signal Rx</span>
+                    <span style="color:${(!c.rx_power || c.rx_power < -28) ? '#dc2626' : '#4f46e5'}">${c.rx_power || '--'} dBm</span>
+                </div>
+            </div>
+            <div style="display:flex;gap:6px">
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${latlng.lat},${latlng.lng}" target="_blank"
+                   style="flex:1;text-align:center;background:#e0e7ff;color:#4f46e5;padding:5px;border-radius:6px;text-decoration:none;font-size:11px;font-weight:bold">🧭 Navigasi</a>
+                <a href="/customers/edit/${c.id}"
+                   style="flex:1;text-align:center;background:#f1f5f9;color:#475569;padding:5px;border-radius:6px;text-decoration:none;font-size:11px">✏️ Edit</a>
+            </div>
+        </div>`;
+        var marker = L.marker(latlng, { icon: getCustIcon(c), draggable: true, title: c.name })
+            .bindPopup(popup)
+            .bindTooltip(`${c.name}<br><span style="font-size:8px;opacity:0.6">${c.address || ''}</span>`, { permanent: false, direction: 'bottom', className: 'permanent-tooltip', offset: [0, 10] })
+            .addTo(markersLayer);
+        marker.on('dragend', function (e) { saveCoords(c.id, 'cust', e.target.getLatLng()); });
+        custMarkers[c.id] = marker;
+        bounds.extend(latlng);
+        if (c.odp_id && odpLocs[c.odp_id]) {
+            var poly = L.polyline([latlng, odpLocs[c.odp_id]], { color: c.is_online > 0 ? '#3b82f6' : '#94a3b8', weight: 1.5, dashArray: '4, 4', opacity: 0.5 }).addTo(linesLayer);
+            poly.bindTooltip(`${(map.distance(latlng, odpLocs[c.odp_id])).toFixed(0)} meter`, { sticky: true, className: 'text-[9px] px-1 py-0' });
+            connectionLines[c.id] = poly;
+        }
+    });
+
+    heatmapLayer.setLatLngs(heatPoints);
+    if (odpsData.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
+
+    // 4. Functions
+    function toggleHeatmap(s) { s ? map.addLayer(heatmapLayer) : map.removeLayer(heatmapLayer); }
+    function toggleLayer(l, s) { s ? map.addLayer(l) : map.removeLayer(l); }
+    function toggleLabels(s) { markersLayer.eachLayer(function (l) { if (l.getTooltip()) s ? l.openTooltip() : l.closeTooltip(); }); }
+    function toggleSidebar() { var s = document.getElementById('sidebar'); s.classList.toggle('visible'); s.classList.toggle('invisible'); }
+    function toggleMapType() { if (map.hasLayer(streetMap)) { map.removeLayer(streetMap); map.addLayer(satelliteMap); } else { map.removeLayer(satelliteMap); map.addLayer(streetMap); } }
+    function zoomTo(id, type) { var m = type === 'odp' ? odpMarkers[id] : custMarkers[id]; if (m) { map.setView(m.getLatLng(), 19, { animate: true }); m.openPopup(); if (window.innerWidth < 768) toggleSidebar(); } }
+    function filterMapData(q) { q = q.toLowerCase(); document.querySelectorAll('.sidebar-item').forEach(function (i) { i.style.display = i.getAttribute('data-name').includes(q) ? 'flex' : 'none'; }); }
+    function saveCoords(id, type, latlng) {
+        if (!confirm('Simpan lokasi baru?')) return;
+        const url = type === 'odp' ? "{{ url_for('odp.update_odp_coords') }}" : "{{ url_for('odp.update_customer_coords') }}";
+        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id, coordinates: `${latlng.lat.toFixed(6)},${latlng.lng.toFixed(6)}` }) })
+            .then(function (res) { return res.json(); }).then(function (data) {
+                if (data.success) { if (type === 'odp') { odpLocs[id] = latlng; updateLinesForOdp(id); } else { updateLineForCustomer(id, latlng); } }
+            });
+    }
+    function updateLineForCustomer(id, latlng) { var l = connectionLines[id]; if (l) { var dest = l.getLatLngs()[1]; l.setLatLngs([latlng, dest]); l.setTooltipContent(`${(map.distance(latlng, dest)).toFixed(0)} meter`); } }
+    function updateLinesForOdp(id) { customersData.forEach(function (c) { if (c.odp_id == id && connectionLines[c.id]) { var l = connectionLines[c.id]; l.setLatLngs([l.getLatLngs()[0], odpLocs[id]]); l.setTooltipContent(`${(map.distance(l.getLatLngs()[0], odpLocs[id])).toFixed(0)} meter`); } }); }
+</script>
+{% endblock %}

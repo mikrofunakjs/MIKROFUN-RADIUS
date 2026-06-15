@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+                <i class="bi bi-clipboard-check"></i> Hasil Import DHCP / IP Static
+            </h2>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('mac_customers.import_excel') }}" class="btn btn-outline btn-sm gap-1">
+                <i class="bi bi-upload"></i> Import Lagi
+            </a>
+            <a href="{{ url_for('mac_customers.index') }}" class="btn btn-primary btn-sm gap-1">
+                <i class="bi bi-diagram-3"></i> Lihat Daftar Customer DHCP
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div class="stat bg-base-100 rounded-xl shadow border border-base-200">
+            <div class="stat-figure text-success"><i class="bi bi-check-circle-fill text-3xl"></i></div>
+            <div class="stat-title text-xs">Berhasil</div>
+            <div class="stat-value text-success">{{ success_count }}</div>
+        </div>
+        <div class="stat bg-base-100 rounded-xl shadow border border-base-200">
+            <div class="stat-figure text-error"><i class="bi bi-x-circle-fill text-3xl"></i></div>
+            <div class="stat-title text-xs">Gagal / Error</div>
+            <div class="stat-value text-error">{{ error_count }}</div>
+        </div>
+        <div class="stat bg-base-100 rounded-xl shadow border border-base-200">
+            <div class="stat-figure text-base-content/30"><i class="bi bi-skip-forward-fill text-3xl"></i></div>
+            <div class="stat-title text-xs">Total Baris</div>
+            <div class="stat-value">{{ results|length }}</div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body p-0">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra table-sm">
+                    <thead class="bg-base-200 text-xs uppercase">
+                        <tr>
+                            <th>Baris</th>
+                            <th>Nama</th>
+                            <th>Status</th>
+                            <th>Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in results %}
+                        <tr>
+                            <td class="opacity-50">{{ r.row }}</td>
+                            <td class="font-medium">{{ r.name or '-' }}</td>
+                            <td>
+                                {% if r.status == 'success' %}
+                                <span class="badge badge-success badge-sm gap-1"><i class="bi bi-check"></i>
+                                    Berhasil</span>
+                                {% elif r.status == 'skip' %}
+                                <span class="badge badge-warning badge-sm gap-1"><i class="bi bi-skip-forward"></i>
+                                    Dilewati</span>
+                                {% else %}
+                                <span class="badge badge-error badge-sm gap-1"><i class="bi bi-x"></i> Error</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs opacity-70">{{ r.message }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not results %}
+                        <tr>
+                            <td colspan="4" class="text-center opacity-40">Tidak ada data untuk ditampilkan</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+[Unit]
+Description=MikroFun Voucher Cleanup Service
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/akjsteknik/radius_version
+ExecStart=/home/akjsteknik/radius_version/venv/bin/python3 /home/akjsteknik/radius_version/cleanup_vouchers.py
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=mikrofun-cleanup
+
+[Install]
+WantedBy=multi-user.target

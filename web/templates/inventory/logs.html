@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Riwayat Aset: {{ asset.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6 flex items-center gap-4">
+        <a href="{{ url_for('inventory.index') }}" class="btn btn-sm btn-ghost btn-circle">
+            <i class="bi bi-arrow-left text-xl"></i>
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Riwayat Pergerakan Aset</h1>
+            <p class="text-sm text-gray-500">Lacak perjalanan aset mulai dari gudang, peminjaman, hingga kembali.</p>
+        </div>
+    </div>
+
+    <!-- Info Card -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 shadow-md text-white mb-8">
+        <div class="flex items-start justify-between">
+            <div>
+                <h2 class="text-2xl font-black mb-1">{{ asset.name }}</h2>
+                <div class="opacity-80 flex gap-4 text-sm mt-3">
+                    <span><i class="bi bi-tag-fill mr-1"></i> {{ asset.category|upper }}</span>
+                    <span><i class="bi bi-bookmark-fill mr-1"></i> {{ asset.brand or '-' }}</span>
+                    <span><i class="bi bi-upc-scan mr-1"></i> SN: <span class="font-mono">{{ asset.serial_number or '-'
+                            }}</span></span>
+                    <span><i class="bi bi-ethernet mr-1"></i> MAC: <span class="font-mono">{{ asset.mac_address or '-'
+                            }}</span></span>
+                </div>
+            </div>
+            <div>
+                {% if asset.status == 'available' %}
+                <span class="badge badge-success border-0 bg-white/20 text-white font-bold px-4 py-3"><i
+                        class="bi bi-check-circle-fill mr-1 text-green-300"></i> Gudang</span>
+                {% elif asset.status == 'assigned_tech' %}
+                <span class="badge badge-warning border-0 bg-white/20 text-white font-bold px-4 py-3"><i
+                        class="bi bi-person-fill mr-1 text-amber-300"></i> Teknisi</span>
+                {% elif asset.status == 'assigned_cust' %}
+                <span class="badge badge-secondary border-0 bg-white/20 text-white font-bold px-4 py-3"><i
+                        class="bi bi-house-fill mr-1 text-pink-300"></i> Klien</span>
+                {% else %}
+                <span class="badge badge-error border-0 bg-white/20 text-white font-bold px-4 py-3"><i
+                        class="bi bi-x-circle-fill mr-1 text-red-300"></i> {{ asset.status|upper }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Logs -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 class="font-bold text-gray-800 text-lg mb-6 border-b pb-3"><i
+                class="bi bi-clock-history mr-2 text-primary"></i> Timeline Transaksi</h3>
+
+        {% if logs %}
+        <ul class="timeline timeline-vertical">
+            {% for log in logs %}
+            <li>
+                <div class="timeline-start timeline-box border-0 bg-gray-50 shadow-sm text-sm p-4 w-72">
+                    <div class="font-bold text-gray-800 mb-1">
+                        {% if log.action == 'assign' %}
+                        Dipinjamkan ke {{ log.entity_type|title }}
+                        {% elif log.action == 'return' %}
+                        Dikembalikan ke Gudang
+                        {% elif log.action == 'mark_broken' %}
+                        Dilaporkan Rusak
+                        {% elif log.action == 'mark_lost' %}
+                        Dilaporkan Hilang
+                        {% elif log.action == 'repaired' %}
+                        Dipulihkan ke Gudang
+                        {% elif log.action == 'deleted' %}
+                        Dihapus dari Sistem
+                        {% else %}
+                        {{ log.action }}
+                        {% endif %}
+                    </div>
+                    {% if log.entity_name and log.entity_name != '-' %}
+                    <div class="text-primary font-bold"><i class="bi bi-person mr-1"></i> {{ log.entity_name }}</div>
+                    {% endif %}
+                    <div class="text-gray-500 mt-2 italic text-xs border-t border-gray-200 pt-2"><i
+                            class="bi bi-chat-left-text text-gray-400 mr-1"></i> {{ log.notes or 'Tidak ada catatan' }}
+                    </div>
+                </div>
+
+                <div class="timeline-middle text-2xl mx-2">
+                    {% if log.action == 'assign' %}
+                    <i class="bi bi-arrow-right-circle-fill text-warning"></i>
+                    {% elif log.action == 'return' %}
+                    <i class="bi bi-arrow-left-circle-fill text-success"></i>
+                    {% elif log.action == 'mark_broken' %}
+                    <i class="bi bi-exclamation-triangle-fill text-error"></i>
+                    {% elif log.action == 'repaired' %}
+                    <i class="bi bi-arrow-repeat text-info"></i>
+                    {% elif log.action == 'deleted' %}
+                    <i class="bi bi-trash-fill text-error"></i>
+                    {% else %}
+                    <i class="bi bi-circle-fill text-gray-300"></i>
+                    {% endif %}
+                </div>
+
+                <div class="timeline-end text-xs text-gray-500 font-mono font-medium pl-4 py-3">
+                    <div class="text-gray-800">{{ log.action_date.strftime('%d %b %Y') }}</div>
+                    <div>{{ log.action_date.strftime('%H:%M') }} WIB</div>
+                    <div class="mt-2 text-[10px] bg-gray-100 px-2 py-1 rounded inline-block">oleh: {{ log.admin_name or
+                        'System' }}</div>
+                </div>
+
+                {% if not loop.last %}
+                <hr class="bg-gray-100" />{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-center py-10 text-gray-500">
+            <i class="bi bi-inboxes text-4xl text-gray-300 mb-3 block"></i>
+            <p>Belum ada riwayat pergerakan untuk aset ini.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

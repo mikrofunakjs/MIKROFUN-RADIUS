@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% block title %}Manajemen Gudang & Aset{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-end">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Manajemen Gudang & Aset</h1>
+        <p class="text-sm text-gray-500 mt-1">Lacak modem, router, dan alat kerja teknisi Anda</p>
+    </div>
+    <div class="flex gap-2">
+        <a href="{{ url_for('inventory.add') }}"
+            class="btn btn-primary shadow-sm bg-gradient-to-r from-primary to-indigo-600 border-0 hover:scale-105 transition-transform">
+            <i class="bi bi-plus-lg"></i> Tambah Aset
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-2xl">
+            <i class="bi bi-boxes"></i>
+        </div>
+        <div>
+            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Aset</div>
+            <div class="text-2xl font-black text-gray-800">{{ stats.total }}</div>
+        </div>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-green-50 text-green-500 flex items-center justify-center text-2xl">
+            <i class="bi bi-check-circle"></i>
+        </div>
+        <div>
+            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Tersedia (Gudang)</div>
+            <div class="text-2xl font-black text-gray-800">{{ stats.available }}</div>
+        </div>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center text-2xl">
+            <i class="bi bi-person-workspace"></i>
+        </div>
+        <div>
+            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Dipinjamkan</div>
+            <div class="text-2xl font-black text-gray-800">{{ stats.assigned }}</div>
+        </div>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-2xl">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div>
+            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Rusak / Hilang</div>
+            <div class="text-2xl font-black text-gray-800">{{ stats.broken }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <h3 class="font-bold text-gray-700">Daftar Inventaris</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="table w-full">
+            <thead class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wider">
+                <tr>
+                    <th class="px-6 py-4">Nama Barang</th>
+                    <th class="px-6 py-4">Kategori & Merk</th>
+                    <th class="px-6 py-4">Identitas (SN/MAC)</th>
+                    <th class="px-6 py-4">Status & Pemegang</th>
+                    <th class="px-6 py-4 text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for a in assets %}
+                <tr class="hover:bg-gray-50/50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-gray-800">{{ a.name }}</div>
+                        <div class="text-xs text-gray-500">Beli: {{ a.purchase_date or '-' }} | Harga: Rp {{
+                            "{:,.0f}".format(a.purchase_price) if a.purchase_price else '0' }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if a.category == 'modem' %}
+                        <span class="badge badge-sm badge-info text-white font-bold"><i class="bi bi-router mr-1"></i>
+                            Modem/ONT</span>
+                        {% elif a.category == 'router' %}
+                        <span class="badge badge-sm badge-primary text-white font-bold"><i
+                                class="bi bi-hdd-network mr-1"></i> Router</span>
+                        {% elif a.category == 'tool' %}
+                        <span class="badge badge-sm badge-neutral font-bold"><i class="bi bi-tools mr-1"></i> Alat
+                            Kerja</span>
+                        {% else %}
+                        <span class="badge badge-sm font-bold">{{ a.category|upper }}</span>
+                        {% endif %}
+                        <div class="text-xs font-bold text-gray-600 mt-1">{{ a.brand|default('-', true)|upper }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-xs font-mono bg-gray-100 px-2 py-1 rounded inline-block"><span
+                                class="text-gray-400">SN:</span> {{ a.serial_number or '-' }}</div>
+                        <br>
+                        <div class="text-xs font-mono bg-gray-100 px-2 py-1 rounded inline-block mt-1"><span
+                                class="text-gray-400">MAC:</span> {{ a.mac_address or '-' }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if a.status == 'available' %}
+                        <span class="badge badge-success badge-sm text-white font-bold gap-1"><i
+                                class="bi bi-check-circle-fill"></i> Tersedia Gudang</span>
+                        {% elif a.status == 'assigned_tech' %}
+                        <span class="badge badge-warning badge-sm text-white font-bold gap-1"><i
+                                class="bi bi-person-fill"></i> Dibawa Teknisi</span>
+                        <div class="text-xs font-bold mt-1 text-orange-600">{{ a.assignee_name }}</div>
+                        {% elif a.status == 'assigned_cust' %}
+                        <span class="badge badge-secondary badge-sm text-white font-bold gap-1"><i
+                                class="bi bi-house-door-fill"></i> Dipasang di Klien</span>
+                        <div class="text-xs font-bold mt-1 text-pink-600">{{ a.assignee_name }}</div>
+                        {% elif a.status == 'broken' %}
+                        <span class="badge badge-error badge-sm text-white font-bold gap-1"><i
+                                class="bi bi-x-circle-fill"></i> Rusak</span>
+                        {% elif a.status == 'lost' %}
+                        <span class="badge badge-active badge-ghost badge-sm font-bold gap-1"><i
+                                class="bi bi-question-circle-fill"></i> Hilang</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="join">
+                            {% if a.status == 'available' %}
+                            <button data-assign-id="{{ a.id }}" data-assign-name="{{ a.name }}"
+                                class="btn-assign btn btn-sm btn-success text-white join-item tooltip"
+                                data-tip="Tugaskan / Pinjamkan"><i class="bi bi-send-fill"></i></button>
+                            {% elif a.status in ['assigned_tech', 'assigned_cust'] %}
+                            <button data-return-id="{{ a.id }}" data-return-name="{{ a.name }}"
+                                class="btn-return btn btn-sm btn-warning text-white join-item tooltip"
+                                data-tip="Tarik ke Gudang"><i class="bi bi-box-arrow-in-down-left"></i></button>
+                            {% elif a.status in ['broken', 'lost'] %}
+                            <button data-repair-id="{{ a.id }}" data-repair-name="{{ a.name }}"
+                                class="btn-repair btn btn-sm btn-info text-white join-item tooltip"
+                                data-tip="Pulihkan ke Gudang"><i class="bi bi-arrow-repeat"></i></button>
+                            {% endif %}
+
+                            <a href="{{ url_for('inventory.logs', id=a.id) }}"
+                                class="btn btn-sm btn-ghost join-item tooltip" data-tip="Riwayat Log"><i
+                                    class="bi bi-clock-history text-primary"></i></a>
+
+                            <form action="{{ url_for('inventory.delete', id=a.id) }}" method="POST" class="inline"
+                                onsubmit="return confirm('Hapus aset ini permanen?');">
+                                <button type="submit" class="btn btn-sm btn-ghost join-item text-error tooltip"
+                                    data-tip="Hapus Aset"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="bi bi-box-seam text-3xl text-gray-300"></i>
+                        </div>
+                        <p class="font-medium text-gray-600">Belum ada data barang di Gudang.</p>
+                        <p class="text-xs text-gray-400 mt-1">Klik tombol 'Tambah Aset' untuk mulai mencatat inventaris
+                            Anda.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SHARED MODAL: ASSIGN -->
+<dialog id="modal-assign-shared" class="modal">
+    <div class="modal-box text-left">
+        <h3 class="font-bold text-lg mb-4 text-gray-800" id="assign-title">Tugaskan Aset</h3>
+        <form id="form-assign-shared" action="" method="POST">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Jenis Penerima</span></label>
+                <select name="entity_type" id="sel-entity-type" class="select select-bordered" onchange="toggleEntitySelect(this)" required>
+                    <option value="" disabled selected>Pilih Penerima...</option>
+                    <option value="technician">Pegawai / Teknisi</option>
+                    <option value="customer">Pelanggan Internet</option>
+                </select>
+            </div>
+            <div class="form-control mb-4 hidden" id="div-tech-shared">
+                <label class="label"><span class="label-text font-bold">Pilih Teknisi</span></label>
+                <select name="entity_id_tech" class="select select-bordered w-full">
+                    <option value="" disabled selected>-- Pilih Teknisi --</option>
+                    {% for t in techs %}
+                    <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-control mb-4 hidden" id="div-cust-shared">
+                <label class="label"><span class="label-text font-bold">Pilih Pelanggan</span></label>
+                <select name="entity_id_cust" class="select select-bordered w-full">
+                    <option value="" disabled selected>-- Pilih Pelanggan --</option>
+                    {% for c in customers %}
+                    <option value="{{ c.id }}">{{ c.name }} ({{ c.username or 'Hotspot' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input type="hidden" name="entity_id" id="real-entity-shared">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Catatan Peminjaman</span></label>
+                <input type="text" name="notes" class="input input-bordered" placeholder="Cth: Dipinjam untuk project X">
+            </div>
+            <div class="modal-action mt-6">
+                <button type="button" class="btn" onclick="document.getElementById('modal-assign-shared').close()">Batal</button>
+                <button type="button" class="btn btn-primary" onclick="submitSharedAssignForm()">Simpan Penugasan</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- SHARED MODAL: RETURN -->
+<dialog id="modal-return-shared" class="modal">
+    <div class="modal-box text-left">
+        <h3 class="font-bold text-lg mb-4 text-gray-800" id="return-title">Kembalikan ke Gudang</h3>
+        <form id="form-return-shared" action="" method="POST">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Kondisi Saat Dikembalikan</span></label>
+                <select name="condition" class="select select-bordered" required>
+                    <option value="good" selected>Baik / Berfungsi Normal</option>
+                    <option value="broken">Rusak</option>
+                    <option value="lost">Hilang</option>
+                </select>
+            </div>
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Catatan (Bila ada)</span></label>
+                <input type="text" name="notes" class="input input-bordered" placeholder="Alasan penarikan / detail kerusakan">
+            </div>
+            <div class="modal-action mt-6">
+                <button type="button" class="btn" onclick="document.getElementById('modal-return-shared').close()">Batal</button>
+                <button type="submit" class="btn btn-warning">Tarik Aset</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- SHARED MODAL: REPAIR -->
+<dialog id="modal-repair-shared" class="modal">
+    <div class="modal-box text-left">
+        <h3 class="font-bold text-lg mb-4 text-gray-800" id="repair-title">Pulihkan ke Gudang</h3>
+        <form id="form-repair-shared" action="" method="POST">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Catatan</span></label>
+                <input type="text" name="notes" class="input input-bordered" placeholder="Diperbaiki / Ditemukan kembali">
+            </div>
+            <div class="modal-action mt-6">
+                <button type="button" class="btn" onclick="document.getElementById('modal-repair-shared').close()">Batal</button>
+                <button type="submit" class="btn btn-info text-white">Pulihkan Aset</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+    const ASSIGN_URL = "{{ url_for('inventory.assign', id=0) }}".replace('/0', '');
+    const RETURN_URL = "{{ url_for('inventory.return_asset', id=0) }}".replace('/0', '');
+    const REPAIR_URL = "{{ url_for('inventory.repair', id=0) }}".replace('/0', '');
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-assign').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                openAssignModal(this.dataset.assignId, this.dataset.assignName);
+            });
+        });
+        document.querySelectorAll('.btn-return').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                openReturnModal(this.dataset.returnId, this.dataset.returnName);
+            });
+        });
+        document.querySelectorAll('.btn-repair').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                openRepairModal(this.dataset.repairId, this.dataset.repairName);
+            });
+        });
+    });
+
+    function openAssignModal(id, name) {
+        var form = document.getElementById('form-assign-shared');
+        form.reset();
+        form.action = ASSIGN_URL + "/" + id;
+        document.getElementById('sel-entity-type').selectedIndex = 0;
+        document.getElementById('div-tech-shared').classList.add('hidden');
+        document.getElementById('div-cust-shared').classList.add('hidden');
+        document.getElementById('real-entity-shared').value = '';
+        document.getElementById('assign-title').textContent = "Tugaskan Aset: " + name;
+        document.getElementById('modal-assign-shared').showModal();
+    }
+
+    function openReturnModal(id, name) {
+        var form = document.getElementById('form-return-shared');
+        form.reset();
+        form.action = RETURN_URL + "/" + id;
+        document.getElementById('return-title').textContent = "Kembalikan ke Gudang: " + name;
+        document.getElementById('modal-return-shared').showModal();
+    }
+
+    function openRepairModal(id, name) {
+        var form = document.getElementById('form-repair-shared');
+        form.reset();
+        form.action = REPAIR_URL + "/" + id;
+        document.getElementById('repair-title').textContent = "Pulihkan Aset: " + name;
+        document.getElementById('modal-repair-shared').showModal();
+    }
+
+    function toggleEntitySelect(select) {
+        var techDiv = document.getElementById('div-tech-shared');
+        var custDiv = document.getElementById('div-cust-shared');
+        if (select.value === 'technician') {
+            techDiv.classList.remove('hidden');
+            custDiv.classList.add('hidden');
+        } else if (select.value === 'customer') {
+            custDiv.classList.remove('hidden');
+            techDiv.classList.add('hidden');
+        }
+    }
+
+    function submitSharedAssignForm() {
+        var form = document.getElementById('form-assign-shared');
+        var typeSelect = form.querySelector('select[name="entity_type"]');
+        var type = typeSelect.value;
+        var realInput = document.getElementById('real-entity-shared');
+
+        if (!type || type === '') {
+            alert("Pilih jenis penerima terlebih dahulu");
+            return;
+        }
+
+        if (type === 'technician') {
+            var techSelect = form.querySelector('select[name="entity_id_tech"]');
+            if (!techSelect.value || techSelect.value === '') {
+                alert("Pilih teknisi terlebih dahulu");
+                return;
+            }
+            realInput.value = techSelect.value;
+        } else if (type === 'customer') {
+            var custSelect = form.querySelector('select[name="entity_id_cust"]');
+            if (!custSelect.value || custSelect.value === '') {
+                alert("Pilih pelanggan terlebih dahulu");
+                return;
+            }
+            realInput.value = custSelect.value;
+        }
+
+        if (!realInput.value) {
+            alert("Pilih target penerima terlebih dahulu");
+            return;
+        }
+        form.submit();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-magic"></i> Generate Voucher
+        </h2>
+        <p class="text-sm opacity-60">Buat kode voucher hotspot secara massal</p>
+    </div>
+
+    <!-- Form Card -->
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+            <form method="POST">
+
+                <!-- Select Profile -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-medium">Pilih Profile Voucher</span>
+                    </label>
+                    <select name="profile_id" class="select select-bordered w-full" required>
+                        <option value="">-- Pilih Profile --</option>
+                        {% for p in profiles %}
+                        <option value="{{ p.id }}">{{ p.name }} ({{ p.validity }} 
+                            {% if p.validity_unit == 'days' %}Hari
+                            {% elif p.validity_unit == 'months' %}Bulan
+                            {% else %}Jam{% endif %} - Rp {{
+                            "{:,.0f}".format(p.price|float) }})</option>
+                        {% endfor %}
+                    </select>
+                    <label class="label">
+                        <span class="label-text-alt opacity-60">Harga dan Masa Aktif mengikuti profile yang
+                            dipilih</span>
+                    </label>
+                </div>
+
+                <!-- Qty & Length -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Jumlah (Qty)</span>
+                        </label>
+                        <input type="number" name="qty" class="input input-bordered w-full" value="10" min="1" max="500"
+                            required>
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Model Karakter</span>
+                        </label>
+                        <select name="mode" class="select select-bordered w-full">
+                            <option value="numbers">Angka Saja (123)</option>
+                            <option value="lower">Huruf Kecil (abc)</option>
+                            <option value="upper" selected>Huruf Besar (ABC)</option>
+                            <option value="mixed">Campuran (aB3)</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Panjang Kode</span>
+                        </label>
+                        <input type="number" name="length" class="input input-bordered w-full" value="6" min="4"
+                            max="12" required>
+                    </div>
+                </div>
+
+                <!-- Prefix -->
+                <div class="form-control mb-6">
+                    <label class="label">
+                        <span class="label-text font-medium">Prefix Kode (Opsional)</span>
+                    </label>
+                    <input type="text" name="prefix" class="input input-bordered w-full font-mono uppercase"
+                        placeholder="Contoh: VC-">
+                    <label class="label">
+                        <span class="label-text-alt opacity-60">Kode voucher akan diawali dengan karakter ini</span>
+                    </label>
+                </div>
+
+                <!-- Batch & Expiry -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Nama Batch (Opsional)</span>
+                        </label>
+                        <input type="text" name="batch_name" class="input input-bordered w-full"
+                            placeholder="Contoh: Promo Lebaran 2025">
+                        <label class="label">
+                            <span class="label-text-alt opacity-60">Untuk pengelompokan & pencarian</span>
+                        </label>
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Tanggal Kadaluarsa (Opsional)</span>
+                        </label>
+                        <input type="date" name="expires_at" class="input input-bordered w-full">
+                        <label class="label">
+                            <span class="label-text-alt opacity-60">Voucher hangus jika tidak dipakai sampai tanggal
+                                ini</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-lightning-charge"></i> Generate Sekarang
+                    </button>
+                    <a href="{{ url_for('vouchers.index') }}" class="btn btn-ghost">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

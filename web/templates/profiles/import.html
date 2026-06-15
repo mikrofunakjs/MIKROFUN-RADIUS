@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-file-earmark-excel"></i> Import Paket Internet
+        </h2>
+        <p class="text-sm opacity-60">Upload file .xlsx untuk menambah banyak paket sekaligus.</p>
+    </div>
+
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-control mb-6">
+                    <label class="label">
+                        <span class="label-text font-medium">Pilih File Excel (.xlsx)</span>
+                    </label>
+                    <input type="file" name="file" class="file-input file-input-bordered w-full" accept=".xlsx"
+                        required />
+                    <label class="label">
+                        <span class="label-text-alt opacity-50 italic">Kolom: Nama, Rate Limit, Harga, Masa Aktif, Unit
+                            (hours/days), Tipe (pppoe/voucher), Nama Router</span>
+                    </label>
+                </div>
+
+                <div class="alert alert-info shadow-sm text-sm mb-6">
+                    <i class="bi bi-info-circle"></i>
+                    <div>
+                        <p class="font-bold">Format Excel:</p>
+                        <p>1. Baris pertama dianggap header.</p>
+                        <p>2. Kolom: Nama, Rate Limit (1M/1M), Harga, Masa Aktif, Unit, Tipe, Router.</p>
+                        <p>3. Jika Nama Paket sudah ada, data akan diupdate.</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4">
+                    <a href="{{ url_for('profiles.index') }}" class="btn btn-ghost">Kembali</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Proses Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

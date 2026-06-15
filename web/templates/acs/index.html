@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-router text-info"></i> ACS — Manajemen CPE
+        </h2>
+        <p class="text-xs opacity-50 mt-1">Remote management router pelanggan via TR-069</p>
+    </div>
+    <a href="{{ url_for('acs.settings') }}" class="btn btn-ghost btn-sm gap-1">
+        <i class="bi bi-gear"></i> Panduan Setup
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm">
+        <div class="stat-title text-xs">Total Device</div>
+        <div class="stat-value text-2xl">{{ devices|length }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm">
+        <div class="stat-title text-xs">Online (24 jam)</div>
+        <div class="stat-value text-2xl text-success">
+            {{ devices | selectattr('last_inform') | list | length }}
+        </div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm">
+        <div class="stat-title text-xs">Terhubung ke Pelanggan</div>
+        <div class="stat-value text-2xl text-info">{{ devices | selectattr('customer_id') | list | length }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm">
+        <div class="stat-title text-xs">Belum Ditautkan</div>
+        <div class="stat-value text-2xl text-warning">{{ devices | rejectattr('customer_id') | list | length }}</div>
+    </div>
+</div>
+
+<!-- Device Table -->
+<div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm">
+                <thead class="bg-base-200 uppercase text-xs">
+                    <tr>
+                        <th>Serial Number</th>
+                        <th>Model</th>
+                        <th>IP Address</th>
+                        <th>SSID 2.4GHz</th>
+                        <th>Pelanggan</th>
+                        <th>Last Inform</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in devices %}
+                    <tr class="hover">
+                        <td class="font-mono text-xs font-bold">{{ d.serial_number }}</td>
+                        <td class="text-sm">
+                            <div>{{ d.model or '-' }}</div>
+                            <div class="text-xs opacity-50">{{ d.vendor or '' }}</div>
+                        </td>
+                        <td class="font-mono text-xs">{{ d.ip_address or '-' }}</td>
+                        <td class="text-sm">{{ d.ssid_24 or '-' }}</td>
+                        <td>
+                            {% if d.customer_name %}
+                            <span class="badge badge-info badge-sm text-white">{{ d.customer_name }}</span>
+                            {% else %}
+                            <span class="badge badge-ghost badge-sm opacity-50">Belum ditautkan</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-xs opacity-60">
+                            {% if d.last_inform %}
+                            {{ d.last_inform.strftime('%d/%m %H:%M') }}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('acs.device_detail', serial=d.serial_number) }}"
+                                class="btn btn-xs btn-primary">
+                                <i class="bi bi-sliders"></i> Kelola
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not devices %}
+                    <tr>
+                        <td colspan="7" class="text-center py-16 opacity-40">
+                            <i class="bi bi-router text-4xl"></i>
+                            <p class="mt-2">Belum ada router yang check-in ke ACS.</p>
+                            <a href="{{ url_for('acs.settings') }}" class="btn btn-sm btn-ghost mt-2">Lihat Cara
+                                Setup</a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

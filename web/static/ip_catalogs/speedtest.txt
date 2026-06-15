@@ -1,0 +1,12 @@
+# Kumpulan IP Address (ASN) untuk Routing Speedtest Lokal
+# Dikelola secara internal oleh MikroFun
+# Note: Ini adalah IP contoh untuk testing
+103.11.22.0/24
+103.12.33.0/24
+202.134.0.0/16
+114.124.0.0/14
+180.250.0.0/16
+182.253.0.0/16
+36.81.0.0/16
+125.160.0.0/16
+118.98.0.0/16

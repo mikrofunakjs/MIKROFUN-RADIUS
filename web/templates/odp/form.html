@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+    #map {
+        height: 400px;
+        width: 100%;
+        z-index: 1;
+        border-radius: 0.5rem;
+    }
+</style>
+
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-geo-alt"></i> {{ 'Edit' if odp else 'Tambah' }} ODP
+        </h2>
+        <a href="{{ url_for('odp.index') }}" class="btn btn-ghost">Kembali</a>
+    </div>
+
+    <form method="POST" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Form Fields -->
+        <div class="card bg-base-100 shadow-xl border border-base-200 h-fit">
+            <div class="card-body">
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Nama ODP</span></label>
+                    <input type="text" name="name" class="input input-bordered" placeholder="Contoh: ODP-RW01-01"
+                        value="{{ odp.name if odp else '' }}" required>
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Kapasitas Port</span></label>
+                    <select name="capacity" class="select select-bordered">
+                        <option value="8" {{ 'selected' if odp and odp.capacity==8 else '' }}>8 Port</option>
+                        <option value="16" {{ 'selected' if odp and odp.capacity==16 else '' }}>16 Port</option>
+                        <option value="24" {{ 'selected' if odp and odp.capacity==24 else '' }}>24 Port</option>
+                    </select>
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Pilih ODC (Parent)</span></label>
+                    <select name="odc_id" class="select select-bordered">
+                        <option value="">-- Tanpa ODC --</option>
+                        {% for o in odcs %}
+                        <option value="{{ o.id }}" {{ 'selected' if odp and odp.odc_id==o.id else '' }}>{{ o.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Koordinat (Latitude,
+                            Longitude)</span></label>
+                    <div class="join">
+                        <input type="text" name="coordinates" id="coordInput"
+                            class="input input-bordered join-item w-full font-mono" placeholder="-6.123456, 106.123456"
+                            value="{{ odp.coordinates if odp else '' }}">
+                        <button type="button" class="btn btn-secondary join-item" onclick="openGoogleMaps()">
+                            Maps
+                        </button>
+                    </div>
+                    <label class="label">
+                        <span class="label-text-alt opacity-60">Klik peta untuk isi otomatis</span>
+                    </label>
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-bold">Alamat / Lokasi Tiang</span></label>
+                    <textarea name="address" class="textarea textarea-bordered h-24"
+                        placeholder="Detail lokasi...">{{ odp.address if odp else '' }}</textarea>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="flex justify-end gap-2">
+                    <button type="submit" class="btn btn-primary">Simpan Data</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="card bg-base-100 shadow-xl border border-base-200">
+            <div class="card-body p-4">
+                <h3 class="font-bold mb-2">Peta Lokasi</h3>
+                <div id="map"></div>
+                <div class="alert alert-info shadow-sm mt-4 text-xs">
+                    <i class="bi bi-info-circle"></i> Klik pada peta untuk menandai lokasi ODP.
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Initialize Map
+    // Default to Jakarta if no coord (-6.200000, 106.816666)
+    var defaultLat = -6.200000;
+    var defaultLng = 106.816666;
+    var initialZoom = 13;
+
+    var existingCoord = "{{ odp.coordinates if odp else '' }}";
+    if (existingCoord) {
+        var parts = existingCoord.split(',');
+        if (parts.length == 2) {
+            defaultLat = parseFloat(parts[0].trim());
+            defaultLng = parseFloat(parts[1].trim());
+            initialZoom = 17;
+        }
+    }
+
+    var map = L.map('map').setView([defaultLat, defaultLng], initialZoom);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    var marker;
+
+    // If editing, add marker
+    if (existingCoord) {
+        marker = L.marker([defaultLat, defaultLng]).addTo(map);
+    }
+
+    function onMapClick(e) {
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        marker = L.marker(e.latlng).addTo(map);
+
+        // Update input
+        var lat = e.latlng.lat.toFixed(6);
+        var lng = e.latlng.lng.toFixed(6);
+        document.getElementById('coordInput').value = lat + ", " + lng;
+    }
+
+    map.on('click', onMapClick);
+
+    function openGoogleMaps() {
+        var coord = document.getElementById('coordInput').value;
+        if (coord) {
+            window.open('https://www.google.com/maps?q=' + coord, '_blank');
+        } else {
+            alert("Koordinat belum diisi!");
+        }
+    }
+</script>
+{% endblock %}

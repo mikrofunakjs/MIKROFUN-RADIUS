@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-globe text-primary"></i> Domain IPv4/IPv6 Resolver
+        </h2>
+        <p class="text-sm opacity-60">Lacak IP Publik sebuah server/domain dan sinkronkan ke MikroTik Address List.</p>
+    </div>
+
+    <!-- MAIN FORM -->
+    <div class="card bg-base-100 shadow border border-base-200 mb-6">
+        <div class="card-body">
+            <form method="POST" class="flex flex-col md:flex-row gap-4" id="resolver-form">
+                <div class="form-control flex-1">
+                    <label class="label">
+                        <span class="label-text font-medium">Domain Server (contoh: mobilelegends.com)</span>
+                    </label>
+                    <input type="text" name="domain" class="input input-bordered w-full font-mono text-primary"
+                        placeholder="whatsapp.net" value="{{ domain }}" required autofocus>
+                </div>
+                <div class="form-control justify-end">
+                    <button type="submit" class="btn btn-primary" onclick="showLoading()">
+                        <i class="bi bi-search"></i> Lacak IP Server
+                    </button>
+                </div>
+            </form>
+            
+            {% if error %}
+            <div class="alert alert-error shadow-sm mt-4">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+            
+            <div id="loading" class="hidden mt-6 text-center text-primary">
+                <span class="loading loading-spinner loading-lg"></span>
+                <p class="mt-2 text-sm font-bold">Sedang melacak IP...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULT SECTION -->
+    {% if ips %}
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body p-0">
+            <div class="p-4 border-b border-base-200 flex flex-wrap justify-between items-center bg-base-200/50">
+                <div>
+                    <h3 class="font-bold">Hasil Pelacakan: <span class="text-primary">{{ domain }}</span></h3>
+                    <p class="text-xs opacity-60">Ditemukan {{ ips|length }} IP Address</p>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-accent" onclick="document.getElementById('push_modal').showModal()">
+                        <i class="bi bi-send-fill"></i> Kirim ke MikroTik
+                    </button>
+                    <button class="btn btn-sm btn-ghost" onclick="copyIps()">
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto max-h-80">
+                <table class="table table-sm table-pin-rows">
+                    <thead class="bg-base-200">
+                        <tr>
+                            <th class="w-12 text-center">No</th>
+                            <th>IP Address</th>
+                            <th>Tipe</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ip-table-body">
+                        {% for ip in ips %}
+                        <tr class="hover">
+                            <td class="text-center">{{ loop.index }}</td>
+                            <td class="font-mono font-bold">{{ ip }}</td>
+                            <td>
+                                {% if ':' in ip %}
+                                <span class="badge badge-sm badge-info badge-outline">IPv6</span>
+                                {% else %}
+                                <span class="badge badge-sm badge-success badge-outline">IPv4</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Push -->
+{% if ips %}
+<dialog id="push_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+            <i class="bi bi-send-fill text-accent"></i> Push ke Address List
+        </h3>
+        
+        <div class="bg-base-200 p-3 rounded-lg mb-4 text-xs font-mono border-l-4 border-info">
+             Proses pengiriman API diatur otomatis jeda tiap 150 alamat agar Mikrotik tidak freeze.
+        </div>
+
+        <div class="form-control mb-4">
+            <label class="label">
+                <span class="label-text font-bold">Pilih Router Tujuan</span>
+            </label>
+            <select id="router_id" class="select select-bordered w-full">
+                <option value="">-- Pilih Router --</option>
+                {% for r in routers %}
+                <option value="{{ r.id }}">{{ r.name }} ({{ r.ip_address }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-control mb-4">
+            <label class="label">
+                <span class="label-text font-bold">Nama Address List</span>
+            </label>
+            <input type="text" id="list_name" class="input input-bordered w-full font-mono" placeholder="contoh: Trafik-Game" value="List_{{ domain|replace('.','_') }}">
+            <label class="label">
+                <span class="label-text-alt opacity-60">Nama list ini akan muncul di menu IP > Firewall > Address Lists MikroTik.</span>
+            </label>
+        </div>
+
+        <div id="push-result" class="hidden alert mb-4 text-sm"></div>
+
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn" id="btn-close-modal">Tutup</button>
+            </form>
+            <button class="btn btn-accent" id="btn-push" onclick="pushToMikroTik()">Mulai Sinkronisasi</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+    const IP_DATA = {{ ips|tojson }};
+    
+    function showLoading() {
+        if(document.querySelector('input[name="domain"]').value.trim() !== "") {
+            document.getElementById('loading').classList.remove('hidden');
+        }
+    }
+
+    function copyIps() {
+        const text = IP_DATA.join("\n");
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Disalin ke clipboard!");
+        });
+    }
+
+    async function pushToMikroTik() {
+        const routerId = document.getElementById('router_id').value;
+        const listName = document.getElementById('list_name').value.trim();
+        const resBox = document.getElementById('push-result');
+        const btn = document.getElementById('btn-push');
+        
+        if(!routerId) return alert("Pilih router target!");
+        if(!listName) return alert("Isi nama address list!");
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading loading-spinner"></span> Sedang Mengirim...';
+        resBox.classList.add('hidden');
+        resBox.className = 'alert text-sm mb-4';
+
+        try {
+            const res = await fetch("{{ url_for('tools.push_address_list') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    router_id: routerId,
+                    list_name: listName,
+                    ips: IP_DATA
+                })
+            });
+            const data = await res.json();
+            
+            resBox.classList.remove('hidden');
+            if(data.success) {
+                resBox.classList.add('alert-success');
+                resBox.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
+            } else {
+                resBox.classList.add('alert-error');
+                resBox.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + data.message;
+            }
+        } catch (e) {
+            resBox.classList.remove('hidden');
+            resBox.classList.add('alert-error');
+            resBox.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Gagal menghubungi server.';
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = 'Mulai Sinkronisasi';
+    }
+</script>
+{% endif %}
+{% endblock %}

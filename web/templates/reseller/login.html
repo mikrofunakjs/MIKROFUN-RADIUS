@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login Mitra — {{ app_name if app_name != 'MikroFun' else hotspot_name }}</title>
+    {% if app_logo %}
+    <link rel="icon" type="image/x-icon" href="{{ app_logo }}">
+    {% endif %}
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.2/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .login-card {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .brand-circle {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            margin: 0 auto 1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-card">
+        <!-- Brand Header (above card) -->
+        <div class="text-center text-white mb-6">
+            <div class="brand-circle overflow-hidden">
+                {% if app_logo %}
+                <img src="{{ app_logo }}" alt="Logo" class="w-full h-full object-cover">
+                {% else %}
+                <i class="fas fa-wifi text-3xl text-white"></i>
+                {% endif %}
+            </div>
+            <p class="text-[10px] opacity-60 uppercase tracking-widest font-bold">{{ app_name }}</p>
+            <h1 class="text-2xl font-extrabold tracking-tight">{{ app_name }}</h1>
+            <p class="text-sm opacity-75 mt-1">Portal Mitra / Reseller Voucher</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-white rounded-3xl shadow-2xl p-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-1">Masuk sebagai Mitra 🏪</h2>
+            <p class="text-sm text-gray-500 mb-6">Gunakan akun Mitra yang diberikan oleh Admin.</p>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="space-y-2 mb-4">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'error' }} text-sm p-3 rounded-2xl">
+                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('reseller.login') }}">
+                <div class="form-control mb-4">
+                    <label class="label pb-1"><span class="label-text font-semibold text-gray-700">Username
+                            Mitra</span></label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" name="username" placeholder="Masukkan username..." required autofocus
+                            class="input input-bordered w-full pl-10 rounded-xl focus:border-primary" />
+                    </div>
+                </div>
+                <div class="form-control mb-6">
+                    <label class="label pb-1"><span
+                            class="label-text font-semibold text-gray-700">Password</span></label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="password" name="password" placeholder="Masukkan password..." required
+                            class="input input-bordered w-full pl-10 rounded-xl focus:border-primary" />
+                    </div>
+                </div>
+                <button type="submit"
+                    class="btn btn-primary w-full rounded-xl text-base shadow-lg shadow-primary/30 hover:scale-[1.02] transition-transform">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Masuk ke Portal Mitra
+                </button>
+            </form>
+
+            <p class="text-center text-xs text-gray-400 mt-6">
+                Bukan Mitra? <a href="/auth/login" class="text-primary font-semibold hover:underline">Login Admin</a>
+            </p>
+        </div>
+
+        <p class="text-center text-white/50 text-xs mt-4">Powered by MikroFun &copy; {{ app_name }}</p>
+    </div>
+
+</body>
+
+</html>

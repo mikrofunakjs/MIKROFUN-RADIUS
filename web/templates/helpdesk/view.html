@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex gap-4 mb-4">
+    <a href="{{ url_for('helpdesk.index') }}" class="btn btn-sm btn-ghost">
+        <i class="bi bi-arrow-left"></i> Kembali
+    </a>
+    <h2 class="text-2xl font-bold">Tiket #{{ ticket.id }}</h2>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Chat Section -->
+    <div class="lg:col-span-2 space-y-4">
+        <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body p-4 bg-gray-50 max-h-[60vh] overflow-y-auto" id="adminChatContainer">
+                {% for reply in replies %}
+                {% if reply.sender_type == 'admin' %}
+                <!-- Admin (Me) -->
+                <div class="chat chat-end">
+                    <div class="chat-header text-xs opacity-50 mb-1">
+                        {{ reply.admin_name or 'Admin' }}</div>
+                    <div class="chat-bubble chat-bubble-primary text-sm">{{ reply.message }}</div>
+                    <div class="chat-footer opacity-50 text-[10px] mt-1">{{ reply.created_at }}</div>
+                </div>
+                {% else %}
+                <!-- Client -->
+                <div class="chat chat-start">
+                    <div class="chat-header text-xs opacity-50 mb-1 font-bold">{{ ticket.customer_name }}</div>
+                    <div class="chat-bubble chat-bubble-secondary text-sm">{{ reply.message }}</div>
+                    <div class="chat-footer opacity-50 text-[10px] mt-1">{{ reply.created_at }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            {% if ticket.status != 'closed' %}
+            <div class="card-body border-t p-4">
+                <form method="POST" class="flex flex-col gap-2">
+                    <input type="hidden" name="action" value="reply">
+                    <textarea name="message" class="textarea textarea-bordered w-full" placeholder="Tulis balasan..."
+                        required></textarea>
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-send"></i> Kirim Balasan
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <div class="p-4 text-center bg-gray-100 text-gray-500 font-bold">
+                Tiket Ditutup
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar Info -->
+    <div class="space-y-4">
+        <div class="card bg-base-100 shadow border border-base-200">
+            <div class="card-body p-4">
+                <h3 class="font-bold text-lg mb-2">Info Tiket</h3>
+                <div class="text-sm space-y-2">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Pelanggan</span>
+                        <a href="{{ url_for('customers.edit', id=ticket.uid) }}" class="link link-primary font-bold">
+                            {{ ticket.customer_name }}
+                        </a>
+                        <span class="text-xs block opacity-50">{{ ticket.username }}</span>
+                    </div>
+                    <div class="divider my-1"></div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Subject</span>
+                        <span class="font-bold">{{ ticket.subject }}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Kategori</span>
+                        <span class="badge badge-outline">{{ ticket.category or 'General' }}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Status</span>
+                        <span
+                            class="uppercase font-bold 
+                            {% if ticket.status=='open' %}text-error{% elif ticket.status=='answered' %}text-success{% else %}text-gray-400{% endif %}">
+                            {{ ticket.status }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <h3 class="font-bold text-lg mb-2">Aksi</h3>
+                <div class="flex flex-col gap-2">
+                    {% if ticket.status != 'closed' %}
+                    <a href="{{ url_for('helpdesk.dispatch_job', ticket_id=ticket.id) }}"
+                        class="btn btn-accent btn-sm text-white w-full">
+                        <i class="bi bi-briefcase"></i> Buat Perintah Kerja (Dispatch)
+                    </a>
+
+                    <form method="POST">
+                        <input type="hidden" name="action" value="close">
+                        <button type="submit" class="btn btn-warning btn-sm btn-outline w-full"
+                            onclick="return confirm('Tutup tiket ini?')">
+                            <i class="bi bi-check-circle"></i> Tandai Selesai (Close)
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <form method="POST">
+                        <input type="hidden" name="action" value="delete">
+                        <button type="submit" class="btn btn-error btn-sm btn-outline w-full"
+                            onclick="return confirm('Hapus tiket ini permanen? Chat history hilang.')">
+                            <i class="bi bi-trash"></i> Hapus Tiket
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const container = document.getElementById('adminChatContainer');
+    container.scrollTop = container.scrollHeight;
+</script>
+{% endblock %}

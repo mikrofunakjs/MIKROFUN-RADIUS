@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-plus-circle"></i> Tambah Profile {{ type|upper }}
+        </h2>
+        <p class="text-sm opacity-60">Buat paket internet baru untuk {{ type|capitalize }}</p>
+    </div>
+
+    <!-- Form Card -->
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+            <form method="POST">
+                <input type="hidden" name="type" value="{{ type }}">
+
+                <!-- Nama Profile -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-medium">Nama Profile</span>
+                    </label>
+                    <input type="text" name="name" class="input input-bordered w-full" placeholder="contoh: 10Mbps"
+                        required autofocus>
+                </div>
+
+                <!-- Technical Specs -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Rate Limit (Upload/Download)</span>
+                        </label>
+                        <input type="text" name="rate_limit" class="input input-bordered w-full"
+                            placeholder="contoh: 5M/10M">
+                        <label class="label">
+                            <span class="label-text-alt opacity-60">Format Mikrotik Simple Queue</span>
+                        </label>
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Pool Name</span>
+                        </label>
+                        <input type="text" name="pool_name" class="input input-bordered w-full"
+                            placeholder="contoh: pool-pppoe">
+                        <label class="label">
+                            <span class="label-text-alt opacity-60">Kosongkan jika tidak menggunakan IP Pool
+                                khusus</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Voucher Specifics, Quota & Price -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {% if type == 'voucher' %}
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Masa Aktif</span>
+                        </label>
+                        <div class="join w-full">
+                            <input type="number" name="validity" class="input input-bordered w-full join-item"
+                                value="24" required>
+                            <select name="validity_unit" class="select select-bordered join-item">
+                                <option value="hours" selected>Jam</option>
+                                <option value="days">Hari</option>
+                                <option value="months">Bulan</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium text-warning flex items-center gap-1">
+                                <i class="bi bi-person-badge"></i> Limit Login (Device)
+                            </span>
+                        </label>
+                        <div class="join w-full">
+                            <input type="number" name="shared_users" class="input input-bordered w-full join-item" value="1" min="1">
+                            <span class="btn btn-disabled join-item">User</span>
+                        </div>
+                        <label class="label">
+                            <span class="label-text-alt opacity-60">Jumlah perangkat yang bisa login bersamaan.</span>
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium text-primary flex items-center gap-1">
+                                <i class="bi bi-pie-chart"></i> Batas Kuota (GB)
+                            </span>
+                        </label>
+                        <div class="join w-full">
+                            <input type="number" step="0.1" name="quota_limit" class="input input-bordered w-full join-item" value="0">
+                            <span class="btn btn-disabled join-item">GB</span>
+                        </div>
+                        <label class="label">
+                            <span class="label-text-alt opacity-60">Isi "0" untuk Unlimited</span>
+                        </label>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Harga (Rp)</span>
+                        </label>
+                        <div class="join w-full">
+                            <span class="btn btn-disabled join-item">Rp</span>
+                            <input type="number" name="price" class="input input-bordered w-full join-item" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Router Wilayah (Optional) -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-medium">Khusus Router / Wilayah <span
+                                class="badge badge-ghost badge-sm ml-1">Opsional</span></span>
+                    </label>
+                    <select name="router_id" class="select select-bordered w-full">
+                        <option value="">— Semua Wilayah (Global) —</option>
+                        {% for r in routers %}
+                        <option value="{{ r.id }}">{{ r.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <label class="label">
+                        <span class="label-text-alt opacity-60">Pilih router jika paket ini hanya berlaku untuk wilayah
+                            tertentu. Biarkan kosong jika berlaku global.</span>
+                    </label>
+                </div>
+
+                <!-- Description -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-medium">Deskripsi (Opsional)</span>
+                    </label>
+                    <input type="text" name="description" class="input input-bordered w-full"
+                        placeholder="Keterangan tambahan...">
+                </div>
+
+                <!-- Burst QoS Section -->
+                <div class="card bg-base-200/50 border border-base-300 mb-6">
+                    <div class="card-body p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-bold text-sm flex items-center gap-2">
+                                <i class="bi bi-speedometer2 text-primary"></i> Fitur Burst (Speed Boost)
+                            </h4>
+                            <button type="button" onclick="calculateBurst()" class="btn btn-xs btn-outline btn-primary">
+                                <i class="bi bi-calculator"></i> Kalkulator Burst
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="form-control">
+                                <label class="label p-1"><span
+                                        class="label-text text-[10px] font-bold uppercase opacity-60">Burst
+                                        Limit</span></label>
+                                <input type="text" name="burst_limit" id="burst_limit"
+                                    class="input input-sm input-bordered font-mono" placeholder="20M/20M">
+                            </div>
+                            <div class="form-control">
+                                <label class="label p-1"><span
+                                        class="label-text text-[10px] font-bold uppercase opacity-60">Threshold</span></label>
+                                <input type="text" name="burst_threshold" id="burst_threshold"
+                                    class="input input-sm input-bordered font-mono" placeholder="8M/8M">
+                            </div>
+                            <div class="form-control">
+                                <label class="label p-1"><span
+                                        class="label-text text-[10px] font-bold uppercase opacity-60">Burst
+                                        Time</span></label>
+                                <input type="text" name="burst_time" id="burst_time"
+                                    class="input input-sm input-bordered font-mono" placeholder="32/32">
+                            </div>
+                            <div class="form-control">
+                                <label class="label p-1"><span
+                                        class="label-text text-[10px] font-bold uppercase opacity-60">Limit
+                                        At</span></label>
+                                <input type="text" name="limit_at" id="limit_at"
+                                    class="input input-sm input-bordered font-mono" placeholder="4M/4M">
+                            </div>
+                        </div>
+                        <p class="text-[10px] opacity-60 mt-2">
+                            <b>Info:</b> Burst memungkinkan pelanggan mendapat speed 2x lipat saat awal loading website.
+                            Gunakan kalkulator untuk nilai otomatis.
+                        </p>
+                    </div>
+                </div>
+
+                <script>
+                    function calculateBurst() {
+                        const rateLimit = document.querySelector('input[name="rate_limit"]').value;
+                        if (!rateLimit || !rateLimit.includes('/')) {
+                            alert("Isi Rate Limit terlebih dahulu (contoh: 5M/10M)");
+                            return;
+                        }
+
+                        const parts = rateLimit.split('/');
+                        const upRaw = parts[0];
+                        const downRaw = parts[1];
+
+                        // Helper to parse Mikrotik Units
+                        const parseVal = (val) => {
+                            let num = parseFloat(val);
+                            let unit = val.toLowerCase().replace(/[0-9.]/g, '') || 'k';
+                            return { num, unit };
+                        };
+
+                        const up = parseVal(upRaw);
+                        const down = parseVal(downRaw);
+
+                        // Calculation Logic:
+                        // Burst Limit: 2x Rate Limit
+                        // Threshold: 0.8x Rate Limit
+                        // Limit At: 0.7x Rate Limit
+                        // Time: 32s (Standard)
+
+                        const format = (v, factor) => {
+                            let res = v.num * factor;
+                            // Avoid decimals in most cases
+                            return (res % 1 === 0 ? res : res.toFixed(1)) + v.unit;
+                        };
+
+                        document.getElementById('burst_limit').value = `${format(up, 2)}/${format(down, 2)}`;
+                        document.getElementById('burst_threshold').value = `${format(up, 0.8)}/${format(down, 0.8)}`;
+                        document.getElementById('burst_time').value = "32/32";
+                        document.getElementById('limit_at').value = `${format(up, 1)}/${format(down, 1)}`;
+                    }
+                </script>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Simpan Profile
+                    </button>
+                    <a href="{{ url_for('profiles.index', type=type) }}" class="btn btn-ghost">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

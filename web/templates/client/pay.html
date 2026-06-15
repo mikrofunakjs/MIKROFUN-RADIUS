@@ -1,0 +1,440 @@
+{% extends "client/base_app.html" %}
+
+{% block content %}
+<div class="bg-white sticky top-0 z-40 px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+    <h1 class="text-lg font-bold">Pembayaran & Tagihan</h1>
+</div>
+
+<div class="p-6 space-y-6">
+    <!-- Unpaid Bill Alert -->
+    {% if user.due_date and user.due_date < today %} <div
+        class="bg-error/10 border border-error/20 rounded-2xl p-4 flex gap-3 items-start">
+        <i class="bi bi-exclamation-triangle-fill text-error text-xl shrink-0"></i>
+        <div>
+            <h3 class="font-bold text-error">Tagihan Belum Lunas</h3>
+            <p class="text-xs text-gray-600 mt-1">Layanan internet Anda mungkin terisolir. Segera lakukan pembayaran
+                untuk mengaktifkan kembali.</p>
+        </div>
+</div>
+{% endif %}
+
+<!-- Bank Info -->
+<div>
+    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Transfer Ke</h2>
+    <div class="space-y-3">
+        {% for bank in banks %}
+        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs text-gray-400">{{ bank.bank_name }}</p>
+                <p class="text-lg font-mono font-bold text-gray-800">{{ bank.account_number }}</p>
+                <p class="text-xs text-gray-500">a.n {{ bank.account_holder }}</p>
+            </div>
+            <button onclick="navigator.clipboard.writeText('{{ bank.account_number }}'); alert('No Rekening disalin!')"
+                class="btn btn-circle btn-sm btn-ghost text-primary">
+                <i class="bi bi-clipboard"></i>
+            </button>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-gray-400 text-sm bg-gray-50 rounded-xl">
+            Belum ada rekening bank admin.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Upload Form -->
+<!-- PAYMENT TABS -->
+<div class="tabs tabs-boxed mb-6 bg-gray-100 p-1">
+    <a class="tab tab-lg {{ 'tab-active' if not request.args.get('mode') else '' }}"
+        onclick="showTab('manual')">Transfer Manual</a>
+    <a class="tab tab-lg {{ 'tab-active' if request.args.get('mode') == 'online' else '' }}"
+        onclick="showTab('online')">Pembayaran Otomatis</a>
+</div>
+
+<!-- TAB: MANUAL TRANSFER -->
+<div id="tab-manual" class="{{ 'hidden' if request.args.get('mode') == 'online' else '' }}">
+    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Konfirmasi Pembayaran Manual</h2>
+    <form method="POST" enctype="multipart/form-data"
+        class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm space-y-4">
+        <input type="hidden" id="manual-method-input" name="payment_method" value="manual">
+
+        {% if settings.get('moota_api_key') %}
+        <div class="alert alert-info shadow-sm mb-4">
+            <i class="bi bi-robot text-xl"></i>
+            <div class="text-xs">
+                <span class="font-bold">Transfer Otomatis (Moota) Aktif!</span><br>
+                Pilih metode ini, maka nominal transfer Anda akan ditambah 3 kode unik (misal Rp 50.123). Pastikan
+                transfer TEPAT agar otomatis lunas tanpa upload bukti!
+            </div>
+        </div>
+
+        <div class="form-control w-full mb-4">
+            <label class="label"><span class="label-text text-xs font-bold">Pilih Tipe Transfer</span></label>
+            <div class="flex gap-4">
+                <label class="cursor-pointer flex items-center gap-2">
+                    <input type="radio" name="manual_type" value="moota" class="radio radio-primary radio-sm" checked
+                        onchange="document.getElementById('manual-method-input').value='moota'; document.getElementById('proof-upload-div').classList.add('hidden');">
+                    <span class="text-sm font-bold">Otomatis (Moota)</span>
+                </label>
+                <label class="cursor-pointer flex items-center gap-2">
+                    <input type="radio" name="manual_type" value="manual" class="radio radio-primary radio-sm"
+                        onchange="document.getElementById('manual-method-input').value='manual'; document.getElementById('proof-upload-div').classList.remove('hidden');">
+                    <span class="text-sm">Manual (Upload Bukti)</span>
+                </label>
+            </div>
+        </div>
+        {% else %}
+        <input type="hidden" name="manual_type" value="manual">
+        {% endif %}
+
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text text-xs font-bold">Tanggal Transfer</span></label>
+            <input type="date" name="payment_date" class="input input-bordered w-full bg-gray-50" required />
+        </div>
+
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text text-xs font-bold">Jumlah Transfer</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold">Rp</span>
+                <input type="number" name="amount" class="input input-bordered w-full pl-10 bg-gray-100 font-bold" 
+                    value="{{ total_bill }}" readonly required />
+            </div>
+        </div>
+
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text text-xs font-bold">Dari Bank / E-Wallet</span></label>
+            <input type="text" name="sender_bank" class="input input-bordered w-full bg-gray-50"
+                placeholder="Contoh: BCA / DANA" required />
+        </div>
+
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text text-xs font-bold">Nama Pengirim</span></label>
+            <input type="text" name="sender_name" class="input input-bordered w-full bg-gray-50"
+                placeholder="Nama pemilik rekening" required />
+        </div>
+
+        <div id="proof-upload-div" class="form-control w-full {{ 'hidden' if settings.get('moota_api_key') else '' }}">
+            <label class="label"><span class="label-text text-xs font-bold">Bukti Transfer
+                    (Foto/Screenshot)</span></label>
+            <input type="file" name="proof_image" class="file-input file-input-bordered w-full file-input-primary"
+                accept="image/*" {{ 'required' if not settings.get('moota_api_key') else '' }} />
+        </div>
+
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text text-xs font-bold">Tujuan Transfer</span></label>
+            <select name="bank_account_id" class="select select-bordered w-full bg-gray-50" required>
+                <option disabled selected>Pilih Rekening Tujuan</option>
+                {% for bank in banks %}
+                <option value="{{ bank.id }}">{{ bank.bank_name }} - {{ bank.account_number }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full rounded-xl shadow-lg shadow-primary/20 mt-2">
+            <i class="bi bi-send-fill"></i> Kirim Konfirmasi
+        </button>
+    </form>
+</div>
+
+<!-- TAB: ONLINE PAYMENT -->
+<div id="tab-online" class="{{ 'hidden' if not request.args.get('mode') == 'online' else '' }}">
+    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+
+        {% if active_gateway == 'manual' %}
+        <div class="alert alert-warning shadow-sm">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+                <h3 class="font-bold">Fitur Belum Aktif</h3>
+                <div class="text-xs">Metode pembayaran otomatis belum diaktifkan oleh Admin. Silakan gunakan Transfer
+                    Manual.</div>
+            </div>
+        </div>
+        {% else %}
+
+        <div class="form-control w-full mb-6">
+            <label class="label"><span class="label-text font-bold text-lg">Masukkan Nominal Pembayaran</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-500 font-bold text-lg">Rp</span>
+                <input type="number" id="online-amount"
+                    class="input input-bordered w-full input-lg pl-12 font-mono text-xl bg-gray-100 font-bold" 
+                    value="{{ total_bill }}" readonly />
+            </div>
+        </div>
+
+        <!-- Online Payment Section -->
+        {% if active_gateway == 'both' %}
+        <div class="form-control w-full mb-6">
+            <label class="label"><span
+                    class="label-text font-bold text-sm uppercase tracking-widest text-gray-500">Pilih Layanan
+                    Pembayaran</span></label>
+            <select id="gateway_selector" class="select select-bordered w-full bg-gray-50 font-bold"
+                onchange="toggleGatewayTabs()">
+                <option value="tripay">Tripay (QRIS / VA / Retail)</option>
+                <option value="midtrans">Midtrans (Instant / E-Wallet)</option>
+            </select>
+        </div>
+        {% endif %}
+
+        <!-- DUITKU CHANNELS -->
+        <div id="duitku-section" class="{{ 'hidden' if active_gateway != 'duitku' else '' }} mb-6">
+            <h3 class="font-bold text-sm text-gray-500 uppercase tracking-widest mb-3">Pilih Metode Pembayaran (Duitku)
+            </h3>
+            <div id="duitku-loading" class="text-center text-sm text-gray-400 hidden py-4">Memuat opsi pembayaran...
+            </div>
+            <div id="duitku-channels-container" class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                <!-- Channels will be loaded via JS based on amount -->
+            </div>
+            <form method="POST" id="form-duitku">
+                <input type="hidden" name="payment_method" value="duitku">
+                <input type="hidden" name="amount" id="duitku-amount">
+                <input type="hidden" name="method_code" id="duitku-method">
+                <button type="submit" id="btn-pay-duitku" class="btn btn-primary w-full btn-lg shadow-lg" disabled>
+                    Lanjutkan Pembayaran (Duitku)
+                </button>
+            </form>
+        </div>
+
+        <!-- TRIPAY CHANNELS -->
+        <div id="tripay-section" class="{{ 'hidden' if active_gateway not in ['tripay', 'both'] else '' }} mb-6">
+            <h3 class="font-bold text-sm text-gray-500 uppercase tracking-widest mb-3">Pilih Metode Pembayaran (Tripay)
+            </h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                {% for ch in tripay_channels %}
+                <label class="cursor-pointer">
+                    <input type="radio" name="tripay_method" value="{{ ch.code }}" class="peer sr-only"
+                        onchange="enablePayButton()">
+                    <div
+                        class="rounded-xl border border-gray-200 p-3 hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center h-full flex flex-col items-center justify-center gap-2">
+                        <img src="{{ ch.icon_url }}" class="h-8 object-contain" alt="{{ ch.name }}">
+                        <span class="text-xs font-bold">{{ ch.name }}</span>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+            <form method="POST" id="form-tripay">
+                <input type="hidden" name="payment_method" value="tripay">
+                <input type="hidden" name="amount" id="tripay-amount">
+                <input type="hidden" name="method_code" id="tripay-method">
+                <button type="submit" id="btn-pay-tripay" class="btn btn-primary w-full btn-lg shadow-lg" disabled>
+                    Lanjutkan Pembayaran (Tripay)
+                </button>
+            </form>
+        </div>
+
+        <script>
+            function toggleGatewayTabs() {
+                const gateway = document.getElementById('gateway_selector').value;
+                if (gateway === 'tripay') {
+                    document.getElementById('tripay-section').classList.remove('hidden');
+                    document.getElementById('midtrans-section').classList.add('hidden');
+                    if (document.getElementById('duitku-section')) document.getElementById('duitku-section').classList.add('hidden');
+                } else if (gateway === 'midtrans') {
+                    document.getElementById('midtrans-section').classList.remove('hidden');
+                    document.getElementById('tripay-section').classList.add('hidden');
+                    if (document.getElementById('duitku-section')) document.getElementById('duitku-section').classList.add('hidden');
+                } else {
+                    if (document.getElementById('duitku-section')) {
+                        document.getElementById('duitku-section').classList.remove('hidden');
+                        document.getElementById('tripay-section').classList.add('hidden');
+                        document.getElementById('midtrans-section').classList.add('hidden');
+                        const amount = document.getElementById('online-amount').value;
+                        if (amount >= 10000) fetchDuitkuChannels(amount);
+                    }
+                }
+            }
+        </script>
+
+
+        <!-- MIDTRANS SECTION -->
+        <div id="midtrans-section" class="{{ 'hidden' if active_gateway != 'midtrans' else '' }} mb-6">
+            <h3 class="font-bold text-sm text-gray-500 uppercase tracking-widest mb-3">Layanan Pembayaran Midtrans</h3>
+            <div class="bg-primary/5 rounded-2xl p-6 mb-4 border border-primary/20">
+                <div class="text-center mb-4">
+                    <p class="text-xs text-gray-500 uppercase font-bold tracking-widest">Total Bayar</p>
+                    <p class="text-3xl font-black text-primary">Rp {{ "{:,.0f}".format(total_bill).replace(",", ".") }}</p>
+                </div>
+                <div class="divider border-primary/10"></div>
+                <div class="flex items-center justify-center gap-3 text-info">
+                    <i class="bi bi-lightning-charge-fill text-2xl"></i>
+                    <div class="text-left">
+                        <div class="font-bold text-sm">Pembayaran Instan</div>
+                        <div class="text-[10px] opacity-70">Konfirmasi lunas otomatis dalam detik</div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="btn-pay-midtrans" onclick="payMidtrans()"
+                class="btn btn-primary w-full btn-lg shadow-lg">
+                <i class="bi bi-lightning-fill"></i> Bayar Sekarang
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+</div>
+
+{% if settings.get('midtrans_mode') == 'production' %}
+<script src="https://app.midtrans.com/snap/snap.js"
+    data-client-key="{{ settings.get('midtrans_client_key') }}"></script>
+{% else %}
+<script src="https://app.sandbox.midtrans.com/snap/snap.js"
+    data-client-key="{{ settings.get('midtrans_client_key') }}"></script>
+{% endif %}
+<!-- Note: Need to pass settings to template or fetch client key from backend. Assuming passed or hardcoded for now -->
+<!-- Better: Pass 'midtrans_client_key' in render_template args -->
+
+<script>
+    function showTab(mode) {
+        if (mode === 'manual') {
+            document.getElementById('tab-manual').classList.remove('hidden');
+            document.getElementById('tab-online').classList.add('hidden');
+            document.querySelectorAll('.tab')[0].classList.add('tab-active');
+            document.querySelectorAll('.tab')[1].classList.remove('tab-active');
+        } else {
+            document.getElementById('tab-manual').classList.add('hidden');
+            document.getElementById('tab-online').classList.remove('hidden');
+            document.querySelectorAll('.tab')[0].classList.remove('tab-active');
+            document.querySelectorAll('.tab')[1].classList.add('tab-active');
+        }
+    }
+
+    function enablePayButton() {
+        const amount = document.getElementById('online-amount').value;
+        const radios = document.getElementsByName('tripay_method');
+        let selected = false;
+        let method = '';
+        for (const r of radios) {
+            if (r.checked) {
+                selected = true;
+                method = r.value;
+                break;
+            }
+        }
+
+        const btn = document.getElementById('btn-pay-tripay');
+        if (btn) {
+            if (amount > 0 && selected) {
+                btn.disabled = false;
+                document.getElementById('tripay-amount').value = amount;
+                document.getElementById('tripay-method').value = method;
+            } else {
+                btn.disabled = true;
+            }
+        }
+    }
+
+    document.getElementById('online-amount').addEventListener('input', enablePayButton);
+
+    {% if active_gateway in ['duitku', 'both'] %}
+    let duitkuTimeout;
+    const fetchDuitkuChannels = async (amount) => {
+        if (!amount || amount < 10000) return;
+
+        const container = document.getElementById('duitku-channels-container');
+        const loading = document.getElementById('duitku-loading');
+
+        loading.classList.remove('hidden');
+        container.innerHTML = '';
+        document.getElementById('btn-pay-duitku').disabled = true;
+
+        try {
+            const res = await fetch(`{{ url_for('api.duitku_methods') }}?amount=${amount}`);
+            const data = await res.json();
+
+            loading.classList.add('hidden');
+
+            if (data.success && data.methods && data.methods.length > 0) {
+                data.methods.forEach(method => {
+                    const el = document.createElement('label');
+                    el.className = 'cursor-pointer';
+                    el.innerHTML = `
+                        <input type="radio" name="duitku_method" value="${method.paymentMethod}" class="peer sr-only" onchange="enableDuitkuButton()">
+                        <div class="rounded-xl border border-gray-200 p-3 hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center h-full flex flex-col items-center justify-center gap-2">
+                            <img src="${method.paymentImage}" class="h-8 object-contain" alt="${method.paymentName}">
+                            <span class="text-xs font-bold leading-tight">${method.paymentName}</span>
+                            <span class="text-[10px] text-gray-500 block w-full">+Fee Rp ${method.totalFee}</span>
+                        </div>
+                    `;
+                    container.appendChild(el);
+                });
+            } else {
+                container.innerHTML = `<div class="col-span-2 text-center p-4 bg-error/5 rounded-xl">
+                    <p class="text-sm text-error font-bold">Gagal memuat metode pembayaran Duitku.</p>
+                    <p class="text-[10px] text-gray-500 mt-1">${data.error || 'Terjadi kesalahan pada server.'}</p>
+                </div>`;
+            }
+        } catch (e) {
+            loading.classList.add('hidden');
+            container.innerHTML = `<div class="col-span-2 text-center text-sm text-error">Koneksi terputus.</div>`;
+        }
+    };
+
+    function enableDuitkuButton() {
+        const selected = document.querySelector('input[name="duitku_method"]:checked');
+        const btn = document.getElementById('btn-pay-duitku');
+        const amount = document.getElementById('online-amount').value;
+
+        if (selected && amount >= 10000) {
+            btn.disabled = false;
+            document.getElementById('duitku-method').value = selected.value;
+            document.getElementById('duitku-amount').value = amount;
+        } else {
+            btn.disabled = true;
+        }
+    }
+
+    document.getElementById('online-amount').addEventListener('input', (e) => {
+        clearTimeout(duitkuTimeout);
+        document.getElementById('btn-pay-duitku').disabled = true;
+        duitkuTimeout = setTimeout(() => {
+            fetchDuitkuChannels(e.target.value);
+        }, 800);
+    });
+    {% endif %}
+
+    async function payMidtrans() {
+        const amount = document.getElementById('online-amount').value;
+        if (!amount || amount < 1000) {
+            alert('Masukkan jumlah pembayaran minimal Rp 1.000');
+            return;
+        }
+
+        // Request Token
+        try {
+            const res = await fetch("{{ url_for('client.midtrans_token') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: amount })
+            });
+            const data = await res.json();
+
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else if (data.token) {
+                snap.pay(data.token, {
+                    onSuccess: function (result) { window.location.reload(); },
+                    onPending: function (result) { window.location.reload(); },
+                    onError: function (result) { alert("Payment Failed!"); console.log(result); }
+                });
+            } else {
+                alert('Gagal mendapatkan token Midtrans: ' + (data.error || 'Unknown Error'));
+            }
+        } catch (e) {
+            alert('Error: ' + e);
+        }
+    }
+
+    // Initialize Duitku/Tripay with default amount if online tab active
+    window.onload = () => {
+        const amt = document.getElementById('online-amount').value;
+        if (amt >= 10000) {
+            if ("{{ active_gateway }}" === "duitku") {
+                fetchDuitkuChannels(amt);
+            }
+            enablePayButton();
+        }
+    };
+</script>
+
+{% endblock %}

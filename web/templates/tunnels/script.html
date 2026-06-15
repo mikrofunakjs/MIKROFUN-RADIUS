@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="mb-6">
+    <a href="{{ url_for('tunnels.index') }}" class="btn btn-ghost btn-sm gap-1">
+        <i class="bi bi-arrow-left"></i> Kembali
+    </a>
+</div>
+
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+    <div>
+        <h2 class="text-2xl font-black flex items-center gap-2">
+            <i class="bi bi-terminal-fill text-primary"></i> Script Instalasi Tunnel
+        </h2>
+        <p class="text-sm opacity-60">Tunnel: <strong>{{ tunnel.tunnel_name }}</strong></p>
+    </div>
+</div>
+
+<!-- Connection Info -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="stat bg-base-100 rounded-xl shadow border border-base-200 py-3">
+        <div class="stat-title text-xs">Winbox Remote</div>
+        <div class="stat-value text-primary text-lg">{{ server_ip }}:{{ tunnel.public_winbox_port }}</div>
+        <div class="stat-desc">Paste di Winbox → Connect To</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl shadow border border-base-200 py-3">
+        <div class="stat-title text-xs">Web / HTTP</div>
+        <div class="stat-value text-info text-lg">{{ server_ip }}:{{ tunnel.public_web_port }}</div>
+        <div class="stat-desc">Akses browser HTTP</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl shadow border border-base-200 py-3">
+        <div class="stat-title text-xs">API Remote</div>
+        <div class="stat-value text-warning text-lg">{{ server_ip }}:{{ tunnel.public_api_port }}</div>
+        <div class="stat-desc">Digunakan oleh Sistem Portal</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl shadow border border-base-200 py-3">
+        <div class="stat-title text-xs">IP Internal VPN</div>
+        <div class="stat-value text-lg">{{ tunnel.internal_ip }}</div>
+        <div class="stat-desc">L2TP Client Address</div>
+    </div>
+</div>
+
+<!-- Instructions -->
+<div class="alert alert-warning shadow-sm mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div class="text-sm">
+        <strong>Cara Pakai:</strong> Copy script di bawah → Buka Winbox → Login ke Mikrotik → Klik "New Terminal" →
+        Paste → Enter.
+        Setelah itu router akan otomatis terkoneksi ke VPS melalui L2TP VPN.
+    </div>
+</div>
+
+<!-- Script -->
+<div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body p-4">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-sm"><i class="bi bi-code-slash"></i> MikroTik Script</h3>
+            <button onclick="copyScript()" class="btn btn-primary btn-sm gap-2">
+                <i class="bi bi-clipboard-fill"></i> Copy Script
+            </button>
+        </div>
+        <pre id="scriptContent"
+            class="bg-gray-900 text-green-400 p-4 rounded-xl text-xs overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed">{{ script }}</pre>
+    </div>
+</div>
+
+<script>
+    function copyScript() {
+        var text = document.getElementById('scriptContent').textContent;
+        navigator.clipboard.writeText(text).then(function () {
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-end z-50';
+            toast.innerHTML = '<div class="alert alert-success py-2 px-4"><span class="text-sm">Script tersalin!</span></div>';
+            document.body.appendChild(toast);
+            setTimeout(function () { toast.remove(); }, 2000);
+        });
+    }
+</script>
+
+{% endblock %}

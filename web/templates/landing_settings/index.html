@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+                <i class="bi bi-window-sidebar"></i> Pengaturan Landing Page
+            </h2>
+            <p class="text-sm opacity-60">Kustomisasi halaman depan untuk pelanggan Anda.</p>
+        </div>
+        <div>
+            <a href="/landing-page" target="_blank" class="btn btn-primary btn-outline">
+                <i class="bi bi-eye"></i> Pratinjau
+            </a>
+        </div>
+    </div>
+
+    <form method="POST">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+
+            <!-- LEFT COLUMN: SETTINGS -->
+            <div class="md:col-span-8">
+
+                <!-- Tab Navigation (DaisyUI Tabs) -->
+                <div class="tabs tabs-boxed mb-6 bg-base-100 shadow-sm border border-base-200 p-2">
+                    <a class="tab tab-active font-bold" id="tab-theme" onclick="switchTab('theme')"><i
+                            class="bi bi-palette mr-2"></i> Tema Tampilan</a>
+                    <a class="tab font-bold" id="tab-packages" onclick="switchTab('packages')"><i
+                            class="bi bi-box-seam mr-2"></i> Paket Internet</a>
+                </div>
+
+                <!-- TAB CONTENT: THEME -->
+                <div id="content-theme">
+                    <!-- Theme Chooser -->
+                    <div class="card bg-base-100 shadow-sm border border-base-200 mb-6">
+                        <div class="card-body">
+                            <h3 class="card-title text-lg border-b pb-2 mb-4">
+                                <i class="bi bi-palette text-primary"></i> Pilih Tema
+                            </h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <!-- Template 1 -->
+                                <label class="cursor-pointer block">
+                                    <input type="radio" name="template_choice" value="1" class="peer sr-only" {% if
+                                        current_template=='1' %}checked{% endif %}>
+                                    <div
+                                        class="card border-2 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-base-300 transition-all duration-200 active:scale-95 shadow-sm hover:shadow-md">
+                                        <div class="card-body p-4 text-center items-center">
+                                            <i class="bi bi-brightness-high text-4xl text-blue-500 mb-2"></i>
+                                            <h4 class="font-bold">Tema 1</h4>
+                                            <p class="text-xs opacity-60">Terang & Modern</p>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <!-- Template 2 -->
+                                <label class="cursor-pointer block">
+                                    <input type="radio" name="template_choice" value="2" class="peer sr-only" {% if
+                                        current_template=='2' %}checked{% endif %}>
+                                    <div
+                                        class="card border-2 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-base-300 transition-all duration-200 active:scale-95 shadow-sm hover:shadow-md">
+                                        <div class="card-body p-4 text-center items-center">
+                                            <i class="bi bi-moon-stars text-4xl text-indigo-500 mb-2"></i>
+                                            <h4 class="font-bold">Tema 2</h4>
+                                            <p class="text-xs opacity-60">Gelap & Elegan</p>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <!-- Template 3 -->
+                                <label class="cursor-pointer block">
+                                    <input type="radio" name="template_choice" value="3" class="peer sr-only" {% if
+                                        current_template=='3' %}checked{% endif %}>
+                                    <div
+                                        class="card border-2 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-base-300 transition-all duration-200 active:scale-95 shadow-sm hover:shadow-md">
+                                        <div class="card-body p-4 text-center items-center">
+                                            <i class="bi bi-vector-pen text-4xl text-green-500 mb-2"></i>
+                                            <h4 class="font-bold">Tema 3</h4>
+                                            <p class="text-xs opacity-60">Koporat & Bersih</p>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <!-- Custom HTML -->
+                                <label class="cursor-pointer block">
+                                    <input type="radio" name="template_choice" value="custom" class="peer sr-only"
+                                        id="radio-custom" {% if current_template=='custom' %}checked{% endif %}>
+                                    <div
+                                        class="card border-2 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-base-300 transition-all duration-200 active:scale-95 shadow-sm hover:shadow-md">
+                                        <div class="card-body p-4 text-center items-center">
+                                            <i class="bi bi-code-slash text-4xl text-orange-500 mb-2"></i>
+                                            <h4 class="font-bold">Kustom</h4>
+                                            <p class="text-xs opacity-60">Upload HTML Sendiri</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom HTML Editor (Hidden by default) -->
+                    <div id="custom-html-container"
+                        class="card bg-base-100 shadow-sm border border-base-200 mb-6 {% if current_template != 'custom' %}hidden{% endif %}">
+                        <div class="card-body">
+                            <h3 class="card-title text-lg border-b pb-2 mb-4">
+                                <i class="bi bi-file-earmark-code text-primary"></i> Kode HTML Kustom
+                            </h3>
+                            <div class="alert alert-info shadow-sm mb-4">
+                                <i class="bi bi-info-circle-fill"></i>
+                                <div>
+                                    <h3 class="font-bold text-xs">PANDUAN PENTING</h3>
+                                    <div class="text-xs space-y-2 mt-1">
+                                        <p>
+                                            1. Pastikan template HTML kustom Anda menyertakan tombol atau link
+                                            peringatan menuju
+                                            <strong>/client/login</strong> agar pelanggan Anda bisa mengecek tagihan
+                                            mereka.
+                                        </p>
+                                        <p>
+                                            2. <strong>Untuk memanggil Paket Layanan</strong>, Anda bisa menggunakan
+                                            kode Jinja2:
+                                            <code
+                                                class="bg-base-300 px-1 py-0.5 rounded text-error">{% raw %}{% for pkg in packages %}{% endraw %}</code>
+                                            lalu panggil variabel seperti <code
+                                                class="bg-base-300 px-1 py-0.5 rounded text-error">{% raw %}{{ pkg.name }}{% endraw %}</code>,
+                                            <code
+                                                class="bg-base-300 px-1 py-0.5 rounded text-error">{% raw %}{{ pkg.speed }}{% endraw %}</code>,
+                                            <code
+                                                class="bg-base-300 px-1 py-0.5 rounded text-error">{% raw %}{{ pkg.price }}{% endraw %}</code>,
+                                            dan ditutup dengan <code
+                                                class="bg-base-300 px-1 py-0.5 rounded text-error">{% raw %}{% endfor %}{% endraw %}</code>.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-control">
+                                <textarea name="custom_html" class="textarea textarea-bordered h-96 font-mono text-sm"
+                                    placeholder="Paste kode HTML lengkap (<html>...</html>) Anda di sini...">{{ custom_html }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- END CONTENT THEME -->
+
+                <!-- TAB CONTENT: PACKAGES -->
+                <div id="content-packages" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold">Daftar Paket Internet</h3>
+                        <button type="button" class="btn btn-primary btn-sm"
+                            onclick="document.getElementById('add_package_modal').showModal()">
+                            <i class="bi bi-plus-lg"></i> Tambah Paket
+                        </button>
+                    </div>
+
+                    {% if packages %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for pkg in packages %}
+                        <div class="card bg-base-100 border border-base-200 shadow-sm relative overflow-hidden group">
+                            <!-- Discount Badge -->
+                            {% if pkg.get('discount_price') %}
+                            <div
+                                class="absolute top-4 right-4 badge badge-error badge-sm font-bold text-white shadow-sm z-10">
+                                DISCOUNT</div>
+                            {% endif %}
+
+                            <div class="card-body p-5">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                                        <i class="bi bi-rocket-takeoff text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg">{{ pkg.name }}</h4>
+                                        <p class="text-xs font-bold text-slate-500">{{ pkg.speed }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="my-4 p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                                    {% if pkg.get('discount_price') %}
+                                    <p class="text-xs text-slate-400 line-through mb-1">Rp {{
+                                        "{:,.0f}".format(pkg.price|float) }}</p>
+                                    <p class="text-xl font-black text-primary">Rp {{
+                                        "{:,.0f}".format(pkg.discount_price|float) }}<span
+                                            class="text-xs text-slate-500 font-normal">/bln</span></p>
+                                    {% else %}
+                                    <p class="text-xl font-black text-primary">Rp {{ "{:,.0f}".format(pkg.price|float)
+                                        }}<span class="text-xs text-slate-500 font-normal">/bln</span></p>
+                                    {% endif %}
+                                </div>
+
+                                <ul class="text-sm space-y-1 text-slate-500">
+                                    {% for f in pkg.features %}
+                                    <li><i class="bi bi-check-circle-fill text-green-500 mr-2 text-xs"></i>{{ f }}</li>
+                                    {% endfor %}
+                                </ul>
+
+                                <div class="card-actions justify-end mt-4 pt-4 border-t border-slate-100">
+                                    <button type="button" class="btn btn-error btn-sm btn-outline w-full"
+                                        onclick="document.getElementById('delete_form_{{ pkg.id }}').submit();">
+                                        <i class="bi bi-trash"></i> Hapus Paket
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div
+                        class="text-center py-12 bg-base-100 border border-base-200 rounded-2xl shadow-sm border-dashed">
+                        <i class="bi bi-inbox text-4xl text-slate-300 mb-3 block"></i>
+                        <h4 class="font-bold text-slate-500">Belum Ada Paket</h3>
+                            <p class="text-sm text-slate-400">Tambahkan paket internet agar muncul di Landing Page Anda.
+                            </p>
+                    </div>
+                    {% endif %}
+                </div> <!-- END CONTENT PACKAGES -->
+            </div>
+
+            <!-- RIGHT COLUMN: ACTION -->
+            <div class="md:col-span-4">
+                <div class="card bg-base-100 shadow-sm border border-base-200 sticky top-4">
+                    <div class="card-body">
+                        <h3 class="card-title text-base border-b pb-2 mb-4">Publikasi</h3>
+                        <p class="text-xs opacity-70 mb-4">Perubahan pada tema Landing Page akan langsung diterapkan
+                            secara live untuk pelanggan yang mengunjungi web Anda.</p>
+                        <button type="submit" class="btn btn-primary w-full shadow-lg">
+                            <i class="bi bi-cloud-arrow-up"></i> Simpan Perubahan
+                        </button>
+
+                        <div class="divider">Atau</div>
+
+                        <a href="/settings" class="btn btn-outline w-full">
+                            <i class="bi bi-gear"></i> Konfigurasi Identitas ISP
+                        </a>
+                        <p class="text-[10px] opacity-50 mt-2 text-center">Teks seperti Nama ISP, Email, dan Telepon
+                            pada Tema 1, 2, & 3 diambil otomatis dari pengaturan Identitas Anda.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </form>
+
+    <!-- Hidden Delete Forms -->
+    {% for pkg in packages %}
+    <form id="delete_form_{{ pkg.id }}" action="{{ url_for('landing_settings.delete_package', pkg_id=pkg.id) }}"
+        method="POST"></form>
+    {% endfor %}
+
+    <!-- Add Package Modal -->
+    <dialog id="add_package_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg border-b pb-3 mb-4"><i class="bi bi-plus-circle text-primary"></i> Tambah Paket
+                Internet</h3>
+            <form action="{{ url_for('landing_settings.add_package') }}" method="POST">
+                <div class="form-control mb-3">
+                    <label class="label"><span class="label-text font-bold">Nama Paket <span
+                                class="text-error">*</span></span></label>
+                    <input type="text" name="name" class="input input-bordered" placeholder="Contoh: Paket Gamer"
+                        required>
+                </div>
+                <div class="form-control mb-3">
+                    <label class="label"><span class="label-text font-bold">Kecepatan <span
+                                class="text-error">*</span></span></label>
+                    <input type="text" name="speed" class="input input-bordered" placeholder="Contoh: 50 Mbps" required>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-bold">Harga Normal (Rp) <span
+                                    class="text-error">*</span></span></label>
+                        <input type="number" name="price" class="input input-bordered" placeholder="Contoh: 200000"
+                            required>
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-bold">Harga Promo/Diskon
+                                (Opsional)</span></label>
+                        <input type="number" name="discount_price" class="input input-bordered"
+                            placeholder="Contoh: 150000">
+                    </div>
+                </div>
+
+                <div class="form-control mb-6">
+                    <label class="label">
+                        <span class="label-text font-bold">Fitur (Pisahkan dengan koma)</span>
+                    </label>
+                    <textarea name="features" class="textarea textarea-bordered h-20"
+                        placeholder="Unlimitid Quota, Bantuan Prioritas, Gratis Modem"></textarea>
+                    <label class="label w-full"><span class="label-text-alt text-slate-500">Contoh: Fiber Optic, 100%
+                            SLA, Bantuan 24/7</span></label>
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" class="btn"
+                        onclick="document.getElementById('add_package_modal').close()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Paket</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+</div>
+
+<script>
+    // Tab Switching Logic
+    function switchTab(tabId) {
+        document.getElementById('tab-theme').classList.remove('tab-active');
+        document.getElementById('tab-packages').classList.remove('tab-active');
+
+        document.getElementById('content-theme').classList.add('hidden');
+        document.getElementById('content-packages').classList.add('hidden');
+
+        document.getElementById('tab-' + tabId).classList.add('tab-active');
+        document.getElementById('content-' + tabId).classList.remove('hidden');
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const radios = document.querySelectorAll('input[name="template_choice"]');
+        const customContainer = document.getElementById('custom-html-container');
+
+        radios.forEach(radio => {
+            radio.addEventListener('change', function () {
+                if (this.value === 'custom') {
+                    customContainer.classList.remove('hidden');
+                } else {
+                    customContainer.classList.add('hidden');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

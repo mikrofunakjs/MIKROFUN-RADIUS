@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Edit Mitra Reseller{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Edit Mitra: {{ reseller.username }}</h1>
+    <p class="text-sm text-gray-500 mt-1">Ubah akses atau sesuaikan komisi diskon agen.</p>
+</div>
+
+<div class="card bg-base-100 shadow-xl max-w-2xl border border-base-200">
+    <div class="card-body">
+        <form method="POST">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Username / Nama Panggilan</span></label>
+                <input type="text" name="username" class="input input-bordered w-full" value="{{ reseller.username }}"
+                    required>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Password Login Baru (Opsional)</span></label>
+                <input type="password" name="password" class="input input-bordered w-full"
+                    placeholder="Kosongkan jika tidak ingin mengubah password">
+            </div>
+
+            <div class="divider">Keuntungan Mitra</div>
+
+            <div class="form-control mb-6">
+                <label class="label">
+                    <span class="label-text font-bold">Persentase Diskon Penjualan (%)</span>
+                </label>
+                <label class="input-group">
+                    <input type="number" name="discount_percent" class="input input-bordered w-full"
+                        value="{{ reseller.discount_percent }}" min="0" max="100" required>
+                    <span>%</span>
+                </label>
+                <label class="label"><span class="label-text-alt text-gray-500">Nilai potongan yang didapat saat
+                        Reseller generate web.</span></label>
+            </div>
+
+            <div class="flex justify-between items-center mt-4 pt-4 border-t border-base-200">
+                <div class="text-sm text-gray-500">
+                    Sisa Saldo: <span class="font-bold text-success font-mono">Rp {{
+                        "{:,.0f}".format(reseller.balance).replace(',', '.') }}</span>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <a href="{{ url_for('reseller_admin.index') }}" class="btn btn-ghost">Batal</a>
+                    <button type="submit" class="btn btn-primary px-8">Update Mitra</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

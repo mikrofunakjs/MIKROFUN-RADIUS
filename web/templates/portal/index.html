@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Centralized Hotspot Portal Admin{% endblock %}
+{% block content %}
+<div class="mb-5">
+    <h2 class="text-2xl font-bold flex items-center gap-2">
+        <i class="bi bi-wifi"></i> Portal Login Terpusat
+    </h2>
+    <div class="flex gap-2 mt-2">
+        <a href="{{ url_for('portal_settings.index') }}" class="btn btn-secondary btn-sm">
+            <i class="bi bi-gear-wide-connected"></i> Pengaturan Portal
+        </a>
+        <p class="text-xs opacity-50 self-center">Kelola halaman login voucher terpusat untuk semua router mikrotik
+            Anda.</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Penjelasan Fitur -->
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body">
+            <h3 class="card-title text-primary"><i class="bi bi-info-circle"></i> Apa itu Portal Terpusat?</h3>
+            <p class="text-sm">
+                Biasanya Anda harus mendesain dan mengupload file HTML halaman login hotspot (seperti
+                <code>login.html</code>, gambar, logo) ke **setiap** router Mikrotik. Jika ada 10 router, maka Anda
+                harus upload ke 10 router.
+            </p>
+            <p class="text-sm mt-3">
+                Dengan fitur **Portal Terpusat MikroFun**, Anda hanya perlu menggunakan **satu desain halaman login ini
+                saja**. Semua router Mikrotik akan secara otomatis melempar (mengalihkan) layar login pelanggan ke
+                MikroFun.
+            </p>
+            <ul class="text-sm list-disc pl-5 mt-3 space-y-1">
+                <li>Desain lebih keren, modern, dan sangat responsif di HP.</li>
+                <li>Ganti background atau logo? Cukup diedit di MikroFun, semua router langsung ganti.</li>
+                <li>Lebih aman dari bypass/bobol Mikrotik karena proses login 100% dipusatkan di sini.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Cara Penggunaan -->
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body">
+            <h3 class="card-title text-success mb-4"><i class="bi bi-cloud-arrow-down"></i> Cara Implementasi ke Mikrotik</h3>
+
+            {% set current_ip = request.host.split(':')[0] %}
+            {% set current_port = request.host.split(':')[1] if ':' in request.host else '80' %}
+            <div x-data="{ activeTab: 'iframe' }">
+                <!-- Tab Selector -->
+                <div class="tabs tabs-boxed bg-base-200 mb-6 font-semibold overflow-x-auto flex-nowrap">
+                    <a class="tab transition-all whitespace-nowrap" :class="{ 'tab-active': activeTab === 'iframe' }" @click="activeTab = 'iframe'">
+                        <i class="bi bi-window-stack mr-2"></i> Metode Standar (IFrame)
+                    </a>
+                    <a class="tab transition-all whitespace-nowrap" :class="{ 'tab-active': activeTab === 'modern' }" @click="activeTab = 'modern'">
+                        <i class="bi bi-cpu mr-2"></i> Metode Tanpa Upload
+                    </a>
+                </div>
+
+                <!-- Content: Metode IFrame (Rekomendasi) -->
+                <div x-show="activeTab === 'iframe'" class="space-y-4 animate-in fade-in duration-500">
+                    <div class="alert alert-success bg-success/10 text-success border-success/20 text-xs shadow-none">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span><b>REKOMENDASI (100% WORKS):</b> Gunakan metode ini agar URL HP tertahan di Mikrotik secara transparan (tanpa kelihatan pindah web). Suport di SEMUA hape jadul maupun baru.</span>
+                    </div>
+                    
+                    <div class="step-item font-semibold text-sm">Langkah 1: Siapkan Walled Garden</div>
+                    <div class="bg-slate-900 p-3 rounded-xl relative group">
+                        <code class="text-emerald-400 text-[10px] sm:text-xs break-all" id="scriptWalled">
+                            /ip firewall address-list add address={{ current_ip }} list=mikrofun_vpn_vps comment="VPN Server IP"<br>
+                            /ip hotspot walled-garden ip add action=accept dst-address-list=mikrofun_vpn_vps comment="Allow Portal via VPN"
+                        </code>
+                        <button onclick="copyToClipboard('scriptWalled')" class="btn btn-xs btn-success absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+                    </div>
+
+                    <div class="step-item font-semibold text-sm mt-4">Langkah 2: Download & Extract</div>
+                    <a href="{{ url_for('portal.download_redirect', mode='vpn') }}" class="btn btn-primary btn-sm w-full gap-2 mt-2">
+                        <i class="bi bi-download"></i> Download File Portal (ZIP)
+                    </a>
+                    <p class="text-[10px] text-gray-500 mt-2">
+                        <i>Ekstrak file yang didownload, lalu Timpa (Upload) isinya ke folder <b>hotspot</b> di MikroTik menggunakan menu Files Winbox. Pastikan script NAT Anda dihapus.</i>
+                    </p>
+                </div>
+
+                <!-- Content: Metode Modern (API-Proxy) -->
+                <div x-show="activeTab === 'modern'" class="space-y-4 animate-in fade-in duration-500">
+                    <div class="p-4 bg-primary/5 rounded-2xl border border-primary/10 mb-4">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary shrink-0">
+                                <i class="bi bi-stars"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm">Metode Cepat (Tanpa Upload File)</h4>
+                                <p class="text-[11px] opacity-70 mt-1 text-error"><b>WARNING:</b> Metode ini merusak pendeteksian HTTPS, dan tidak bisa melacak MAC Address HP. Sering menyebabkan "Secure Connection Failed".</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item font-semibold text-sm">Script NAT Sakti</div>
+                    <p class="text-xs text-gray-500 mb-2 italic">Copy script ini ke Terminal Winbox MikroTik Anda.</p>
+                    <div class="bg-slate-900 p-4 rounded-xl relative group border border-slate-700">
+                        <code class="text-sky-300 text-[10px] sm:text-xs leading-relaxed" id="scriptModern">
+                            /ip firewall nat add action=dst-nat chain=dstnat dst-port=80 protocol=tcp to-addresses={{ current_ip }} to-ports={{ current_port }} comment="MikroFun: API-Proxy Portal" place-before=0<br>
+                            /ip firewall nat add action=masquerade chain=srcnat dst-address={{ current_ip }} dst-port={{ current_port }} protocol=tcp comment="MikroFun: API-Proxy Return Path"<br>
+                            /ip hotspot walled-garden ip add action=accept dst-address={{ current_ip }} comment="Allow Central Portal"
+                        </code>
+                        <button onclick="copyToClipboard('scriptModern')" class="btn btn-xs btn-primary absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">Copy Script</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-warning text-[10px] py-2 px-3 shadow-none mt-4">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>Pastikan API Service MikroTik aktif dan <b>Port {{ current_port }}</b> di VPS/Server MikroFun sudah dibuka.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+    function copyToClipboard(id) {
+        const text = document.getElementById(id).innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Script berhasil disalin! Silakan paste di Terminal Winbox.');
+        });
+    }
+</script>
+
+<div class="mt-5">
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body">
+            <h3 class="card-title"><i class="bi bi-phone"></i> Preview Portal</h3>
+            <p class="text-sm opacity-70 mb-3">Ini adalah tampilan halaman login yang akan dilihat pelanggan Anda. Anda
+                dapat menguji cobanya secara langsung.</p>
+            <div class="mockup-browser border border-base-300 bg-base-200 w-full lg:w-1/2 mx-auto shadow-xl">
+                <div class="mockup-browser-toolbar">
+                    <div class="input">https://mikrofun.local/portal/login</div>
+                </div>
+                <div class="flex justify-center flex-col px-4 py-8 bg-base-100 h-96 relative">
+                    <!-- Iframe to show the actual portal login ignoring query params so it simulates a direct view -->
+                    <iframe src="{{ url_for('portal.hotspot_login') }}"
+                        class="w-full h-full border-0 absolute top-0 left-0"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

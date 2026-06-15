@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block title %}Data Mitra (Reseller){% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <i class="bi bi-person-hearts text-primary"></i> Mitra Voucher
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Kelola perwakilan agen penjual voucher Anda.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="/reseller/login" target="_blank" class="btn btn-outline btn-primary btn-sm gap-1">
+            <i class="bi bi-shop"></i> Buka Portal Mitra
+        </a>
+        <a href="/client/login" target="_blank" class="btn btn-outline btn-secondary btn-sm gap-1">
+            <i class="bi bi-person-circle"></i> Portal Web Client
+        </a>
+        <a href="{{ url_for('reseller_admin.add') }}"
+            class="btn btn-primary btn-sm shadow-lg shadow-indigo-500/30 gap-1">
+            <i class="bi bi-person-plus-fill"></i> Tambah Mitra
+        </a>
+    </div>
+</div>
+
+<!-- Pengaturan Tampilan Portal Mitra -->
+<div class="card bg-base-100 shadow border border-base-200 mb-6">
+    <div class="card-body py-4">
+        <h3 class="card-title text-base flex items-center gap-2">
+            <i class="bi bi-palette-fill text-primary"></i> Pengaturan Tampilan Portal Mitra
+        </h3>
+        <p class="text-xs opacity-60 mb-3">Pilih warna tema yang akan diterapkan di tampilan halaman login dan dashboard
+            Mitra.</p>
+        <form method="POST" action="{{ url_for('reseller_admin.save_theme') }}" class="flex flex-wrap items-end gap-4">
+            <!-- Preset Color Swatches -->
+            <div>
+                <p class="text-xs font-semibold mb-2 opacity-70">Pilih Preset Warna:</p>
+                <div class="flex flex-wrap gap-2" id="swatches">
+                    {% set presets = [
+                    ('#4f46e5', 'Indigo'),
+                    ('#7c3aed', 'Ungu'),
+                    ('#2563eb', 'Biru'),
+                    ('#0891b2', 'Cyan'),
+                    ('#059669', 'Hijau'),
+                    ('#d97706', 'Amber'),
+                    ('#dc2626', 'Merah'),
+                    ('#db2777', 'Pink'),
+                    ('#374151', 'Gelap'),
+                    ] %}
+                    {% for hex, name in presets %}
+                    <button type="button" onclick="setColor('{{ hex }}')" title="{{ name }}"
+                        class="w-8 h-8 rounded-full border-2 border-white shadow-md hover:scale-110 transition-transform ring-2 ring-transparent hover:ring-gray-400"
+                        style="background-color: {{ hex }}"></button>
+                    {% endfor %}
+                </div>
+            </div>
+            <!-- Custom Color Picker -->
+            <div class="form-control">
+                <label class="label py-0"><span class="label-text text-xs font-semibold">Warna Kustom
+                        (Hex):</span></label>
+                <div class="flex items-center gap-2">
+                    <input type="color" id="colorPickerVisual" onchange="setColor(this.value)"
+                        class="w-10 h-10 rounded-lg border cursor-pointer" style="padding: 2px">
+                    <input type="text" name="theme_color" id="colorPickerHex" placeholder="#4f46e5" required
+                        class="input input-bordered input-sm w-28 font-mono" oninput="syncPicker(this.value)">
+                    <!-- Live Preview -->
+                    <div id="colorPreview"
+                        class="w-10 h-10 rounded-lg border border-gray-200 shadow-inner transition-all"
+                        title="Preview warna"></div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm gap-1">
+                <i class="bi bi-check-circle-fill"></i> Simpan Tema
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function setColor(hex) {
+        document.getElementById('colorPickerHex').value = hex;
+        document.getElementById('colorPickerVisual').value = hex;
+        document.getElementById('colorPreview').style.backgroundColor = hex;
+    }
+    function syncPicker(val) {
+        if (val.length === 7 && val.startsWith('#')) {
+            document.getElementById('colorPickerVisual').value = val;
+            document.getElementById('colorPreview').style.backgroundColor = val;
+        }
+    }
+    // Init with current value
+    document.addEventListener('DOMContentLoaded', function () {
+        const stored = '{{ current_theme_color }}';
+        if (stored) setColor(stored);
+    });
+</script>
+
+<!-- Mobile: Card List -->
+<div class="space-y-3 md:hidden">
+    {% for r in resellers %}
+    <div class="card bg-base-100 border border-base-200 shadow-sm">
+        <div class="card-body p-4">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="font-bold text-base flex items-center gap-2">
+                        <i class="bi bi-person-hearts text-primary"></i> {{ r.username }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">Daftar: {{ r.created_at.strftime('%d %b %Y') if r.created_at
+                        else '-' }}</p>
+                </div>
+                <span class="badge badge-neutral text-sm">{{ r.discount_percent }}% diskon</span>
+            </div>
+            <div class="flex gap-4 mt-3 text-sm">
+                <div class="flex-1">
+                    <p class="text-xs text-gray-400">Sisa Saldo</p>
+                    <p class="font-bold font-mono text-success">Rp {{ r.balance|currency }}</p>
+                </div>
+                <div class="flex-1">
+                    <p class="text-xs text-gray-400">Voucher Terjual</p>
+                    <p class="font-bold"><span class="badge badge-info badge-sm">{{ r.total_vouchers }} Lembar</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-3">
+                <a href="/reseller/dashboard" target="_blank" class="btn btn-xs btn-outline btn-primary gap-1">
+                    <i class="bi bi-shop"></i> Portal
+                </a>
+                <a href="{{ url_for('reseller_admin.report', id=r.id) }}"
+                    class="btn btn-xs btn-outline btn-warning gap-1">
+                    <i class="bi bi-bar-chart-fill"></i> Laporan
+                </a>
+                <label for="modal-topup-{{ r.id }}" class="btn btn-xs btn-success text-white gap-1">
+                    <i class="bi bi-cash-coin"></i> Top-Up
+                </label>
+                <a href="{{ url_for('reseller_admin.edit', id=r.id) }}" class="btn btn-xs btn-outline btn-info gap-1">
+                    <i class="bi bi-pencil-fill"></i> Edit
+                </a>
+                <button
+                    onclick="if(confirm('Hapus mitra ini?')) window.location.href='{{ url_for('reseller_admin.delete', id=r.id) }}'"
+                    class="btn btn-xs btn-outline btn-error gap-1">
+                    <i class="bi bi-trash-fill"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Top-Up Modal -->
+        <input type="checkbox" id="modal-topup-{{ r.id }}" class="modal-toggle" />
+        <div class="modal">
+            <div class="modal-box text-left">
+                <h3 class="font-bold text-lg mb-4"><i class="fas fa-coins text-success mr-2"></i> Isi Saldo Mitra</h3>
+                <p class="text-sm text-gray-500 mb-4">Tambah deposit untuk <b>{{ r.username }}</b>.</p>
+                <form action="{{ url_for('reseller_admin.topup', id=r.id) }}" method="POST">
+                    <div class="form-control mb-4">
+                        <label class="label"><span class="label-text">Nominal (Rp)</span></label>
+                        <label class="input-group"><span>Rp</span>
+                            <input type="number" name="amount" class="input input-bordered w-full" placeholder="500000"
+                                min="1000" required>
+                        </label>
+                    </div>
+                    <div class="form-control mb-6">
+                        <label class="label"><span class="label-text">Keterangan</span></label>
+                        <input type="text" name="description" class="input input-bordered w-full"
+                            value="Setoran Tunai via Kasir" required>
+                    </div>
+                    <div class="modal-action">
+                        <label for="modal-topup-{{ r.id }}" class="btn btn-ghost">Batal</label>
+                        <button type="submit" class="btn btn-success text-white">Proses Saldo</button>
+                    </div>
+                </form>
+            </div>
+            <label class="modal-backdrop" for="modal-topup-{{ r.id }}">Close</label>
+        </div>
+    </div>
+    {% else %}
+    <div class="card bg-base-100 border border-base-200 shadow-sm">
+        <div class="card-body text-center py-12 text-gray-400">
+            <i class="bi bi-person-hearts text-4xl mb-3 block"></i>
+            Belum ada mitra yang didaftarkan.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Desktop: Table -->
+<div class="hidden md:block card bg-base-100 shadow-xl border border-base-200">
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead class="bg-base-200/50 text-base-content">
+                    <tr>
+                        <th>Username / Nama</th>
+                        <th>Hak Diskon</th>
+                        <th>Sisa Saldo</th>
+                        <th>Voucher Terjual</th>
+                        <th>Tgl Terdaftar</th>
+                        <th class="text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in resellers %}
+                    <tr class="hover:bg-base-200/30 transition-colors">
+                        <td class="font-bold">
+                            <i class="fas fa-user-tie text-primary mr-2"></i>{{ r.username }}
+                        </td>
+                        <td>
+                            <div class="badge badge-lg badge-neutral">{{ r.discount_percent }}%</div>
+                        </td>
+                        <td>
+                            <div class="font-bold text-success font-mono text-lg">{{ r.balance|currency }}</div>
+                        </td>
+                        <td>
+                            <div class="badge badge-info">{{ r.total_vouchers }} Lembar</div>
+                        </td>
+                        <td class="text-sm text-base-content/70">{{ r.created_at.strftime('%d %b %Y') if r.created_at
+                            else '-' }}</td>
+                        <td class="text-right">
+                            <div class="flex justify-end gap-2 flex-wrap">
+                                <a href="/reseller/dashboard" target="_blank" class="btn btn-sm btn-outline btn-primary"
+                                    title="Portal Mitra">
+                                    <i class="bi bi-shop"></i>
+                                </a>
+                                <a href="{{ url_for('reseller_admin.report', id=r.id) }}"
+                                    class="btn btn-sm btn-outline btn-warning" title="Laporan">
+                                    <i class="bi bi-bar-chart-fill"></i>
+                                </a>
+                                <label for="modal-desk-topup-{{ r.id }}" class="btn btn-sm btn-success text-white">
+                                    <i class="bi bi-cash-coin mr-1"></i> Top-Up
+                                </label>
+                                <a href="{{ url_for('reseller_admin.edit', id=r.id) }}"
+                                    class="btn btn-sm btn-outline btn-info">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+                                <button
+                                    onclick="if(confirm('Hapus mitra ini beserta riwayat saldonya?')) window.location.href='{{ url_for('reseller_admin.delete', id=r.id) }}'"
+                                    class="btn btn-sm btn-outline btn-error">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </div>
+                            <!-- Desktop Top-Up Modal -->
+                            <input type="checkbox" id="modal-desk-topup-{{ r.id }}" class="modal-toggle" />
+                            <div class="modal">
+                                <div class="modal-box text-left">
+                                    <h3 class="font-bold text-lg mb-4"><i class="fas fa-coins text-success mr-2"></i>
+                                        Isi Saldo Mitra</h3>
+                                    <p class="py-2 text-sm text-gray-500 mb-4">Tambahkan deposit untuk <b>{{ r.username
+                                            }}</b>.</p>
+                                    <form action="{{ url_for('reseller_admin.topup', id=r.id) }}" method="POST">
+                                        <div class="form-control mb-4">
+                                            <label class="label"><span class="label-text">Nominal Top-Up
+                                                    (Rp)</span></label>
+                                            <label class="input-group">
+                                                <span>Rp</span>
+                                                <input type="number" name="amount"
+                                                    class="input input-bordered w-full font-bold" placeholder="500000"
+                                                    min="1000" required>
+                                            </label>
+                                        </div>
+                                        <div class="form-control mb-6">
+                                            <label class="label"><span class="label-text">Keterangan /
+                                                    Catatan</span></label>
+                                            <input type="text" name="description" class="input input-bordered w-full"
+                                                value="Setoran Tunai via Kasir" placeholder="Contoh: Transfer BCA"
+                                                required>
+                                        </div>
+                                        <div class="modal-action">
+                                            <label for="modal-desk-topup-{{ r.id }}" class="btn btn-ghost">Batal</label>
+                                            <button type="submit" class="btn btn-success text-white px-6">Proses
+                                                Saldo</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <label class="modal-backdrop" for="modal-desk-topup-{{ r.id }}">Close</label>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-12 text-base-content/50">
+                            <i class="fas fa-box-open text-4xl mb-3 block"></i>
+                            Belum ada agen/mitra reseller yang didaftarkan.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

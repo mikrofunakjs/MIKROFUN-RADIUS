@@ -1,0 +1,45 @@
+{% extends "reseller/base.html" %}
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-xl font-bold">Cetak Banyak Voucher</h2>
+    <p class="text-sm opacity-70">Pilih paket dan tentukan jumlah yang ingin dicetak.</p>
+</div>
+
+<div class="card bg-base-100 shadow-md border-t-4" style="border-top-color: {{ reseller_theme_color }}">
+    <div class="card-body">
+        <form method="POST">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Pilih Paket Internet</span></label>
+                <select name="profile_id" class="select select-bordered w-full" required>
+                    <option value="">-- Pilih Paket --</option>
+                    {% for p in profiles %}
+                    <option value="{{ p.id }}">{{ p.name }} - Rp {{ "{:,.0f}".format(p.price|float) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-control mb-6">
+                <label class="label"><span class="label-text font-bold">Jumlah Voucher</span></label>
+                <input type="number" name="qty" class="input input-bordered" value="5" min="1" max="100" required />
+                <label class="label">
+                    <span class="label-text-alt opacity-60 text-warning"><i class="bi bi-exclamation-triangle"></i>
+                        Maksimal 100 voucher per transaksi</span>
+                </label>
+            </div>
+
+            <div class="p-4 bg-base-200 rounded-lg mb-6 flex justify-between items-center">
+                <div>
+                    <div class="text-xs opacity-60 uppercase font-black">Saldo Anda</div>
+                    <div class="text-lg font-bold">Rp {{ "{:,.0f}".format(balance|float) }}</div>
+                </div>
+                <i class="bi bi-wallet2 text-2xl opacity-20"></i>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full"
+                onclick="return confirm('Proses cetak banyak voucher?')">
+                <i class="bi bi-printer-fill mr-1"></i> Mulai Cetak Voucher
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

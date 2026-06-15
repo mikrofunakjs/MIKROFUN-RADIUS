@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+    <div>
+        <h2 class="text-2xl font-black flex items-center gap-2">
+            <i class="bi bi-shield-lock-fill text-primary"></i> MikroTunnel
+        </h2>
+        <p class="text-sm opacity-60">Remote Access via VPN NAT Traversal (L2TP/IPsec)</p>
+    </div>
+</div>
+
+<!-- Info -->
+<div class="alert alert-info shadow-sm mb-6">
+    <i class="bi bi-info-circle-fill text-lg"></i>
+    <div>
+        <div class="text-sm"><strong>Cara Kerja:</strong> MikroTik konek ke VPS via L2TP VPN → Sistem forward port
+            publik ke port Winbox/Web MikroTik.</div>
+        <div class="text-xs opacity-70 mt-1">Server IP: <code class="font-bold">{{ server_ip }}</code></div>
+    </div>
+</div>
+
+<!-- Create Tunnel Form -->
+<div class="card bg-base-100 shadow border border-base-200 mb-6">
+    <div class="card-body p-4">
+        <h3 class="font-bold text-sm mb-3"><i class="bi bi-plus-circle"></i> Tambah Tunnel Baru</h3>
+        <form method="POST" action="{{ url_for('tunnels.create') }}">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div class="form-control">
+                    <label class="label py-1"><span class="label-text text-xs">Nama Tunnel *</span></label>
+                    <input type="text" name="tunnel_name" placeholder="contoh: Router Kantor A"
+                        class="input input-bordered input-sm w-full" required>
+                </div>
+                <div class="form-control">
+                    <label class="label py-1"><span class="label-text text-xs">User MikroTik</span></label>
+                    <input type="text" name="mikrotik_user" value="admin" placeholder="admin"
+                        class="input input-bordered input-sm w-full">
+                </div>
+                <div class="form-control">
+                    <label class="label py-1"><span class="label-text text-xs">Password MikroTik</span></label>
+                    <input type="text" name="mikrotik_password" placeholder="password mikrotik"
+                        class="input input-bordered input-sm w-full">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div class="form-control">
+                    <label class="label py-1"><span class="label-text text-xs">Port Winbox MikroTik</span></label>
+                    <input type="number" name="mikrotik_winbox_port" value="8291" min="1" max="65535"
+                        class="input input-bordered input-sm w-full">
+                    <label class="label py-0"><span class="label-text-alt text-[10px] opacity-50">Default:
+                            8291</span></label>
+                </div>
+                <div class="form-control">
+                    <label class="label py-1"><span class="label-text text-xs">Port Web MikroTik</span></label>
+                    <input type="number" name="mikrotik_web_port" value="80" min="1" max="65535"
+                        class="input input-bordered input-sm w-full">
+                </div>
+                <div class="form-control">
+                    <label class="label py-1"><span class="label-text text-xs">Port API MikroTik</span></label>
+                    <input type="number" name="mikrotik_api_port" value="8728" min="1" max="65535"
+                        class="input input-bordered input-sm w-full">
+                </div>
+                <div class="form-control flex justify-end md:col-span-1">
+                    <button type="submit" class="btn btn-primary btn-sm gap-2 mt-auto">
+                        <i class="bi bi-lightning-charge-fill"></i> Buat Tunnel
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tunnels Table -->
+<div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="table table-sm">
+                <thead>
+                    <tr class="bg-base-200/50">
+                        <th>Nama</th>
+                        <th>Login MikroTik</th>
+                        <th>Akses Winbox</th>
+                        <th>Akses Web</th>
+                        <th>Akses API</th>
+                        <th>IP Internal</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tunnels %}
+                    <tr class="hover">
+                        <td>
+                            <div class="font-bold text-sm">{{ t.tunnel_name or 'Unnamed' }}</div>
+                            <div class="text-[10px] opacity-40">VPN: {{ t.vpn_username }}</div>
+                        </td>
+                        <td>
+                            <div class="text-xs">
+                                <span class="opacity-50">User:</span> <code
+                                    class="font-bold">{{ t.mikrotik_user or 'admin' }}</code>
+                                <button onclick="copyText('{{ t.mikrotik_user or 'admin' }}')"
+                                    class="btn btn-ghost btn-xs btn-circle"><i
+                                        class="bi bi-clipboard text-[10px]"></i></button>
+                            </div>
+                            <div class="text-xs">
+                                <span class="opacity-50">Pass:</span> <code
+                                    class="font-bold">{{ t.mikrotik_password or '-' }}</code>
+                                {% if t.mikrotik_password %}
+                                <button onclick="copyText('{{ t.mikrotik_password }}')"
+                                    class="btn btn-ghost btn-xs btn-circle"><i
+                                        class="bi bi-clipboard text-[10px]"></i></button>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-1">
+                                <code
+                                    class="text-primary font-bold text-xs">{{ server_ip }}:{{ t.public_winbox_port }}</code>
+                                <button onclick="copyText('{{ server_ip }}:{{ t.public_winbox_port }}')"
+                                    class="btn btn-ghost btn-xs"><i class="bi bi-clipboard"></i></button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-1">
+                                <code class="text-xs">{{ server_ip }}:{{ t.public_web_port }}</code>
+                                <button onclick="copyText('{{ server_ip }}:{{ t.public_web_port }}')"
+                                    class="btn btn-ghost btn-xs"><i class="bi bi-clipboard"></i></button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-1">
+                                <code class="text-xs">{{ server_ip }}:{{ t.public_api_port }}</code>
+                                <button onclick="copyText('{{ server_ip }}:{{ t.public_api_port }}')"
+                                    class="btn btn-ghost btn-xs"><i class="bi bi-clipboard"></i></button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex flex-col gap-1">
+                                <code class="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-bold">{{ t.internal_ip }}</code>
+                                <span class="text-[9px] opacity-50 font-bold uppercase">Gunakan ini di Mikhmon</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if t.is_active %}
+                            <span class="badge badge-success badge-sm gap-1" id="status-{{ t.id }}">
+                                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Aktif
+                            </span>
+                            {% else %}
+                            <span class="badge badge-ghost badge-sm">Nonaktif</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="flex gap-1">
+                                <a href="{{ url_for('tunnels.script', id=t.id) }}" class="btn btn-ghost btn-xs tooltip"
+                                    data-tip="Lihat Script">
+                                    <i class="bi bi-terminal-fill text-info"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('tunnels.toggle', id=t.id) }}" class="inline">
+                                    <button class="btn btn-ghost btn-xs tooltip"
+                                        data-tip="{{ 'Nonaktifkan' if t.is_active else 'Aktifkan' }}">
+                                        <i
+                                            class="bi {{ 'bi-pause-circle text-warning' if t.is_active else 'bi-play-circle text-success' }}"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('tunnels.delete', id=t.id) }}" class="inline"
+                                    onsubmit="return confirm('Hapus tunnel ini? Akses remote akan terputus!')">
+                                    <button class="btn btn-ghost btn-xs tooltip" data-tip="Hapus">
+                                        <i class="bi bi-trash-fill text-error"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-8 opacity-50">
+                            <i class="bi bi-shield-lock text-4xl"></i>
+                            <p class="mt-2">Belum ada tunnel. Isi form di atas untuk membuat akses remote.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyText(text) {
+        navigator.clipboard.writeText(text).then(function () {
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-end z-50';
+            toast.innerHTML = '<div class="alert alert-success py-2 px-4"><span class="text-sm">Copied!</span></div>';
+            document.body.appendChild(toast);
+            setTimeout(function () { toast.remove(); }, 1500);
+        });
+    }
+
+    {% if tunnels | length > 0 %}
+    fetch('{{ url_for("tunnels.status") }}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.status) {
+                Object.keys(data.status).forEach(id => {
+                    var el = document.getElementById('status-' + id);
+                    if (el && data.status[id]) {
+                        el.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Connected';
+                        el.className = 'badge badge-success badge-sm gap-1';
+                    }
+                });
+            }
+        }).catch(() => { });
+    {% endif %}
+</script>
+
+{% endblock %}

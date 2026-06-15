@@ -1,0 +1,149 @@
+{% extends "client/base_app.html" %}
+
+{% block content %}
+<!-- Top Header Background -->
+<div
+    class="bg-gradient-to-br from-primary to-blue-600 text-white pb-20 pt-8 px-6 rounded-b-[2.5rem] shadow-xl relative overflow-hidden">
+    <!-- Decorative Circle -->
+    <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+
+    <div class="flex justify-between items-center relative z-10">
+        <div>
+            <p class="text-blue-100 text-sm mb-1">Halo, Selamat Pagi 👋</p>
+            <h1 class="text-2xl font-bold">{{ user.name }}</h1>
+        </div>
+        <div class="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+            <i class="bi bi-person-fill text-lg"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Main Cards Area -->
+<div class="px-6 -mt-16 pb-6 relative z-10 space-y-6">
+
+    <!-- Hero Status Card -->
+    <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">PAKET INTERNET</p>
+                <h3 class="text-lg font-bold text-gray-800">{{ user.profile_name or 'Paket Custom' }}</h3>
+            </div>
+            {% if user.status == 'active' %}
+            <span class="badge badge-success text-white border-0 shadow-sm shadow-success/40">Active</span>
+            {% else %}
+            <span class="badge badge-error text-white border-0 shadow-sm shadow-error/40">Isolir</span>
+            {% endif %}
+        </div>
+
+        <div class="divider my-2"></div>
+
+        <!-- Usage Stats -->
+        <div class="grid grid-cols-2 gap-4 mb-2">
+            <div class="bg-gray-50 p-2 rounded-xl border border-gray-100">
+                <p class="text-[10px] text-gray-400 uppercase font-bold">Download</p>
+                <div class="flex items-center gap-1 text-success">
+                    <i class="bi bi-arrow-down-circle-fill"></i>
+                    <span class="font-mono font-bold">{{ usage.download|filesizeformat }}</span>
+                </div>
+            </div>
+            <div class="bg-gray-50 p-2 rounded-xl border border-gray-100">
+                <p class="text-[10px] text-gray-400 uppercase font-bold">Upload</p>
+                <div class="flex items-center gap-1 text-warning">
+                    <i class="bi bi-arrow-up-circle-fill"></i>
+                    <span class="font-mono font-bold">{{ usage.upload|filesizeformat }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center">
+            <div>
+                <p class="text-xs text-gray-400">Jatuh Tempo</p>
+                <p class="font-mono font-bold text-gray-800">{{ user.due_date or '-' }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-gray-400">Status Bayar</p>
+                {% if user.due_date and user.due_date < today %} <span class="text-error font-bold text-sm">Belum
+                    Lunas</span>
+                    {% else %}
+                    <span class="text-success font-bold text-sm">Aman</span>
+                    {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Menu Grid -->
+    <div class="grid grid-cols-3 gap-3">
+        <a href="{{ url_for('client.pay') }}"
+            class="btn h-auto px-2 py-4 flex-col bg-white border-none shadow hover:shadow-md text-primary gap-2 rounded-2xl">
+            <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-1">
+                <i class="bi bi-credit-card-2-front text-xl"></i>
+            </div>
+            <span class="text-[10px] font-bold text-gray-600 text-center leading-tight">Bayar<br>Tagihan</span>
+        </a>
+
+        {% if is_premium %}
+        <a href="{{ url_for('client.buy_voucher') }}"
+            class="btn h-auto px-2 py-4 flex-col bg-white border-none shadow hover:shadow-md text-warning gap-2 rounded-2xl">
+            <div class="w-10 h-10 bg-warning/10 rounded-full flex items-center justify-center mb-1">
+                <i class="bi bi-ticket-perforated-fill text-xl"></i>
+            </div>
+            <span class="text-[10px] font-bold text-gray-600 text-center leading-tight">Beli<br>Voucher</span>
+        </a>
+        {% else %}
+        <button onclick="alert('Fitur Beli Voucher dari dalam portal klien eksklusif untuk ISP berlisensi PRO.');"
+            class="btn h-auto px-2 py-4 flex-col bg-white border-none shadow text-warning gap-2 rounded-2xl opacity-50 relative">
+            <div class="absolute top-2 right-2 text-warning"><i class="bi bi-lock-fill"></i></div>
+            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-1 text-gray-400">
+                <i class="bi bi-ticket-perforated-fill text-xl"></i>
+            </div>
+            <span class="text-[10px] font-bold text-gray-400 text-center leading-tight">Beli<br>Voucher</span>
+        </button>
+        {% endif %}
+        <a href="{{ url_for('client.tickets') }}"
+            class="btn h-auto px-2 py-4 flex-col bg-white border-none shadow hover:shadow-md text-info gap-2 rounded-2xl">
+            <div class="w-10 h-10 bg-info/10 rounded-full flex items-center justify-center mb-1">
+                <i class="bi bi-headset text-xl"></i>
+            </div>
+            <span class="text-[10px] font-bold text-gray-600 text-center leading-tight">Lapor<br>Gangguan</span>
+        </a>
+    </div>
+
+    <!-- Recent Payments Mini List -->
+    <div>
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-gray-800">Riwayat Terakhir</h3>
+            <a href="{{ url_for('client.pay') }}" class="text-xs text-primary font-bold">Lihat Semua</a>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y">
+            {% for p in payments[:3] %}
+            <div class="p-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">Pembayaran</p>
+                        <p class="text-[10px] text-gray-400">{{ p.payment_date }}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-mono font-bold">Rp {{ "{:,.0f}".format(p.amount) }}</p>
+                    {% if p.status == 'approved' %}
+                    <span class="text-[10px] text-success font-bold">Lunas</span>
+                    {% elif p.status == 'rejected' %}
+                    <span class="text-[10px] text-error font-bold">Ditolak</span>
+                    {% else %}
+                    <span class="text-[10px] text-warning font-bold">Proses</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="p-6 text-center text-gray-400 text-sm">
+                Belum ada transaksi.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-8">
+    <div class="mb-8 flex items-center gap-4">
+        <a href="{{ url_for('vouchers.index') }}" class="btn btn-ghost btn-circle shadow-sm border-base-200">
+            <i class="bi bi-arrow-left text-xl"></i>
+        </a>
+        <div>
+            <h2 class="text-3xl font-black text-primary">Voucher Bulk System</h2>
+            <p class="text-sm opacity-60 font-medium">Impor data voucher dari Microsoft Excel / Spreadsheet</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Form -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="card bg-base-100 shadow-2xl border border-base-200 overflow-hidden">
+                <div class="h-1.5 w-full bg-primary"></div>
+                <div class="card-body p-8">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="form-control mb-8">
+                            <label class="label mb-2">
+                                <span
+                                    class="label-text font-black uppercase text-[10px] tracking-widest opacity-60">Upload
+                                    Data Source</span>
+                            </label>
+                            <label
+                                class="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed border-base-300 rounded-3xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group relative overflow-hidden">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <div
+                                        class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <i class="bi bi-file-earmark-spreadsheet text-3xl text-primary"></i>
+                                    </div>
+                                    <p class="text-sm font-bold text-base-content/70" id="filename-display">Pilih atau
+                                        Seret File Excel (.xlsx)</p>
+                                    <p class="text-[10px] opacity-40 uppercase font-black mt-2 tracking-tighter">Hanya
+                                        format .xlsx yang didukung</p>
+                                </div>
+                                <input type="file" name="file" class="hidden" id="voucher-file" accept=".xlsx" required
+                                    onchange="document.getElementById('filename-display').innerText = this.files[0].name" />
+                            </label>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                            <a href="{{ url_for('vouchers.index') }}" class="btn btn-ghost px-8">Batal</a>
+                            <button type="submit" class="btn btn-primary px-12 shadow-xl shadow-primary/30">
+                                <i class="bi bi-rocket-takeoff-fill"></i> Eksekusi Import
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preview/Instructions Alert -->
+            <div class="alert alert-info bg-indigo-50 border-indigo-100 text-indigo-900 shadow-sm rounded-2xl p-6">
+                <i class="bi bi-lightbulb-fill text-2xl text-indigo-500"></i>
+                <div>
+                    <h3 class="font-black text-xs uppercase tracking-widest mb-1">Informasi Struktur Kolom</h3>
+                    <div class="text-sm opacity-80 leading-relaxed">
+                        Urutan kolom pada Excel harus tepat:
+                        <code class="bg-indigo-200/50 px-1 rounded font-bold">Kode</code>,
+                        <code class="bg-indigo-200/50 px-1 rounded font-bold">Profile ID</code>,
+                        <code class="bg-indigo-200/50 px-1 rounded font-bold">Batch ID</code>,
+                        <code class="bg-indigo-200/50 px-1 rounded font-bold">Harga Jual</code>,
+                        <code class="bg-indigo-200/50 px-1 rounded font-bold">Harga Modal</code>.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Guide -->
+        <div class="space-y-6">
+            <div class="card bg-base-100 border border-base-200 shadow-sm p-6 relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 opacity-5 rotate-12">
+                    <i class="bi bi-info-circle-fill text-8xl"></i>
+                </div>
+                <h4 class="text-[10px] font-black uppercase opacity-40 mb-4 tracking-widest">Aturan Sistem</h4>
+                <ul class="space-y-4">
+                    <li class="flex gap-3">
+                        <div
+                            class="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center shrink-0">
+                            <i class="bi bi-check text-lg"></i>
+                        </div>
+                        <p class="text-xs font-medium leading-normal">Gunakan baris pertama untuk Header (diabaikan
+                            system).</p>
+                    </li>
+                    <li class="flex gap-3">
+                        <div
+                            class="w-5 h-5 rounded-full bg-warning/20 text-warning flex items-center justify-center shrink-0">
+                            <i class="bi bi-exclamation text-xs"></i>
+                        </div>
+                        <p class="text-xs font-medium leading-normal">Kode Voucher yang sudah ada akan diperbarui
+                            datanya.</p>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card bg-base-100 border border-base-200 shadow-sm p-6">
+                <h4 class="text-[10px] font-black uppercase opacity-40 mb-3 tracking-widest text-center">Reference IDs
+                </h4>
+                <div class="space-y-2">
+                    <div class="p-3 bg-base-200/50 rounded-xl flex justify-between items-center">
+                        <span class="text-[10px] font-bold">Profiles</span>
+                        <span class="badge badge-sm font-bold opacity-60">Cek Menu Profile</span>
+                    </div>
+                    <div class="p-3 bg-base-200/50 rounded-xl flex justify-between items-center">
+                        <span class="text-[10px] font-bold">Batches</span>
+                        <span class="badge badge-sm font-bold opacity-60">ID di List Voucher</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

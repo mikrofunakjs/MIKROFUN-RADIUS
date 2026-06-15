@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="lofi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MikroFun Tech Portal</title>
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .mobile-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            min-height: 100vh;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+            padding-bottom: 80px;
+            overflow-x: hidden;
+        }
+
+        /* Fix DaisyUI btm-nav streching entire screen on desktop */
+        .btm-nav-override {
+            position: fixed;
+            bottom: 0;
+            left: 50% !important;
+            right: auto !important;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            border-top: 1px solid #f3f4f6;
+            z-index: 50;
+            background-color: white;
+            display: flex;
+            height: 4rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="mobile-container">
+        <!-- Top App Bar -->
+        <div class="navbar bg-primary text-primary-content sticky top-0 z-50 shadow-md">
+            <!-- Dynamic Back Button -->
+            {% if request.path != '/tech/dashboard' %}
+            <div class="flex-none">
+                <a href="{{ url_for('tech.dashboard') }}" class="btn btn-square btn-ghost text-white border-0">
+                    <i class="bi bi-arrow-left text-xl"></i>
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="flex-1">
+                <a class="btn btn-ghost normal-case text-lg border-0 tracking-tight">{% block header_title %}MikroFun
+                    Tech{% endblock %}</a>
+            </div>
+            <div class="flex-none gap-2">
+                <div class="dropdown dropdown-end">
+                    <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
+                        <div
+                            class="w-8 rounded-full bg-base-100/30 font-bold flex items-center justify-center text-white">
+                            {{ session.get('username', 'T')[0]|upper }}
+                        </div>
+                    </div>
+                    <ul tabindex="0"
+                        class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 text-base-content rounded-box w-52">
+                        <li class="menu-title px-4 py-2 border-b mb-2">Login: <b>{{ session.get('username') }}</b></li>
+                        <li><a href="{{ url_for('tech.logout') }}" class="text-error"><i
+                                    class="bi bi-box-arrow-right"></i> Logout</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        <div class="px-4 py-2">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flex flex-col gap-2 mt-2">
+                {% for category, message in messages %}
+                <div role="alert"
+                    class="alert alert-{{ category if category != 'danger' else 'error' }} shadow-sm py-2 px-3 text-sm rounded-lg flex items-center gap-2">
+                    <i class="bi bi-info-circle text-lg"></i>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Content Area -->
+        <div class="p-4 pt-1">
+            {% block content %}{% endblock %}
+        </div>
+
+        <!-- Bottom Navigation -->
+        {% if request.path == '/tech/dashboard' %}
+        <div class="btm-nav-override shadow-[0_-4px_10px_rgb(0,0,0,0.05)]">
+            <button
+                class="flex-1 flex flex-col justify-center items-center text-primary bg-primary/10 transition-colors border-t-2 border-primary">
+                <i class="bi bi-card-list text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">Tugas Masuk</span>
+            </button>
+            <button onclick="window.location.href='{{ url_for('tech.logout') }}'"
+                class="flex-1 flex flex-col justify-center items-center text-base-content/50 hover:text-error hover:bg-error/5 transition-colors border-t-2 border-transparent">
+                <i class="bi bi-box-arrow-right text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Logout</span>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cupcake">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ company.get('name', 'MikroFun') }} - Minimal & Clean</title>
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Clean Serif Font -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background-color: #faf9f6;
+            color: #2c2928;
+        }
+
+        h1,
+        h2,
+        h3,
+        .serif-text {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .hero-border {
+            border: 1px solid #e2ded5;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center">
+
+    <!-- Contact Header Area -->
+    <div
+        class="w-full bg-[#f1eee8] py-2.5 px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center text-[10px] sm:text-xs tracking-widest uppercase text-gray-500 font-semibold border-b border-[#e2ded5] gap-2 sm:gap-0">
+        <div class="flex flex-wrap justify-center gap-4 sm:gap-8">
+            {% if company.get('phone') %}
+            <a href="https://wa.me/{{ company.get('phone') | replace('+', '') | replace(' ', '') | replace('-', '') }}"
+                target="_blank" class="hover:text-black transition-colors flex items-center gap-1.5"><i
+                    class="bi bi-telephone-fill"></i> WhatsApp</a>
+            {% endif %}
+            {% if company.get('email') %}
+            <a href="mailto:{{ company.get('email') }}"
+                class="hover:text-black transition-colors flex items-center gap-1.5"><i class="bi bi-envelope-fill"></i>
+                Email Us</a>
+            {% endif %}
+        </div>
+        <div class="hidden sm:block">
+            Layanan Eksklusif Broadband Internet
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-5xl px-6 py-12 flex-grow flex flex-col">
+
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-24 border-b border-[#e2ded5] pb-6">
+            <a href="/" class="serif-text text-3xl font-bold tracking-tight text-[#2c2928]">
+                {{ company.get('name', 'MikroFun') }}.
+            </a>
+            <a href="/client/login"
+                class="text-sm tracking-widest uppercase font-semibold text-gray-500 hover:text-black transition-colors flex items-center gap-2">
+                Sign In <i class="bi bi-arrow-right"></i>
+            </a>
+        </header>
+
+        <!-- Hero Section -->
+        <main class="flex-grow flex flex-col justify-center max-w-3xl mx-auto text-center">
+            <h1 class="text-5xl md:text-6xl font-bold text-[#2c2928] mb-8 leading-tight">
+                Simplicity in connectivity.
+            </h1>
+            <p class="text-lg md:text-xl text-gray-500 font-light leading-relaxed mb-12">
+                Persembahan layanan internet yang bersih, tanpa gangguan, dan langsung pada tujuan. Sambungkan kehidupan
+                digital Anda dengan infrastruktur yang hening namun bertenaga.
+            </p>
+
+            <div class="flex justify-center">
+                <a href="/client/login"
+                    class="px-10 py-4 border border-[#2c2928] bg-[#2c2928] text-white text-sm uppercase tracking-widest font-semibold hover:bg-transparent hover:text-[#2c2928] transition-all duration-300">
+                    Masuk ke Akun Anda
+                </a>
+            </div>
+        </main>
+
+        <!-- Information Minimal Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mt-32 pt-12 border-t border-[#e2ded5]">
+            <div class="hero-border p-10 bg-white">
+                <h3 class="serif-text text-2xl font-bold mb-4">Informasi Kontak</h3>
+                <p class="text-sm leading-loose text-gray-600">
+                    {{ company.get('address', 'Pusat Operasional Jaringan') }}<br />
+                    Email: {{ company.get('email', 'hubungi@' + company.get('name', 'mikrofun').replace(' ','').lower()
+                    + '.com') }}<br />
+                    Telp: {{ company.get('phone', '-') }}
+                </p>
+            </div>
+            <div class="hero-border p-10 bg-white">
+                <h3 class="serif-text text-2xl font-bold mb-4">Kenapa Kami?</h3>
+                <p class="text-sm leading-loose text-gray-600">
+                    Kami percaya bahwa internet terbaik adalah internet yang tidak terasa kehadirannya. Sistem otomatis,
+                    tanpa lag, dan tidak rumit. Murni kecepatan.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PPOB-style Voucher Section (Minimal) -->
+    {% if voucher_profiles and voucher_profiles|length > 0 %}
+    <div class="w-full bg-[#f1eee8] border-t border-b border-[#e2ded5] py-12 z-20 relative">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+                <div>
+                    <h2 class="serif-text text-2xl font-bold text-[#2c2928]">Wi-Fi Instan</h2>
+                    <div class="text-[10px] font-bold tracking-widest uppercase text-gray-500 mt-1">Tanpa Registrasi.
+                        Langsung Konek.</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {% for v in voucher_profiles %}
+                <button onclick="openVoucherModal('{{ v.id }}', '{{ v.name }}', {{ v.price }})"
+                    class="bg-white border-2 border-[#2c2928] p-5 flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1 focus:outline-none group">
+                    <div class="mb-3 text-[#2c2928] group-hover:scale-110 transition-transform">
+                        <i class="bi bi-ticket-perforated text-2xl"></i>
+                    </div>
+                    <div class="serif-text font-bold text-[#2c2928] mb-1 leading-tight">{{ v.name }}</div>
+                    <div class="text-sm font-black text-[#2c2928]">Rp {{ "{:,.0f}".format(v.price|float) }}</div>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Pricing Section (Dynamic) -->
+    {% if packages and packages|length > 0 %}
+    <div class="w-full bg-[#f1eee8] border-t border-[#e2ded5] py-24">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="serif-text text-3xl md:text-4xl font-bold mb-16 text-center text-[#2c2928]">Layanan Kami</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for pkg in packages %}
+                <div class="bg-white hero-border p-8 flex flex-col relative">
+                    {% if pkg.get('discount_price') %}
+                    <div
+                        class="absolute top-0 right-0 bg-[#2c2928] text-white text-[10px] tracking-widest uppercase font-bold px-3 py-1">
+                        Promo</div>
+                    {% endif %}
+
+                    <h3 class="serif-text text-xl font-bold mb-2">{{ pkg.name }}</h3>
+                    <div
+                        class="text-sm font-semibold tracking-widest uppercase text-gray-500 mb-6 border-b border-[#e2ded5] pb-4">
+                        {{ pkg.speed }}</div>
+
+                    <div class="mb-8">
+                        {% if pkg.get('discount_price') %}
+                        <div class="text-gray-400 text-xs line-through mb-1">Rp {{ "{:,.0f}".format(pkg.price|float) }}
+                        </div>
+                        <div class="serif-text text-3xl font-bold text-[#2c2928]">Rp {{
+                            "{:,.0f}".format(pkg.discount_price|float) }}<span
+                                class="text-xs font-normal font-sans text-gray-500 tracking-widest uppercase ml-1">/Bln</span>
+                        </div>
+                        {% else %}
+                        <div class="serif-text text-3xl font-bold text-[#2c2928] mt-5">Rp {{
+                            "{:,.0f}".format(pkg.price|float) }}<span
+                                class="text-xs font-normal font-sans text-gray-500 tracking-widest uppercase ml-1">/Bln</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <ul class="text-sm text-gray-600 mb-10 flex-grow space-y-3">
+                        {% for feature in pkg.features %}
+                        <li class="flex items-start gap-2">
+                            <span class="text-[#2c2928] mt-0.5">•</span>
+                            <span>{{ feature }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    <a href="https://wa.me/{{ company.get('phone') | replace('+', '') | replace(' ', '') | replace('-', '') }}?text=Halo,%20saya%20tertarik%20berlangganan%20paket%20{{ pkg.name | urlencode }}%20({{ pkg.speed | urlencode }})."
+                        target="_blank"
+                        class="block w-full text-center border border-[#2c2928] py-3 text-xs tracking-widest uppercase font-semibold hover:bg-[#2c2928] hover:text-white transition-colors duration-300">
+                        Berlangganan
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    </div>
+    {% endif %}
+
+    <!-- Voucher Purchase Modal (Minimal) -->
+    <dialog id="voucherModal" class="modal modal-bottom sm:modal-middle">
+        <div
+            class="modal-box bg-white border-2 border-[#2c2928] rounded-none shadow-[8px_8px_0_0_#2c2928] overflow-visible">
+            <form method="dialog">
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-[#2c2928]">✕</button>
+            </form>
+            <h3 class="serif-text font-bold text-2xl mb-6 text-[#2c2928]">Checkout Voucher</h3>
+
+            <form id="voucherForm" action="/api/public/buy_voucher" method="POST" class="space-y-5">
+                <input type="hidden" name="profile_id" id="modalProfileId">
+
+                <div class="p-4 bg-[#f1eee8] border border-[#e2ded5] flex justify-between items-center mb-6">
+                    <div>
+                        <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Paket</div>
+                        <div class="serif-text font-bold text-[#2c2928] text-lg" id="modalProfileName">-</div>
+                    </div>
+                    <div class="serif-text text-xl font-bold text-[#2c2928]" id="modalProfilePrice">Rp 0</div>
+                </div>
+
+                <div class="form-control w-full space-y-1">
+                    <label class="label p-0 pb-1"><span
+                            class="text-xs uppercase tracking-widest font-bold text-[#2c2928]">Email</span></label>
+                    <input type="email" name="guest_email"
+                        class="input rounded-none border-2 border-[#e2ded5] focus:border-[#2c2928] focus:outline-none w-full bg-transparent text-[#2c2928]"
+                        required>
+                </div>
+
+                <div class="form-control w-full space-y-1">
+                    <label class="label p-0 pb-1"><span
+                            class="text-xs uppercase tracking-widest font-bold text-[#2c2928]">Nomor WA</span></label>
+                    <input type="text" name="guest_phone"
+                        class="input rounded-none border-2 border-[#e2ded5] focus:border-[#2c2928] focus:outline-none w-full bg-transparent text-[#2c2928]"
+                        required>
+                    <p class="text-[10px] text-gray-500 mt-1">*Kode voucher akan dikirim melalui WhatsApp.</p>
+                </div>
+
+                {% if active_gateway in ['tripay', 'both'] or (active_gateway == 'duitku' and duitku_channels) %}
+                <div class="form-control w-full space-y-1">
+                    <label class="label p-0 pb-1"><span
+                            class="text-xs uppercase tracking-widest font-bold text-[#2c2928]">Pembayaran</span></label>
+
+                    {% if active_gateway == 'both' %}
+                    <select id="gateway_selector" name="payment_method"
+                        class="select rounded-none border-2 border-[#e2ded5] focus:border-[#2c2928] focus:outline-none w-full bg-transparent text-[#2c2928] mb-4"
+                        onchange="toggleGatewayChannels()">
+                        <option value="tripay">Tripay</option>
+                        <option value="duitku">Duitku</option>
+                    </select>
+                    {% else %}
+                    <input type="hidden" name="payment_method" value="{{ active_gateway }}">
+                    {% endif %}
+
+                    <!-- Tripay Channels -->
+                    <div id="tripay_container" class="{% if active_gateway == 'duitku' %}hidden{% endif %}">
+                        <select id="tripay_channels" name="method_code"
+                            class="select rounded-none border-2 border-[#e2ded5] focus:border-[#2c2928] focus:outline-none w-full bg-transparent text-[#2c2928]"
+                            {% if active_gateway !='duitku' %}required{% endif %}>
+                            <option disabled selected value="">-- Pilih Saluran (Tripay) --</option>
+                            {% for channel in tripay_channels %}
+                            {% if channel.active %}
+                            <option value="{{ channel.code }}">{{ channel.name }} - Fee Rp {{
+                                "{:,.0f}".format(channel.total_fee.flat|float) }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Duitku Channels -->
+                    <div id="duitku_container" class="{% if active_gateway != 'duitku' %}hidden{% endif %}">
+                        <select id="duitku_channels" name="method_code"
+                            class="select rounded-none border-2 border-[#e2ded5] focus:border-[#2c2928] focus:outline-none w-full bg-transparent text-[#2c2928]"
+                            {% if active_gateway=='duitku' %}required{% endif %}>
+                            <option disabled selected value="">-- Pilih Saluran (Duitku) --</option>
+                            {% for channel in duitku_channels %}
+                            <option value="{{ channel.paymentMethod }}">{{ channel.paymentName }} - Fee Rp {{
+                                "{:,.0f}".format(channel.totalFee|float) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <script>
+                    function toggleGatewayChannels() {
+                        const gateway = document.getElementById('gateway_selector').value;
+                        const tripayCont = document.getElementById('tripay_container');
+                        const duitkuCont = document.getElementById('duitku_container');
+                        const tripaySel = document.getElementById('tripay_channels');
+                        const duitkuSel = document.getElementById('duitku_channels');
+
+                        if (gateway === 'tripay') {
+                            tripayCont.classList.remove('hidden');
+                            tripaySel.required = true;
+                            duitkuCont.classList.add('hidden');
+                            duitkuSel.required = false;
+                        } else {
+                            duitkuCont.classList.remove('hidden');
+                            duitkuSel.required = true;
+                            tripayCont.classList.add('hidden');
+                            tripaySel.required = false;
+                        }
+                    }
+                </script>
+
+                <div class="mt-8">
+                    <button type="submit"
+                        class="block w-full text-center border-2 border-[#2c2928] bg-[#2c2928] text-white py-4 text-xs tracking-widest uppercase font-bold hover:bg-white hover:text-[#2c2928] transition-colors duration-300">Lanjutkan
+                        <i class="bi bi-arrow-right ml-1"></i></button>
+                </div>
+
+                {% elif active_gateway == 'midtrans' %}
+                <input type="hidden" name="payment_method" value="midtrans">
+                <div class="mt-8">
+                    <button type="button" onclick="payMidtransVoucher()"
+                        class="block w-full text-center border-2 border-[#2c2928] bg-[#2c2928] text-white py-4 text-xs tracking-widest uppercase font-bold hover:bg-white hover:text-[#2c2928] transition-colors duration-300">Bayar
+                        Midtrans <i class="bi bi-arrow-right ml-1"></i></button>
+                </div>
+
+                {% else %}
+                <div class="mt-8 space-y-2">
+                    <button type="button" onclick="orderWhatsapp()"
+                        class="block w-full text-center border-2 border-[#2c2928] bg-green-600 text-white py-4 text-xs tracking-widest uppercase font-bold hover:bg-white hover:text-green-600 transition-colors duration-300">
+                        <i class="bi bi-whatsapp mr-1"></i> Pesan via WhatsApp
+                    </button>
+                    <p class="text-[10px] text-center text-gray-500 uppercase tracking-widest">Konfirmasi via Admin.</p>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button class="bg-black/20 backdrop-blur-sm cursor-default">close</button>
+        </form>
+    </dialog>
+
+    <script>
+        function openVoucherModal(id, name, price) {
+            document.getElementById('modalProfileId').value = id;
+            document.getElementById('modalProfileName').innerText = name;
+            let formatter = new Intl.NumberFormat('id-ID', {
+                style: 'currency', currency: 'IDR', minimumFractionDigits: 0
+            });
+            document.getElementById('modalProfilePrice').innerText = formatter.format(price);
+            document.getElementById('voucherModal').showModal();
+        }
+
+        function orderWhatsapp() {
+            const name = document.getElementById('modalProfileName').innerText;
+            const price = document.getElementById('modalProfilePrice').innerText;
+            const email = document.querySelector('input[name="guest_email"]').value;
+            const phone_no = document.querySelector('input[name="guest_phone"]').value;
+            const isp_phone = '{{ company.get("phone", "") | replace("+", "") | replace(" ", "") | replace("-", "") }}';
+            const msg = encodeURIComponent(`Halo, saya ingin membeli Voucher Internet:\nPaket: ${name}\nHarga: ${price}\nEmail: ${email || '-'}\nNo WA: ${phone_no || '-'}`);
+            window.open(`https://wa.me/${isp_phone}?text=${msg}`, '_blank');
+        }
+
+        {% if active_gateway == 'midtrans' %}
+        const midtransEnv = '{{ settings.get("midtrans_mode", "sandbox") }}';
+        const clientKey = '{{ settings.get("midtrans_client_key", "") }}';
+        if (clientKey) {
+            const script = document.createElement('script');
+            script.src = midtransEnv === 'production' ?
+                'https://app.midtrans.com/snap/snap.js' :
+                'https://app.sandbox.midtrans.com/snap/snap.js';
+            script.setAttribute('data-client-key', clientKey);
+            document.head.appendChild(script);
+        }
+
+        function payMidtransVoucher() {
+            let p_id = document.getElementById('modalProfileId').value;
+            let email = document.querySelector('input[name="guest_email"]').value;
+            let phone = document.querySelector('input[name="guest_phone"]').value;
+
+            if (!p_id || !email || !phone) {
+                alert("Harap isi Email dan No WA."); return;
+            }
+
+            let btn = document.querySelector('button[onclick="payMidtransVoucher()"]');
+            btn.innerHTML = 'Memproses...'; btn.disabled = true;
+
+            fetch('/api/public/buy_voucher_midtrans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ profile_id: p_id, guest_email: email, guest_phone: phone })
+            }).then(res => res.json()).then(data => {
+                btn.innerHTML = 'Bayar Midtrans <i class="bi bi-arrow-right ml-1"></i>'; btn.disabled = false;
+                if (data.error) {
+                    alert(data.error);
+                } else if (data.token) {
+                    document.getElementById('voucherModal').close();
+                    snap.pay(data.token, {
+                        onSuccess: function () { window.location.href = data.redirect_url; },
+                        onPending: function () { window.location.href = data.redirect_url; },
+                        onError: function () { alert("Gagal!"); }
+                    });
+                }
+            }).catch(err => {
+                alert("Kesalahan.");
+                btn.innerHTML = 'Bayar Midtrans <i class="bi bi-arrow-right ml-1"></i>'; btn.disabled = false;
+            });
+        }
+        {% endif %}
+    </script>
+
+    <!-- Minimal Footer -->
+    <footer
+        class="w-full py-8 text-center text-xs text-gray-400 mt-auto uppercase tracking-widest border-t border-[#e2ded5] bg-white">
+        © 2026 {{ company.get('name', 'MIKROFUN') }}. ALL RIGHTS RESERVED.
+    </footer>
+
+</body>
+
+</html>

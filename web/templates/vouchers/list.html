@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Header -->
+<div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+    <div>
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-ticket-perforated"></i> Data Vouchers
+        </h2>
+        <p class="text-xs opacity-50">Total {{ total_vouchers }} voucher</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('vouchers.stats') }}" class="btn btn-ghost btn-sm gap-1">
+            <i class="bi bi-bar-chart"></i> Statistik
+        </a>
+        <a href="{{ url_for('vouchers.import_excel') }}" class="btn btn-ghost btn-sm gap-1">
+            <i class="bi bi-file-earmark-excel"></i> Import Excel
+        </a>
+        <a href="{{ url_for('vouchers.export', status=status_f, batch_id=batch_f, profile_id=profile_f) }}"
+            class="btn btn-ghost btn-sm gap-1">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
+        </a>
+        <a href="{{ url_for('vouchers.print_batch', status=status_f, profile_id=profile_f, batch_id=batch_f) }}"
+            target="_blank" class="btn btn-ghost btn-sm gap-1 text-primary">
+            <i class="bi bi-printer"></i> Cetak Filtered
+        </a>
+        <a href="{{ url_for('vouchers.add') }}" class="btn btn-primary btn-sm gap-1">
+            <i class="bi bi-magic"></i> Generate
+        </a>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+    {% set unused_c = stats_map.get('unused', 0) %}
+    {% set used_c = stats_map.get('used', 0) %}
+    {% set active_c = stats_map.get('active', 0) %}
+    {% set expired_c = stats_map.get('expired', 0) %}
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm py-3">
+        <div class="stat-title text-xs">Unused</div>
+        <div class="stat-value text-2xl text-info">{{ unused_c }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm py-3">
+        <div class="stat-title text-xs">Active</div>
+        <div class="stat-value text-2xl text-success">{{ active_c }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm py-3">
+        <div class="stat-title text-xs">Used</div>
+        <div class="stat-value text-2xl">{{ used_c }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm py-3">
+        <div class="stat-title text-xs">Expired</div>
+        <div class="stat-value text-2xl text-error">{{ expired_c }}</div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" class="flex flex-wrap gap-2 mb-4 bg-base-100 border border-base-200 rounded-xl p-3 shadow-sm">
+    <input type="text" name="q" value="{{ q }}" placeholder="🔍 Cari kode voucher..."
+        class="input input-bordered input-sm flex-1 min-w-[160px]">
+    <select name="status" class="select select-bordered select-sm">
+        <option value="">Semua Status</option>
+        <option value="unused" {{ 'selected' if status_f=='unused' }}>Unused</option>
+        <option value="active" {{ 'selected' if status_f=='active' }}>Active</option>
+        <option value="used" {{ 'selected' if status_f=='used' }}>Used</option>
+        <option value="expired" {{ 'selected' if status_f=='expired' }}>Expired</option>
+    </select>
+    <select name="profile_id" class="select select-bordered select-sm">
+        <option value="">Semua Profile</option>
+        {% for p in profiles %}
+        <option value="{{ p.id }}" {{ 'selected' if profile_f==p.id|string }}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+    <select name="batch_id" class="select select-bordered select-sm">
+        <option value="">Semua Batch</option>
+        {% for b in batches %}
+        <option value="{{ b.id }}" {{ 'selected' if batch_f==b.id|string }}>{{ b.name }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+    <a href="{{ url_for('vouchers.index') }}" class="btn btn-ghost btn-sm">Reset</a>
+</form>
+
+<!-- Bulk Actions -->
+<form id="bulkForm" method="POST" action="{{ url_for('vouchers.bulk_delete') }}">
+    <div class="flex flex-wrap gap-2 mb-3 items-center" id="bulkBar" style="display:none!important">
+        <span class="text-sm font-bold" id="selCount">0 dipilih</span>
+        <input type="hidden" name="mode" value="selected">
+        <button type="submit" class="btn btn-error btn-xs gap-1"
+            onclick="return confirm('Hapus voucher yang dipilih?')">
+            <i class="bi bi-trash"></i> Hapus Terpilih
+        </button>
+        <button type="button" class="btn btn-primary btn-xs gap-1" onclick="printSelected()">
+            <i class="bi bi-printer"></i> Cetak Terpilih
+        </button>
+    </div>
+
+    <!-- Bulk Delete Quick Buttons -->
+    <div class="flex flex-wrap gap-2 mb-3">
+        <button type="button" onclick="bulkAction('used')" class="btn btn-xs btn-outline btn-error gap-1">
+            <i class="bi bi-trash"></i> Hapus Semua Used
+        </button>
+        <button type="button" onclick="bulkAction('expired')" class="btn btn-xs btn-outline btn-warning gap-1">
+            <i class="bi bi-trash"></i> Hapus Semua Expired
+        </button>
+        {% if batch_f %}
+        <button type="button" onclick="bulkAction('batch')" class="btn btn-xs btn-outline btn-error gap-1">
+            <i class="bi bi-trash"></i> Hapus Batch Ini
+        </button>
+        <a href="{{ url_for('vouchers.print_batch', batch_id=batch_f) }}" target="_blank"
+            class="btn btn-xs btn-outline btn-primary gap-1">
+            <i class="bi bi-printer"></i> Cetak Batch Ini
+        </a>
+        <input type="hidden" name="batch_id" value="{{ batch_f }}">
+        {% endif %}
+    </div>
+
+    <!-- Table -->
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body p-0">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra table-sm">
+                    <thead class="bg-base-200 uppercase text-xs">
+                        <tr>
+                            <th class="w-8">
+                                <input type="checkbox" id="checkAll" class="checkbox checkbox-xs"
+                                    onchange="toggleAll(this)">
+                            </th>
+                            <th>Kode</th>
+                            <th>Profile</th>
+                            <th>Durasi</th>
+                            <th>Harga</th>
+                            <th>Batch</th>
+                            <th>Pembuat</th>
+                            <th>Status</th>
+                            <th>Expires</th>
+                            <th>Dibuat</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in vouchers %}
+                        <tr class="hover">
+                            <td>
+                                <input type="checkbox" name="ids" value="{{ v.id }}"
+                                    class="checkbox checkbox-xs rowCheck" onchange="updateBulk()">
+                            </td>
+                            <td class="font-mono font-bold text-primary tracking-wider">{{ v.code }}</td>
+                            <td><span class="badge badge-outline badge-sm">{{ v.profile_name or '-' }}</span></td>
+                            <td class="text-sm">{{ v.validity_str }}</td>
+                            <td class="text-sm">{{ v.price|currency }}</td>
+                            <td class="text-xs opacity-60">{{ v.batch_name or '-' }}</td>
+                            <td class="text-xs">
+                                {{ v.created_by }}
+                                {% if v.reseller_name %}
+                                <br><span class="badge badge-info badge-xs mt-1">Mitra: {{ v.reseller_name }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if v.status == 'unused' %}
+                                <span class="badge badge-ghost badge-sm">Unused</span>
+                                {% elif v.status == 'active' %}
+                                <span class="badge badge-success badge-sm">Active</span>
+                                {% elif v.status == 'used' %}
+                                <span class="badge badge-neutral badge-sm">Used</span>
+                                {% else %}
+                                <span class="badge badge-error badge-sm">Expired</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs opacity-60">
+                                {% if v.expires_at %}{{ v.expires_at.strftime('%d/%m/%Y') }}{% else %}–{% endif %}
+                            </td>
+                            <td class="text-xs opacity-60">
+                                {{ v.created_at.strftime('%d/%m/%y') if v.created_at else '-' }}
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('vouchers.delete', id=v.id) }}"
+                                    class="btn btn-ghost btn-xs text-error"
+                                    onclick="return confirm('Hapus voucher ini?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not vouchers %}
+                        <tr>
+                            <td colspan="10" class="text-center py-12 opacity-40">
+                                <i class="bi bi-inbox text-4xl block mb-2"></i>
+                                Tidak ada voucher ditemukan
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="flex justify-center mt-4 gap-1">
+    {% for p in range(1, total_pages+1) %}
+    <a href="?page={{ p }}&q={{ q }}&status={{ status_f }}&profile_id={{ profile_f }}&batch_id={{ batch_f }}"
+        class="btn btn-xs {{ 'btn-primary' if p == page else 'btn-ghost' }}">{{ p }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="text-center text-xs opacity-40 mt-2">Menampilkan {{ vouchers|length }} dari {{ count }} voucher</div>
+
+<script>
+    function toggleAll(source) {
+        document.querySelectorAll('.rowCheck').forEach(cb => cb.checked = source.checked);
+        updateBulk();
+    }
+
+    function updateBulk() {
+        var checked = document.querySelectorAll('.rowCheck:checked').length;
+        var bar = document.getElementById('bulkBar');
+        document.getElementById('selCount').textContent = checked + ' dipilih';
+        bar.style.display = checked > 0 ? 'flex' : 'none';
+    }
+
+    function bulkAction(mode) {
+        if (!confirm('Yakin hapus voucher ' + mode + '?')) return;
+        var f = document.getElementById('bulkForm');
+        f.querySelector('[name="mode"]').value = mode;
+        f.submit();
+    }
+
+    function printSelected() {
+        var ids = Array.from(document.querySelectorAll('.rowCheck:checked')).map(cb => cb.value);
+        if (!ids.length) return alert('Pilih voucher dulu!');
+        // Get codes for selected IDs — simpler to do it via URL
+        // We'll pass IDs as query params and server resolves codes
+        window.open('/vouchers/print_batch_ids?ids=' + ids.join(','), '_blank');
+    }
+</script>
+{% endblock %}

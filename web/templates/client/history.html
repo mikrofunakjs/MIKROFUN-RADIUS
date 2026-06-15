@@ -1,0 +1,77 @@
+{% extends "client/base_app.html" %}
+
+{% block content %}
+<div class="p-4 pt-6">
+    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+        <i class="bi bi-clock-history text-primary"></i> Riwayat Transaksi
+    </h2>
+
+    {% if payments %}
+    <div class="flex flex-col gap-3">
+        {% for p in payments %}
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-xs opacity-60 font-mono">{{ p.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                        <div class="font-bold text-lg">Rp {{ "{:,.0f}".format(p.amount) }}</div>
+                        <div class="text-xs mt-1">
+                            {% if p.sender_bank == 'CASH' %}
+                            <span class="badge badge-ghost badge-sm">CASH</span>
+                            {% else %}
+                            <span class="badge badge-outline badge-sm">{{ p.sender_bank or p.payment_channel or 'Online'
+                                }}</span>
+                            {% endif %}
+
+                            {% if p.payment_type == 'voucher' %}
+                            <span class="badge badge-warning badge-sm border-0 font-bold ms-1">VOUCHER</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                        {% if p.status == 'approved' %}
+                        <span class="badge badge-success text-white badge-sm">LUNAS</span>
+                        {% elif p.status == 'pending' %}
+                        <span class="badge badge-warning text-white badge-sm">PENDING</span>
+                        {% else %}
+                        <span class="badge badge-error text-white badge-sm">GAGAL</span>
+                        {% endif %}
+
+                        <a href="{{ url_for('client.invoice', payment_id=p.id) }}"
+                            class="btn btn-xs btn-ghost text-primary">
+                            Invoice <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                {% if p.payment_type == 'voucher' and p.status == 'approved' and p.voucher_code %}
+                <div
+                    class="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] text-warning-content font-bold uppercase tracking-wider">Kode Voucher Anda
+                        </p>
+                        <p class="font-mono text-xl font-black text-gray-800 tracking-widest">{{ p.voucher_code }}</p>
+                    </div>
+                    <button
+                        onclick="navigator.clipboard.writeText('{{ p.voucher_code }}'); alert('Kode Voucher Disalin!')"
+                        class="btn btn-square btn-sm btn-ghost text-warning-content">
+                        <i class="bi bi-clipboard text-lg"></i>
+                    </button>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-12 text-center opacity-50">
+        <i class="bi bi-receipt text-4xl mb-2"></i>
+        <p>Belum ada riwayat transaksi.</p>
+    </div>
+    {% endif %}
+
+    <!-- Space for Bottom Nav -->
+    <div class="h-20"></div>
+</div>
+{% endblock %}

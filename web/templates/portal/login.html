@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login Hotspot - {{ app_name if app_name != 'MikroFun' else hotspot_name }}</title>
+    {% if app_logo %}
+    <link rel="icon" type="image/x-icon" href="{{ app_logo }}">
+    {% endif %}
+    <!-- Premium UI with Tab Support (Isi Voucher vs Member) -->
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --primary-hover: #0284c7;
+            --bg-dark: #0f172a;
+            --glass: rgba(255, 255, 255, 0.95);
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --error: #ef4444;
+            --success: #22c55e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            {% if settings.get('portal_background_url') %}
+            background-image: url('{{ settings.get('portal_background_url') }}');
+            {% else %}
+            background-image: url('https://images.unsplash.com/photo-1549643276-fdf2fab574f5?auto=format&fit=crop&w=2000&q=80');
+            {% endif %}
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-main);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 0;
+        }
+
+        .card {
+            background: var(--glass);
+            width: 100%;
+            max-width: 380px;
+            border-radius: 28px;
+            padding: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .header { text-align: center; margin-bottom: 24px; }
+        
+        .logo-wrap {
+            width: 72px; height: 72px;
+            background: var(--primary);
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 20px -5px rgba(14, 165, 233, 0.4);
+            overflow: hidden;
+        }
+        .logo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .logo-wrap svg { width: 36px; height: 36px; fill: white; }
+
+        h2 { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+        .subtitle { font-size: 13px; color: var(--text-muted); }
+
+        /* TABS Styling */
+        .tabs {
+            display: flex;
+            background: rgba(148, 163, 184, 0.1);
+            padding: 4px;
+            border-radius: 14px;
+            margin-bottom: 24px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+        .tab.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .alert {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .input-wrap { position: relative; }
+        .input-wrap svg {
+            position: absolute;
+            left: 14px; top: 12px;
+            width: 18px; height: 18px;
+            fill: #94a3b8;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 12px 12px 42px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1); }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            text-decoration: none;
+        }
+
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-outline { background: transparent; border: 1.5px solid #e2e8f0; color: #475569; margin-top: 12px; }
+        
+        .divider { display: flex; align-items: center; text-align: center; margin: 24px 0; font-size: 11px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e2e8f0; }
+        .divider:not(:empty)::before { margin-right: 12px; }
+        .divider:not(:empty)::after { margin-left: 12px; }
+
+        .diag { margin-top: 24px; text-align: center; font-size: 10px; opacity: 0.4; }
+
+        .hidden { display: none !important; }
+
+        /* Marquee */
+        .marquee-container {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white; padding: 8px 0; z-index: 100;
+            font-size: 12px; overflow: hidden;
+        }
+        .marquee-text { display: inline-block; white-space: nowrap; animation: marquee 25s linear infinite; padding-left: 100%; }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+        {{ settings.get('portal_custom_css') | safe }}
+    </style>
+</head>
+
+<body>
+    {% if settings.get('portal_ticker_text') %}
+    <div class="marquee-container">
+        <div class="marquee-text">
+            {{ settings.get('portal_ticker_text') }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            {{ settings.get('portal_ticker_text') }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            {{ settings.get('portal_ticker_text') }}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="overlay"></div>
+
+    <div class="card">
+        <div class="header">
+            <div class="logo-wrap" style="width: 80px; height: 80px; margin: 0 auto 15px auto; background: white; border-radius: 20px; overflow: hidden; display: flex; items-center; justify-center; border: 3px solid rgba(14, 165, 233, 0.1);">
+                {% if app_logo %}
+                <img src="{{ app_logo }}" alt="Logo" style="width: 100%; height: 100%; object-contain: contain;">
+                {% elif settings.get('portal_logo_url') %}
+                <img src="{{ settings.get('portal_logo_url') }}" alt="Logo">
+                {% else %}
+                <svg viewBox="0 0 24 24"><path d="M12 21l-1.45-1.45c-5.17-5.17-8.55-8.55-8.55-12.05 0-3.05 2.45-5.5 5.5-5.5 1.74 0 3.41.81 4.5 2.09 1.09-1.28 2.76-2.09 4.5-2.09 3.05 0 5.5 2.45 5.5 5.5 0 3.5-3.38 6.88-8.55 12.05l-1.45 1.45z"/></svg>
+                {% endif %}
+            </div>
+            <h2>{{ settings.get('portal_welcome_title') if settings.get('portal_welcome_title') else (app_name if app_name != 'MikroFun' else hotspot_name) }}</h2>
+            <p class="subtitle">{{ settings.get('portal_welcome_subtitle') if settings.get('portal_welcome_subtitle') else 'Silakan pilih metode masuk Anda.' }}</p>
+            
+            {% if settings.get('portal_cs_number') %}
+            <div style="margin-top: 15px;">
+                <a href="https://wa.me/{{ settings.get('portal_cs_number')|replace('+','')|replace(' ','') }}?text=Halo%20Admin,%20saya%20butuh%20bantuan%20login%20hotspot" target="_blank" 
+                   style="display: inline-flex; align-items: center; gap: 6px; background: #25d366; color: white; padding: 6px 14px; border-radius: 100px; font-size: 11px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2);">
+                    <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M12.031 6.172c-2.203 0-4.007 1.797-4.007 3.991 0 2.195 1.804 3.991 4.007 3.991 2.203 0 3.992-1.797 3.992-3.991 0-2.194-1.789-3.991-3.992-3.991zm0 1.9c1.156 0 2.092.937 2.092 2.091 0 1.155-.936 2.091-2.092 2.091s-2.091-.936-2.091-2.091c0-1.154.914-2.091 2.091-2.091zm0-6.172c-5.523 0-10 4.477-10 10s4.477 10 10 10 10-4.477 10-10-4.477-10-10-10zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/></svg>
+                    BANTUAN ADMIN (WA)
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs">
+            <div id="tabVoucher" class="tab active" onclick="switchLoginMode('voucher')">ISI VOUCHER</div>
+            <div id="tabMember" class="tab" onclick="switchLoginMode('member')">MEMBER</div>
+        </div>
+
+        {% if error %}
+        <div class="alert">
+            <svg style="width:18px;height:18px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <!-- REMEMBER VOUCHER SECTION -->
+        <div id="welcomeBackSection" class="hidden" style="text-align: center;">
+            <div style="background: rgba(14, 165, 233, 0.08); padding: 18px; border-radius: 18px; margin-bottom: 24px; border: 1.5px dashed var(--primary);">
+                <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Voucher Terdeteksi</span>
+                <div id="savedVoucherDisplay" style="font-size: 24px; font-weight: 900; color: var(--primary); margin-top: 6px; letter-spacing: 1px;">XXXXXX</div>
+            </div>
+            <button onclick="loginWithSavedVoucher()" class="btn btn-primary">
+                HUBUNGKAN SEKARANG
+            </button>
+            <button onclick="showLoginForm()" style="background:none; border:none; color: var(--text-muted); font-size: 12px; margin-top: 14px; cursor: pointer; font-weight: 600;">Gunakan Kode Lain</button>
+        </div>
+
+        <!-- MAIN LOGIN FORM -->
+        <form id="mainLoginForm" name="login" action="{{ link_login }}" method="post" onsubmit="return handleLogin(event)">
+            <!-- dst mengarah ke halaman status VPS kita (bukan MikroTik lokal) agar tidak 404 setelah login -->
+            <input type="hidden" name="dst" id="dstField" value="" />
+            <input type="hidden" name="popup" value="true" />
+            <input type="hidden" name="login_type" id="loginTypeField" value="voucher" />
+            <input type="hidden" name="router_id" value="{{ router_id }}" />
+            <input type="hidden" name="mac" value="{{ mac }}" />
+            <input type="hidden" name="ip" value="{{ ip }}" />
+
+            <!-- Group Voucher -->
+            <div id="groupVoucher" class="form-group">
+                <label>Kode Voucher</label>
+                <div class="input-wrap">
+                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    <input id="voucherInput" type="text" name="username" value="{{ username }}" placeholder="Masukkan kode voucher..." required autofocus>
+                </div>
+            </div>
+
+            <!-- Group Member Password (Hidden by default) -->
+            <div id="groupMember" class="form-group hidden">
+                <label>Password</label>
+                <div class="input-wrap">
+                    <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg>
+                    <input id="passwordInput" type="password" name="password" placeholder="Masukkan password member...">
+                </div>
+            </div>
+
+            <button type="submit" id="mainSubmitBtn" class="btn btn-primary" style="position: relative; overflow: hidden;">
+                <span id="btnText">MASUK SEKARANG</span>
+                <div id="btnSpinner" style="display: none; align-items: center; justify-content: center; gap: 8px;">
+                    <svg style="animation: spin 1s linear infinite; fill: white; width: 18px; height: 18px;" viewBox="0 0 24 24">
+                        <path d="M12 4V2C6.48 2 2 6.48 2 12h2c0-4.41 3.59-8 8-8z"/>
+                    </svg>
+                    <span>MENYAMBUNGKAN...</span>
+                </div>
+            </button>
+        </form>
+
+        <div class="footer-tools">
+            {% if settings.get('portal_trial_enabled') == '1' %}
+            <form name="trial" action="{{ link_login }}" method="post">
+                <input type="hidden" name="username" value="trial">
+                <input type="hidden" name="dst" value="{{ link_orig }}">
+                <button type="submit" class="btn btn-outline" style="border-color: #22c55e; color: #15803d; border-radius: 14px;">
+                    Coba Gratis (Trial)
+                </button>
+            </form>
+            {% endif %}
+
+            <div class="divider">Ingin Beli Voucher?</div>
+            
+            <button onclick="togglePricing()" class="btn btn-outline" style="color: var(--primary); border-color: var(--primary); border-radius: 14px; position: relative;">
+                <span style="position: absolute; right: 10px; top: -10px;" class="badge-new">PROMO</span>
+                LIHAT DAFTAR HARGA
+            </button>
+        </div>
+
+        <div class="diag">ID: {{ mac }} | IP: {{ ip }}</div>
+    </div>
+
+    <!-- PRICING MODAL -->
+    <div id="pricingModal" class="hidden" style="position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div onclick="togglePricing()" style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);"></div>
+        <div class="card" style="max-height: 80vh; overflow-y: auto; text-align: left; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="font-size: 18px; font-weight: 800;">Daftar Paket Hotspot</h3>
+                <button onclick="togglePricing()" style="background:none; border:none; font-size: 24px; color: var(--text-muted); cursor: pointer;">&times;</button>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for p in profiles %}
+                <div style="background: white; border: 1px solid #e2e8f0; padding: 16px; border-radius: 18px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">{{ p.name }}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-top: 2px;">Aktif {{ p.validity }} {{ p.validity_unit }}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: 900; color: var(--primary); font-size: 16px;">Rp {{ p.price|currency if p.price else 'Gratis' }}</div>
+                        <div style="font-size: 9px; opacity: 0.5;">Sekali Bayar</div>
+                    </div>
+                </div>
+                {% else %}
+                <p style="text-align: center; opacity: 0.5; font-size: 13px; padding: 20px;">Belum ada paket yang tersedia.</p>
+                {% endfor %}
+            </div>
+
+            <div style="margin-top: 24px;">
+                <p style="font-size: 11px; color: var(--text-muted); text-align: center; margin-bottom: 15px;">Hubungi Admin/Kasir untuk pembelian voucher</p>
+                <a href="https://wa.me/{{ settings.get('portal_cs_number')|replace('+','')|replace(' ','') }}?text=Halo%20Admin,%20saya%20mau%20beli%20voucher%20hotspot" target="_blank" class="btn btn-primary" style="background: #25d366; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
+                    PESAN VIA WHATSAPP
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .badge-new { 
+            background: #ef4444; color: white; border-radius: 6px; 
+            padding: 2px 6px; font-size: 8px; font-weight: 900; 
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); 
+        }
+    </style>
+
+    <script>
+        const VOUCHER_KEY = 'mikrofun_saved_voucher';
+        const PASS_KEY = 'mikrofun_saved_pass';
+        let currentMode = 'voucher';
+
+        function togglePricing() {
+            const modal = document.getElementById('pricingModal');
+            modal.classList.toggle('hidden');
+        }
+
+        window.onload = function() {
+            const savedVoucher = localStorage.getItem(VOUCHER_KEY);
+            if (savedVoucher && !("{{ error }}")) {
+                document.getElementById('mainLoginForm').classList.add('hidden');
+                document.getElementById('welcomeBackSection').classList.remove('hidden');
+                document.getElementById('savedVoucherDisplay').innerText = savedVoucher;
+            }
+        };
+
+        function switchLoginMode(mode) {
+            currentMode = mode;
+            const tabVoucher = document.getElementById('tabVoucher');
+            const tabMember = document.getElementById('tabMember');
+            const groupMember = document.getElementById('groupMember');
+            const voucherInput = document.getElementById('voucherInput');
+            const passwordInput = document.getElementById('passwordInput');
+            const loginTypeField = document.getElementById('loginTypeField');
+
+            if (mode === 'voucher') {
+                tabVoucher.classList.add('active');
+                tabMember.classList.remove('active');
+                groupMember.classList.add('hidden');
+                voucherInput.placeholder = "Masukkan kode voucher...";
+                if(loginTypeField) loginTypeField.value = 'voucher';
+                voucherInput.focus();
+            } else {
+                tabMember.classList.add('active');
+                tabVoucher.classList.remove('active');
+                groupMember.classList.remove('hidden');
+                voucherInput.placeholder = "Username Member...";
+                if(loginTypeField) loginTypeField.value = 'member';
+                voucherInput.focus();
+            }
+        }
+
+        /**
+         * handleLogin: Intercept submit form dan navigasi TOP window ke MikroTik login.
+         *
+         * KENAPA TOP NAVIGATION:
+         * Jika form di-submit dari dalam iFrame ke MikroTik, respons redirect dari MikroTik
+         * hanya mengubah konten iFrame — bukan window utama browser. Akibatnya user tetap
+         * di halaman login (top window) dan /login atau /status MikroTik jadi 404.
+         *
+         * Solusi: intercept submit, navigasi window.top ke MikroTik GET login URL + dst ke
+         * halaman /portal/status VPS. MikroTik proses auth, lalu redirect seluruh browser
+         * ke status page VPS kita.
+         */
+        function handleLogin(event) {
+            const linkLogin = "{{ link_login }}";
+            const v = document.getElementById('voucherInput').value;
+            const passwordInput = document.getElementById('passwordInput');
+
+            // Mode voucher: password = username (kode voucher)
+            if (currentMode === 'voucher') {
+                passwordInput.value = v;
+            }
+            const p = passwordInput.value;
+
+            // Simpan ke localStorage
+            if (v) {
+                localStorage.setItem(VOUCHER_KEY, v);
+                localStorage.setItem(PASS_KEY, p);
+            }
+
+            // Animasi loading
+            document.getElementById('mainSubmitBtn').style.pointerEvents = 'none';
+            document.getElementById('btnText').style.display = 'none';
+            document.getElementById('btnSpinner').style.display = 'flex';
+            document.getElementById('mainSubmitBtn').style.opacity = '0.8';
+
+            // Jika ada linkLogin dan sedang di dalam iFrame:
+            // Navigasi TOP window langsung ke MikroTik login (GET),
+            // supaya redirect pasca-auth dari MikroTik terjadi di full browser window.
+            if (linkLogin && window.self !== window.top) {
+                event.preventDefault();
+                const statusUrl = window.location.origin + '/portal/status';
+                const topUrl = linkLogin
+                    + '?username=' + encodeURIComponent(v)
+                    + '&password=' + encodeURIComponent(p)
+                    + '&dst='      + encodeURIComponent(statusUrl);
+                try {
+                    window.top.location.href = topUrl;
+                } catch(e) {
+                    // Fallback: jika browser blokir top-navigation, submit form biasa
+                    document.getElementById('dstField').value = statusUrl;
+                    document.getElementById('mainLoginForm').submit();
+                }
+                return false;
+            }
+
+            // Fallback jika diakses langsung (bukan via iFrame MikroTik):
+            // update dst field lalu biarkan form submit normal
+            document.getElementById('dstField').value = window.location.origin + '/portal/status';
+            return true;
+        }
+
+        function loginWithSavedVoucher() {
+            const v = localStorage.getItem(VOUCHER_KEY);
+            const p = localStorage.getItem(PASS_KEY) || v;
+            document.getElementById('voucherInput').value = v;
+            document.getElementById('passwordInput').value = p;
+
+            const linkLogin = "{{ link_login }}";
+
+            // Animasi loading
+            document.getElementById('mainSubmitBtn').style.pointerEvents = 'none';
+            document.getElementById('btnText').style.display = 'none';
+            document.getElementById('btnSpinner').style.display = 'flex';
+            document.getElementById('mainSubmitBtn').style.opacity = '0.8';
+
+            if (linkLogin && window.self !== window.top) {
+                const statusUrl = window.location.origin + '/portal/status';
+                const topUrl = linkLogin
+                    + '?username=' + encodeURIComponent(v)
+                    + '&password=' + encodeURIComponent(p)
+                    + '&dst='      + encodeURIComponent(statusUrl);
+                try {
+                    window.top.location.href = topUrl;
+                } catch(e) {
+                    document.getElementById('dstField').value = statusUrl;
+                    document.getElementById('mainLoginForm').submit();
+                }
+            } else {
+                document.getElementById('dstField').value = window.location.origin + '/portal/status';
+                document.getElementById('mainLoginForm').submit();
+            }
+        }
+
+        function showLoginForm() {
+            document.getElementById('mainLoginForm').classList.remove('hidden');
+            document.getElementById('welcomeBackSection').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

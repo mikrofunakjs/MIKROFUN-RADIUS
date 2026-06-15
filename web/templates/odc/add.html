@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold flex items-center gap-2">
+        <i class="bi bi-box-fill"></i> Tambah ODC
+    </h2>
+    <p class="text-sm opacity-60">Manajemen Optical Distribution Cabinet</p>
+</div>
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+    #map {
+        height: 400px;
+        width: 100%;
+        z-index: 1;
+        border-radius: 0.5rem;
+    }
+</style>
+
+<form method="POST" class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl">
+    <div class="card bg-base-100 shadow-md border border-base-200 h-fit">
+        <div class="card-body">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Nama ODC</span></label>
+                <input type="text" name="name" class="input input-bordered" placeholder="Contoh: ODC-PUSAT-01"
+                    value="{{ odc.name if odc else '' }}" required />
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Alamat</span></label>
+                <textarea name="address" class="textarea textarea-bordered h-24"
+                    placeholder="Lokasi fisik ODC">{{ odc.address if odc else '' }}</textarea>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Kapasitas (Port)</span></label>
+                <input type="number" name="capacity" class="input input-bordered"
+                    value="{{ odc.capacity if odc else 12 }}" required />
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Koordinat (Latitude, Longitude)</span></label>
+                <div class="join">
+                    <input type="text" name="coordinates" id="coordInput"
+                        class="input input-bordered join-item w-full font-mono" placeholder="-6.123456, 106.123456"
+                        value="{{ odc.coordinates if odc else '' }}" />
+                    <button type="button" class="btn btn-secondary join-item" onclick="openGoogleMaps()">
+                        Maps
+                    </button>
+                </div>
+                <label class="label">
+                    <span class="label-text-alt opacity-60">Klik peta untuk isi otomatis</span>
+                </label>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="card-actions justify-end mt-2">
+                <a href="{{ url_for('odc.index') }}" class="btn btn-ghost">Batal</a>
+                <button type="submit" class="btn btn-primary">Simpan Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div class="card bg-base-100 shadow-md border border-base-200">
+        <div class="card-body p-4">
+            <h3 class="font-bold mb-2 flex items-center gap-2"><i class="bi bi-map"></i> Peta Lokasi ODC</h3>
+            <div id="map"></div>
+            <div class="alert alert-info shadow-sm mt-4 text-xs">
+                <i class="bi bi-info-circle"></i> Klik pada peta untuk mendeteksi koordinat ODC secara otomatis.
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    // Initialize Map
+    // Default to Jakarta if no coord (-6.200000, 106.816666)
+    var defaultLat = -6.200000;
+    var defaultLng = 106.816666;
+    var initialZoom = 13;
+
+    var existingCoord = "{{ odc.coordinates if odc else '' }}";
+    if (existingCoord) {
+        var parts = existingCoord.split(',');
+        if (parts.length == 2) {
+            defaultLat = parseFloat(parts[0].trim());
+            defaultLng = parseFloat(parts[1].trim());
+            initialZoom = 17;
+        }
+    }
+
+    var map = L.map('map').setView([defaultLat, defaultLng], initialZoom);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© ...'
+    }).addTo(map);
+
+    var marker;
+
+    if (existingCoord) {
+        marker = L.marker([defaultLat, defaultLng]).addTo(map);
+    }
+
+    function onMapClick(e) {
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        marker = L.marker(e.latlng).addTo(map);
+
+        var lat = e.latlng.lat.toFixed(6);
+        var lng = e.latlng.lng.toFixed(6);
+        document.getElementById('coordInput').value = lat + ", " + lng;
+    }
+
+    map.on('click', onMapClick);
+
+    function openGoogleMaps() {
+        var coord = document.getElementById('coordInput').value;
+        if (coord) {
+            window.open('https://www.google.com/maps?q=' + coord, '_blank');
+        } else {
+            alert("Koordinat belum diisi!");
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-6">
+
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-black tracking-tight text-white flex items-center gap-3">
+                <i class="bi bi-chat-quote-fill text-blue-500"></i> Custom Chat Templates
+            </h1>
+            <p class="text-slate-400 mt-1">Sesuaikan pesan otomatis yang dikirim ke pelanggan.</p>
+        </div>
+        <a href="{{ url_for('wa_gateway.index') }}" class="btn btn-ghost border-slate-700 text-slate-300">
+            <i class="bi bi-arrow-left"></i> Kembali ke Gateway
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6">
+        {% for template in templates %}
+        <div
+            class="bg-slate-900/50 backdrop-blur-md rounded-3xl border border-white/5 p-6 hover:border-blue-500/30 transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <span
+                        class="px-3 py-1 bg-blue-500/10 text-blue-400 text-xs font-bold rounded-full uppercase tracking-wider border border-blue-500/20">
+                        {{ template.template_key | replace('_', ' ') }}
+                    </span>
+                    <h3 class="text-lg font-bold text-white mt-2">Pesan Konfirmasi</h3>
+                </div>
+                <div class="text-xs text-slate-500 italic">
+                    Placeholders: <span class="text-blue-400 font-mono">{{ template.placeholders }}</span>
+                </div>
+            </div>
+
+            <form action="{{ url_for('wa_gateway.update_template') }}" method="POST">
+                <input type="hidden" name="id" value="{{ template.id }}">
+                <div class="form-control w-full">
+                    <textarea name="message_text"
+                        class="textarea textarea-bordered h-32 bg-slate-950 border-slate-800 text-slate-200 focus:border-blue-500 font-medium leading-relaxed"
+                        required>{{ template.message_text }}</textarea>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <button type="submit" class="btn btn-primary btn-sm px-6 rounded-xl">
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-12 p-6 bg-blue-500/5 border border-blue-500/10 rounded-3xl">
+        <h4 class="text-blue-400 font-bold mb-2 flex items-center gap-2">
+            <i class="bi bi-info-circle"></i> Tips Kustomisasi
+        </h4>
+        <ul class="text-sm text-slate-400 space-y-2 font-light">
+            <li>Gunakan <span class="text-blue-400 font-mono">{code}</span> untuk menampilkan Kode Voucher.</li>
+            <li>Gunakan <span class="text-blue-400 font-mono">{due_date}</span> untuk menampilkan Tanggal Jatuh Tempo.
+            </li>
+            <li>Gunakan simbol bintang <span class="text-white">*teks*</span> untuk menebalkan teks di WhatsApp.</li>
+            <li>Gunakan <span class="text-white">\n</span> untuk memberikan baris baru pada pesan.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

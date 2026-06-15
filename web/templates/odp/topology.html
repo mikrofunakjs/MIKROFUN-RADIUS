@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Vis-Network -->
+<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+<style>
+    #mynetwork {
+        width: 100%;
+        height: 700px;
+        border-radius: 1rem;
+        background: #0f172a;
+        /* Deep Slate */
+        background-image:
+            radial-gradient(circle at 100% 100%, rgba(56, 189, 248, 0.1) 0, transparent 50%),
+            radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.1) 0, transparent 50%);
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .vis-network canvas {
+        border-radius: 1rem;
+        outline: none;
+    }
+
+    /* Modern GlassTooltip override */
+    .vis-tooltip {
+        background: rgba(15, 23, 42, 0.85) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        color: #e2e8f0 !important;
+        border: 1px solid rgba(148, 163, 184, 0.2) !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 13px !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+
+    .stat-modern {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 1.25rem;
+        color: white;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+</style>
+
+<!-- Header -->
+<div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+        <h2 class="text-3xl font-black flex items-center gap-3 text-primary">
+            <i class="bi bi-diagram-3-fill"></i> Data Alat dan Topologi
+        </h2>
+        <p class="text-sm opacity-70 font-medium mt-1">Visualisasi cerdas distribusi jaringan OLT → ODC → ODP</p>
+    </div>
+    <div class="flex gap-3">
+        <button class="btn btn-primary shadow-lg shadow-primary/30 rounded-xl gap-2 font-bold"
+            onclick="network.fit({ animation: { duration: 800, easingFunction: 'easeInOutQuart' } })">
+            <i class="bi bi-arrows-fullscreen"></i> Fit Layar
+        </button>
+        <button class="btn btn-neutral rounded-xl gap-2" onclick="toggleLayout()">
+            <i class="bi bi-shuffle"></i> Ubah Tampilan
+        </button>
+    </div>
+</div>
+
+<!-- Graph Container -->
+<div class="card bg-base-100 shadow-2xl border border-base-200 overflow-hidden rounded-2xl mb-6">
+    <div class="card-body p-1 relative">
+        <div id="mynetwork"></div>
+
+        <!-- Floating Overlay Legend -->
+        <div
+            class="absolute bottom-6 right-6 bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-2xl">
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Keterangan Node</h4>
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.6)]"></div>
+                    <span class="text-sm font-semibold text-white">Cloud / Internet</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
+                    <span class="text-sm font-semibold text-white">OLT Pusat</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-4 h-4 rounded-md bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.6)]"></div>
+                    <span class="text-sm font-semibold text-white">ODC (Distribusi)</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-4 h-4 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]"></div>
+                    <span class="text-sm font-semibold text-white">ODP (Pelanggan)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="stat-modern flex items-center justify-between">
+        <div>
+            <div class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Total OLT</div>
+            <div class="text-3xl font-black text-white" id="count_olt">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-2xl">
+            <i class="bi bi-hdd-network-fill"></i>
+        </div>
+    </div>
+    <div class="stat-modern flex items-center justify-between">
+        <div>
+            <div class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-1">Total ODC</div>
+            <div class="text-3xl font-black text-white" id="count_odc">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-2xl">
+            <i class="bi bi-box-fill"></i>
+        </div>
+    </div>
+    <div class="stat-modern flex items-center justify-between">
+        <div>
+            <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Total ODP</div>
+            <div class="text-3xl font-black text-white" id="count_odp">0</div>
+        </div>
+        <div
+            class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-2xl">
+            <i class="bi bi-geo-alt-fill"></i>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    try {
+        var olts_data = {{ olts | tojson | safe
+    }};
+    var odcs_data = {{ odcs | tojson | safe }};
+    var odps_data = {{ odps | tojson | safe }};
+
+    document.getElementById('count_olt').textContent = olts_data.length;
+    document.getElementById('count_odc').textContent = odcs_data.length;
+    document.getElementById('count_odp').textContent = odps_data.length;
+
+    var nodesArray = [];
+    var edgesArray = [];
+
+    function makeTooltip(title, subtitle, details) {
+        var html = '<div style="min-width:180px">';
+        html += '<div style="font-weight:900;font-size:15px;color:#fff;margin-bottom:4px">' + title + '</div>';
+        if (subtitle) html += '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:6px">' + subtitle + '</div>';
+        if (details) html += '<div style="font-size:12px;color:#cbd5e1;line-height:1.6">' + details + '</div>';
+        html += '</div>';
+        return html;
+    }
+
+    // LEVEL 0: CLOUD
+    nodesArray.push({
+        id: 'cloud', label: 'Internet\nProvider', level: 0, shape: 'dot', size: 30,
+        color: { background: '#a855f7', border: '#d8b4fe', highlight: { background: '#9333ea', border: '#f3e8ff' } },
+        font: { color: '#e9d5ff', size: 14, bold: true },
+        title: makeTooltip('☁️ Internet Backbone', 'Upstream Connection', 'Status: OK<br>Pusat Distribusi Jaringan'),
+        shadow: { enabled: true, color: 'rgba(168,85,247,0.6)', size: 25, x: 0, y: 0 }
+    });
+
+    // LEVEL 1: OLTs
+    olts_data.forEach(function (o) {
+        nodesArray.push({
+            id: 'olt_' + o.id, label: o.name, level: 1, shape: 'dot', size: 24,
+            color: { background: '#3b82f6', border: '#93c5fd', highlight: { background: '#2563eb', border: '#bfdbfe' } },
+            font: { color: '#bfdbfe', size: 12, bold: true },
+            title: makeTooltip('🖥️ ' + o.name + ' (OLT)', o.brand || 'OLT Router', 'IP: ' + (o.ip_address || '-') + '<br>Total Ports: ' + (o.total_ports || '-')),
+            shadow: { enabled: true, color: 'rgba(59,130,246,0.6)', size: 20, x: 0, y: 0 }
+        });
+        edgesArray.push({ from: 'cloud', to: 'olt_' + o.id, width: 3, color: { color: '#8b5cf6', opacity: 0.8 }, smooth: { type: 'cubicBezier' } });
+    });
+
+    var defaultOltId = olts_data.length > 0 ? 'olt_' + olts_data[0].id : 'cloud';
+
+    // LEVEL 2: ODCs
+    odcs_data.forEach(function (o) {
+        var id = 'odc_' + o.id;
+        nodesArray.push({
+            id: id, label: o.name, level: 2, shape: 'box',
+            color: { background: '#0891b2', border: '#67e8f9', highlight: { background: '#0e7490', border: '#a5f3fc' } },
+            font: { color: '#cffafe', size: 11, bold: true },
+            title: makeTooltip('📦 ' + (o.name || 'ODC'), 'Pusat Distribusi Cabang', 'Kapasitas ODP: ' + (o.capacity || '-') + ' Port<br>Alamat: ' + (o.address || '-')),
+            shadow: { enabled: true, color: 'rgba(6,182,212,0.6)', size: 15, x: 0, y: 0 }
+        });
+
+        var parentId = o.olt_id ? 'olt_' + o.olt_id : defaultOltId;
+        edgesArray.push({ from: parentId, to: id, width: 2, color: { color: '#0ea5e9', opacity: 0.7 }, dashes: true, smooth: { type: 'cubicBezier' } });
+    });
+
+    // LEVEL 3: ODPs
+    odps_data.forEach(function (o) {
+        var id = 'odp_' + o.id;
+        nodesArray.push({
+            id: id, label: o.name, level: 3, shape: 'dot', size: 10,
+            color: { background: '#10b981', border: '#6ee7b7', highlight: { background: '#059669', border: '#a7f3d0' } },
+            font: { color: '#a7f3d0', size: 10 },
+            title: makeTooltip('📍 ' + o.name + ' (ODP)', 'Titik Pelanggan', 'Kapasitas: ' + (o.capacity || '-') + ' Port'),
+            shadow: { enabled: true, color: 'rgba(16,185,129,0.5)', size: 10, x: 0, y: 0 }
+        });
+
+        var parentId = o.odc_id ? 'odc_' + o.odc_id : defaultOltId;
+        edgesArray.push({ from: parentId, to: id, width: 1.5, color: { color: '#10b981', opacity: 0.5 }, smooth: { type: 'cubicBezier' } });
+    });
+
+    var container = document.getElementById('mynetwork');
+    var data = {
+        nodes: new vis.DataSet(nodesArray),
+        edges: new vis.DataSet(edgesArray)
+    };
+
+    var hierarchicalMode = true;
+
+    var options = {
+        layout: {
+            hierarchical: {
+                enabled: true, direction: 'UD', sortMethod: 'directed',
+                nodeSpacing: 180, levelSeparation: 150, treeSpacing: 200, blockShifting: true, edgeMinimization: true
+            }
+        },
+        physics: { enabled: false },
+        interaction: { hover: true, tooltipDelay: 50, zoomView: true, dragNodes: true },
+        edges: { smooth: { enabled: true, type: 'cubicBezier', roundness: 0.5 } }
+    };
+
+    var network = new vis.Network(container, data, options);
+
+    // Re-fit on load to ensure it centers
+    network.once('afterDrawing', function () {
+        network.fit({ animation: { duration: 1000, easingFunction: 'easeOutQuint' } });
+    });
+
+    window.toggleLayout = function () {
+        hierarchicalMode = !hierarchicalMode;
+        if (hierarchicalMode) {
+            network.setOptions({ layout: { hierarchical: { enabled: true, direction: 'UD', sortMethod: 'directed' } }, physics: { enabled: false } });
+        } else {
+            network.setOptions({ layout: { hierarchical: { enabled: false } }, physics: { enabled: true, solver: 'forceAtlas2Based', forceAtlas2Based: { gravitationalConstant: -100, centralGravity: 0.01, springLength: 150, springConstant: 0.08 } } });
+            setTimeout(() => { network.setOptions({ physics: { enabled: false } }); }, 2500);
+        }
+        network.fit({ animation: { duration: 600 } });
+    }
+
+    } catch (error) {
+        console.error("Topology Render Error:", error);
+        document.getElementById('mynetwork').innerHTML = '<div class="flex items-center justify-center h-full text-white/50"><div class="text-center"><i class="bi bi-exclamation-triangle text-4xl mb-3 text-red-500"></i><br>Gagal memuat topologi. Hubungi Admin.<br><span class="text-xs opacity-50">' + error.message + '</span></div></div>';
+    }
+</script>
+{% endblock %}

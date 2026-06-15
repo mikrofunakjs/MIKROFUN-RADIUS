@@ -1,0 +1,6 @@
+# IP Dummy Mobile Legends untuk test
+# Ganti dengan IP subnet yang asli nantinya
+161.202.0.0/16
+119.81.0.0/16
+47.74.0.0/16
+210.210.0.0/16

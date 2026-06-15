@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto pb-12">
+    <!-- Header Section -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h2 class="text-3xl font-black flex items-center gap-3 tracking-tight">
+                <i class="bi bi-plus-circle-dotted text-primary"></i>
+                Tambah Router / NAS
+            </h2>
+            <p class="text-sm opacity-60 mt-1">Daftarkan router baru untuk layanan Hotspot atau PPPoE Terpusat.</p>
+        </div>
+        <a href="{{ url_for('routers.index') }}" class="btn btn-ghost btn-sm">
+            <i class="bi bi-arrow-left"></i> Kembali
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        <!-- Main Configuration Card -->
+        <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+            <div class="card-body p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 border-b border-base-200 pb-4">
+                    <i class="bi bi-gear-fill text-xl text-primary"></i>
+                    <h3 class="font-bold text-lg">Informasi Dasar</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Nama Node Router</span>
+                        </label>
+                        <input type="text" name="name" class="input input-bordered w-full focus:input-primary"
+                            placeholder="contoh: Mikrotik-Pusat" required>
+                        <label class="label">
+                            <span class="label-text-alt opacity-50 text-[10px]">Identitas unik untuk router ini di
+                                dashboard.</span>
+                        </label>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Grup / Lokasi</span>
+                        </label>
+                        <input type="text" placeholder="Optional"
+                            class="input input-bordered w-full opacity-50 cursor-not-allowed" disabled>
+                        <label class="label">
+                            <span class="label-text-alt opacity-50 text-[10px]">Fitur Pengelompokan segera hadir.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- VPN Type Selection -->
+                <div class="mt-8">
+                    <label class="label mb-2">
+                        <span class="label-text font-bold">Pilih Metode Koneksi</span>
+                    </label>
+
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- WireGuard -->
+                        <label class="relative cursor-pointer group" onclick="toggleTargetIP(false)">
+                            <input type="radio" name="vpn_type" value="wireguard" class="peer sr-only" checked />
+                            <div
+                                class="h-full p-4 rounded-xl border-2 border-base-300 bg-base-100 peer-checked:border-primary peer-checked:bg-primary/5 transition-all hover:border-primary/50 flex flex-col items-center text-center">
+                                <i class="bi bi-shield-check text-2xl mb-2 text-primary"></i>
+                                <span class="font-bold text-xs uppercase tracking-tighter">WireGuard</span>
+                                <span class="text-[9px] opacity-60 leading-tight mt-2 hidden md:block">Modern & Hemat
+                                    CPU.</span>
+                            </div>
+                            <div class="absolute top-2 right-2 peer-checked:block hidden">
+                                <i class="bi bi-check-circle-fill text-primary text-xs"></i>
+                            </div>
+                        </label>
+
+                        <!-- L2TP -->
+                        <label class="relative cursor-pointer group" onclick="toggleTargetIP(false)">
+                            <input type="radio" name="vpn_type" value="l2tp" class="peer sr-only" />
+                            <div
+                                class="h-full p-4 rounded-xl border-2 border-base-300 bg-base-100 peer-checked:border-primary peer-checked:bg-primary/5 transition-all hover:border-primary/50 flex flex-col items-center text-center">
+                                <i class="bi bi-hdd-network text-2xl mb-2 text-neutral"></i>
+                                <span class="font-bold text-xs uppercase tracking-tighter">L2TP/IPSec</span>
+                                <span class="text-[9px] opacity-60 leading-tight mt-2 hidden md:block">Kompatibilitas
+                                    Luas.</span>
+                            </div>
+                            <div class="absolute top-2 right-2 peer-checked:block hidden">
+                                <i class="bi bi-check-circle-fill text-primary text-xs"></i>
+                            </div>
+                        </label>
+
+                        <!-- SSTP -->
+                        <label class="relative cursor-pointer group" onclick="toggleTargetIP(false)">
+                            <input type="radio" name="vpn_type" value="sstp" class="peer sr-only" />
+                            <div
+                                class="h-full p-4 rounded-xl border-2 border-base-300 bg-base-100 peer-checked:border-primary peer-checked:bg-primary/5 transition-all hover:border-primary/50 flex flex-col items-center text-center">
+                                <i class="bi bi-lock-fill text-2xl mb-2 text-success"></i>
+                                <span class="font-bold text-xs uppercase tracking-tighter">SSTP (HTTPS)</span>
+                                <span class="text-[9px] opacity-60 leading-tight mt-2 hidden md:block">Sakti Tembus
+                                    Blokir.</span>
+                            </div>
+                            <div class="absolute top-2 right-2 peer-checked:block hidden">
+                                <i class="bi bi-check-circle-fill text-primary text-xs"></i>
+                            </div>
+                        </label>
+
+                        <!-- Local -->
+                        <label class="relative cursor-pointer group" onclick="toggleTargetIP(true)">
+                            <input type="radio" name="vpn_type" value="direct_local" class="peer sr-only" />
+                            <div
+                                class="h-full p-4 rounded-xl border-2 border-base-300 bg-base-100 peer-checked:border-primary peer-checked:bg-primary/5 transition-all hover:border-primary/50 flex flex-col items-center text-center">
+                                <i class="bi bi-ethernet text-2xl mb-2 text-info"></i>
+                                <span class="font-bold text-xs uppercase tracking-tighter">Direct Local</span>
+                                <span class="text-[9px] opacity-60 leading-tight mt-2 hidden md:block">Tanpa VPN (1
+                                    Jaringan).</span>
+                            </div>
+                            <div class="absolute top-2 right-2 peer-checked:block hidden">
+                                <i class="bi bi-check-circle-fill text-primary text-xs"></i>
+                            </div>
+                        </label>
+
+                        <!-- Public IP -->
+                        <label class="relative cursor-pointer group" onclick="toggleTargetIP(true)">
+                            <input type="radio" name="vpn_type" value="public_ip" class="peer sr-only" />
+                            <div
+                                class="h-full p-4 rounded-xl border-2 border-base-300 bg-base-100 peer-checked:border-primary peer-checked:bg-primary/5 transition-all hover:border-primary/50 flex flex-col items-center text-center">
+                                <i class="bi bi-globe text-2xl mb-2 text-amber-500"></i>
+                                <span class="font-bold text-xs uppercase tracking-tighter">Public IP</span>
+                                <span class="text-[9px] opacity-60 leading-tight mt-2 hidden md:block">Tembak IP Public
+                                    Langsung.</span>
+                            </div>
+                            <div class="absolute top-2 right-2 peer-checked:block hidden">
+                                <i class="bi bi-check-circle-fill text-primary text-xs"></i>
+                            </div>
+                        </label>
+
+                        <!-- ZeroTier -->
+                        <label class="relative cursor-pointer group" onclick="toggleTargetIP(true)">
+                            <input type="radio" name="vpn_type" value="zerotier" class="peer sr-only" />
+                            <div
+                                class="h-full p-4 rounded-xl border-2 border-base-300 bg-base-100 peer-checked:border-primary peer-checked:bg-primary/5 transition-all hover:border-primary/50 flex flex-col items-center text-center">
+                                <i class="bi bi-grid-3x3-gap text-2xl mb-2 text-secondary"></i>
+                                <span class="font-bold text-xs uppercase tracking-tighter">ZeroTier</span>
+                                <span class="text-[9px] opacity-60 leading-tight mt-2 hidden md:block">Mesh VPN Mikrotik
+                                    v7.</span>
+                            </div>
+                            <div class="absolute top-2 right-2 peer-checked:block hidden">
+                                <i class="bi bi-check-circle-fill text-primary text-xs"></i>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Dynamic Target IP Input -->
+                    <div id="target_ip_container" class="mt-6 hidden">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-bold text-primary">IP Address Mikrotik / ZT-IP</span>
+                            </label>
+                            <div class="relative">
+                                <i
+                                    class="bi bi-geo-fill absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-50"></i>
+                                <input type="text" name="target_ip"
+                                    class="input input-bordered w-full pl-12 border-primary/30 focus:border-primary bg-primary/5"
+                                    placeholder="contoh: 192.168.1.1 atau 10.147.x.x">
+                            </div>
+                            <label class="label">
+                                <span class="label-text-alt opacity-50">Masukkan IP yang bisa dijangkau oleh server
+                                    Mikrofun.</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function toggleTargetIP(show) {
+                        const container = document.getElementById('target_ip_container');
+                        if (show) {
+                            container.style.display = 'block';
+                            container.querySelector('input').setAttribute('required', 'required');
+                        } else {
+                            container.style.display = 'none';
+                            container.querySelector('input').removeAttribute('required');
+                        }
+                    }
+                </script>
+            </div>
+        </div>
+
+        <!-- API Integration Card -->
+        <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+            <div class="card-body p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="bi bi-lightning-charge-fill text-xl text-warning"></i>
+                    <h3 class="font-bold text-lg">Mikrotik API Connection</h3>
+                    <span class="badge badge-outline badge-xs opacity-50 uppercase">Optional</span>
+                </div>
+                <p class="text-xs opacity-50 mb-6 font-medium">Diperlukan untuk fitur Monitoring, Kill Session, dan
+                    Isolir pelanggan secara realtime.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text text-xs font-bold opacity-70">Username API</span>
+                        </label>
+                        <input type="text" name="api_user"
+                            class="input input-sm input-bordered w-full focus:input-primary" placeholder="admin">
+                    </div>
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text text-xs font-bold opacity-70">Password API</span>
+                        </label>
+                        <input type="password" name="api_password"
+                            class="input input-sm input-bordered w-full focus:input-primary">
+                    </div>
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text text-xs font-bold opacity-70">Port API</span>
+                        </label>
+                        <input type="number" name="api_port"
+                            class="input input-sm input-bordered w-full focus:input-primary" value="8728">
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-info/5 rounded-xl border border-info/20 flex gap-4 items-start">
+                    <i class="bi bi-info-circle-fill text-info text-xl"></i>
+                    <div class="text-[11px] leading-relaxed opacity-80">
+                        <b class="text-info">Tips Keamanan:</b> Sangat disarankan membuat User khusus di Mikrotik (Group
+                        API) daripada menggunakan user <i>admin</i> utama. Pastikan servis API di Mikrotik aktif di menu
+                        <code>/ip service</code>.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div
+            class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 bg-base-100 rounded-2xl shadow-lg border border-primary/20">
+            <div class="flex items-center gap-4">
+                <div class="bg-primary/10 p-3 rounded-xl">
+                    <i class="bi bi-stars text-primary text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] max-w-[340px] leading-tight opacity-70">
+                        Sistem akan mengalokasikan <b>IP Private</b> dan <b>Secret Kredensial</b> secara otomatis.
+                    </p>
+                    <p class="text-[11px] opacity-50 mt-1">Script konfigurasi akan muncul di halaman berikutnya.</p>
+                </div>
+            </div>
+            <div class="flex gap-2 w-full md:w-auto">
+                <button type="submit" class="btn btn-primary flex-1 md:flex-none shadow-xl shadow-primary/30 px-10">
+                    Generate & Daftarkan Router
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

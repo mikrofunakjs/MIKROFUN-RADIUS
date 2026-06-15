@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="flex flex-col h-[calc(100vh-120px)] lg:h-[calc(100vh-100px)]">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4 px-1">
+        <div>
+            <h1 class="text-2xl font-black text-primary flex items-center gap-2">
+                <i class="bi bi-cpu-fill text-orange-500"></i> Mikhmon v3
+            </h1>
+            <p class="text-xs opacity-50">Manajemen Hotspot via Proxy Internal</p>
+        </div>
+        <div class="alert alert-warning py-2 px-4 shadow-sm border-none bg-orange-100 text-orange-800 text-xs flex gap-2 items-center">
+            <i class="bi bi-info-circle-fill"></i>
+            <div>
+                <strong>Tips MikroTunnel:</strong> Gunakan <b>IP Internal (10.x.x.x)</b> dari menu MikroTunnel jika router menggunakan VPN.
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="reloadMikhmon()" class="btn btn-sm btn-outline btn-ghost border-base-300">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <a href="{{ mikhmon_url }}" target="_blank" class="btn btn-sm btn-primary">
+                <i class="bi bi-box-arrow-up-right"></i> Open New Tab
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Container with Loading Overlay -->
+    <div class="relative flex-grow bg-base-200 rounded-2xl border border-base-300 overflow-hidden shadow-inner">
+        
+        <!-- Animated Loading Overlay -->
+        <div id="mikhmon-loader" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-base-100/80 backdrop-blur-sm transition-opacity duration-500">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <p class="mt-4 text-xs font-bold opacity-50 tracking-widest uppercase animate-pulse">Menghubungkan ke Mikhmon...</p>
+        </div>
+
+        <!-- The iFrame -->
+        <iframe 
+            id="mikhmon-frame"
+            src="{{ mikhmon_url }}" 
+            class="w-full h-full border-none opacity-0 transition-opacity duration-700" 
+            title="Mikhmon Interface"
+            onload="hideLoader()">
+        </iframe>
+    </div>
+</div>
+
+<style>
+    /* Prevent the white flash by matching background early */
+    #mikhmon-frame {
+        background-color: transparent !important;
+    }
+    
+    /* Ensure the container doesn't have ugly scrollbars while loading */
+    .no-scroll {
+        overflow: hidden !important;
+    }
+</style>
+
+<script>
+    const frame = document.getElementById('mikhmon-frame');
+    const loader = document.getElementById('mikhmon-loader');
+
+    function hideLoader() {
+        // Delay slightly for smoother transition after content is ready
+        setTimeout(() => {
+            loader.classList.add('opacity-0');
+            frame.classList.remove('opacity-0');
+            frame.classList.add('opacity-100');
+            
+            // Wait for fade out animation before hiding element
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 500);
+        }, 300);
+    }
+
+    function reloadMikhmon() {
+        // Show loader again during manual refresh
+        loader.style.display = 'flex';
+        loader.classList.remove('opacity-0');
+        frame.classList.add('opacity-0');
+        
+        // Refresh frame
+        frame.src = frame.src;
+    }
+
+    // Monitor internal navigation clicks inside iframe to show loader if possible
+    // Note: Due to same-origin (proxy), we might be able to detect page changes
+    frame.addEventListener('load', function() {
+        const frameWindow = frame.contentWindow;
+        
+        // Add click listener to all anchors inside the iframe to trigger loader
+        try {
+            frameWindow.addEventListener('beforeunload', function() {
+                loader.style.display = 'flex';
+                loader.classList.remove('opacity-0');
+                frame.classList.add('opacity-0');
+            });
+        } catch (e) {
+            // Cross-origin issues might prevent this, but since it's proxied to localhost
+            // on the same domain as Flask, it should work fine.
+            console.log("Iframe monitoring set up");
+        }
+    });
+
+</script>
+
+{% endblock %}

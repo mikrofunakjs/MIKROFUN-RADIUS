@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Tambah Mitra Reseller{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Tambah Mitra Reseller</h1>
+    <p class="text-sm text-gray-500 mt-1">Daftarkan akun khusus untuk agen penjualan voucher Anda.</p>
+</div>
+
+<div class="card bg-base-100 shadow-xl max-w-2xl border border-base-200">
+    <div class="card-body">
+        <form method="POST">
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Username / Nama Panggilan</span></label>
+                <input type="text" name="username" class="input input-bordered w-full" placeholder="contoh: konter_udin"
+                    required>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text font-bold">Password Login</span></label>
+                <input type="password" name="password" class="input input-bordered w-full"
+                    placeholder="Minimal 6 karakter" required>
+            </div>
+
+            <div class="divider">Keuntungan Mitra</div>
+
+            <div class="form-control mb-6">
+                <label class="label">
+                    <span class="label-text font-bold">Persentase Diskon Penjualan (%)</span>
+                    <span class="label-text-alt text-info tooltip"
+                        data-tip="Contoh: Jika diisi 20, maka voucher Rp 5000 hanya akan memotong Rp 4000 dari saldo Mitra."><i
+                            class="fas fa-info-circle"></i> Info</span>
+                </label>
+                <label class="input-group">
+                    <input type="number" name="discount_percent" class="input input-bordered w-full" value="20" min="0"
+                        max="100" required>
+                    <span>%</span>
+                </label>
+                <label class="label"><span class="label-text-alt text-gray-500">Nilai potongan (keuntungan agen) yang
+                        didapat langsung saat generate voucher.</span></label>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <a href="{{ url_for('reseller_admin.index') }}" class="btn btn-ghost">Batal</a>
+                <button type="submit" class="btn btn-primary px-8">Simpan Mitra</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

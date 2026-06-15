@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+    #map {
+        height: 300px;
+        width: 100%;
+        z-index: 1;
+        border-radius: 0.5rem;
+    }
+</style>
+
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-person-plus"></i> Tambah Customer
+        </h2>
+        <p class="text-sm opacity-60">Input data pelanggan baru (PPPoE / Hotspot)</p>
+    </div>
+
+    <form method="POST" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left Column: Main Data -->
+        <div class="col-span-1 lg:col-span-2 space-y-6">
+            <div class="card bg-base-100 shadow border border-base-200">
+                <div class="card-body">
+                    <h3 class="font-bold text-lg mb-4">Informasi Akun</h3>
+
+                    <div class="form-control mb-4">
+                        <label class="label"><span class="label-text font-medium">Nama Lengkap</span></label>
+                        <input type="text" name="name" class="input input-bordered w-full"
+                            placeholder="Contoh: Budi Santoso" required>
+                    </div>
+
+
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-medium">Pilih Profile /
+                                    Paket</span></label>
+                            <select name="profile_id" id="profileSelect" class="select select-bordered w-full" required>
+                                <option value="">-- Pilih Router dulu --</option>
+                                {% for p in profiles %}
+                                <option value="{{ p.id }}">{{ p.name }} ({{ p.rate_limit or 'Unlimited' }}) - Rp {{
+                                    "{:,.0f}".format(p.price|float) }}</option>
+                                {% endfor %}
+                            </select>
+                            <label class="label"><span class="label-text-alt opacity-60">Difilter otomatis saat router
+                                    dipilih</span></label>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-medium">Router / NAS</span></label>
+                            <select name="router_id" class="select select-bordered w-full"
+                                onchange="loadProfiles(this.value)">
+                                <option value="">-- Pilih Router --</option>
+                                {% for r in routers %}
+                                <option value="{{ r.id }}">{{ r.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-medium">Tipe Layanan</span></label>
+                            <select name="service_type" class="select select-bordered w-full">
+                                <option value="pppoe">PPPoE (Rumahan)</option>
+                                <option value="hotspot">Hotspot (Voucher)</option>
+                            </select>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-medium">Jatuh Tempo</span></label>
+                            <input type="date" name="due_date" class="input input-bordered w-full">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-medium">No. Telepon / WA</span></label>
+                            <input type="text" name="phone" class="input input-bordered w-full" placeholder="0812...">
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-medium">Alamat</span></label>
+                            <input type="text" name="address" class="input input-bordered w-full"
+                                placeholder="Jl. Mawar No. 12">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-medium">MAC Address <span
+                                        class="text-xs text-base-content/50">(DHCP/IPoE Auth)</span></span></label>
+                            <input type="text" name="mac_address"
+                                class="input input-bordered w-full font-mono uppercase" placeholder="AA:BB:CC:DD:EE:FF"
+                                required>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-medium">Static IP <span
+                                        class="text-xs text-base-content/50">(Optional)</span></span></label>
+                            <input type="text" name="static_ip" class="input input-bordered w-full font-mono"
+                                placeholder="10.10.10.5">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Technical & Map -->
+        <div class="col-span-1 space-y-6">
+            <div class="card bg-base-100 shadow border border-base-200">
+                <div class="card-body p-5">
+                    <h3 class="font-bold text-lg mb-4 text-primary">Data Teknis</h3>
+
+                    <div class="form-control mb-4">
+                        <label class="label"><span class="label-text font-medium">Pilih ODP</span></label>
+                        <select name="odp_id" class="select select-bordered w-full select-sm">
+                            <option value="">-- Tidak Ada --</option>
+                            {% for o in odps %}
+                            <option value="{{ o.id }}" data-coord="{{ o.coordinates }}">{{ o.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-control mb-4">
+                        <label class="label"><span class="label-text font-medium">Port Number</span></label>
+                        <input type="number" name="port_number" class="input input-bordered input-sm w-full"
+                            placeholder="Example: 1">
+                    </div>
+
+                    <div class="form-control mb-2">
+                        <label class="label"><span class="label-text font-medium">Koordinat Rumah</span></label>
+                        <div class="join w-full">
+                            <input type="text" name="coordinates" id="coordInput"
+                                class="input input-bordered input-sm join-item w-full font-mono text-xs"
+                                placeholder="-6..., 106...">
+                            <button type="button" class="btn btn-sm btn-secondary join-item" onclick="openGoogleMaps()">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MAP -->
+                    <div id="map" class="border rounded-lg bg-base-200"></div>
+                    <div class="text-xs text-center mt-2 opacity-50">Klik peta untuk set lokasi</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submission Bottom Bar -->
+        <div class="col-span-1 lg:col-span-3 mt-2">
+            <div class="card bg-base-100 border border-base-200 shadow-sm">
+                <div class="card-body p-4 flex flex-col sm:flex-row items-center gap-3 justify-end">
+                    <a href="{{ url_for('mac_customers.index') }}"
+                        class="btn btn-ghost w-full sm:w-auto order-last sm:order-first">Kembali</a>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto text-lg h-12 shadow-sm px-8">
+                        <i class="bi bi-check-lg"></i> Simpan Data Pelanggan
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    var map = L.map('map').setView([-6.200000, 106.816666], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    var marker;
+
+    function onMapClick(e) {
+        if (marker) map.removeLayer(marker);
+        marker = L.marker(e.latlng).addTo(map);
+
+        var lat = e.latlng.lat.toFixed(6);
+        var lng = e.latlng.lng.toFixed(6);
+        document.getElementById('coordInput').value = lat + ", " + lng;
+    }
+
+    map.on('click', onMapClick);
+
+    function openGoogleMaps() {
+        var coord = document.getElementById('coordInput').value;
+        if (coord) window.open('https://www.google.com/maps?q=' + coord, '_blank');
+    }
+
+    // Auto-center map if ODP is selected
+    var odpSelect = document.querySelector('select[name="odp_id"]');
+    if (odpSelect) {
+        odpSelect.addEventListener('change', function () {
+            var selectedOption = this.options[this.selectedIndex];
+            var coord = selectedOption.getAttribute('data-coord');
+            if (coord) {
+                var parts = coord.split(',');
+                if (parts.length == 2) {
+                    var lat = parseFloat(parts[0]);
+                    var lng = parseFloat(parts[1]);
+                    map.setView([lat, lng], 16);
+                }
+            }
+        });
+    }
+
+    // === AJAX: Load profiles filtered by router ===
+    function loadProfiles(routerId) {
+        var profileSel = document.getElementById('profileSelect');
+        if (!profileSel) return;
+
+        var url = '/profiles/api/by_router?type=pppoe';
+        if (routerId) url += '&router_id=' + routerId;
+
+        profileSel.innerHTML = '<option value="">Memuat paket...</option>';
+        fetch(url)
+            .then(function (r) { return r.json(); })
+            .then(function (profiles) {
+                profileSel.innerHTML = '<option value="">-- Pilih Paket --</option>';
+                if (profiles.length === 0) {
+                    profileSel.innerHTML += '<option value="" disabled>Tidak ada profil untuk router ini</option>';
+                }
+                profiles.forEach(function (p) {
+                    var price = p.price ? 'Rp ' + Number(p.price).toLocaleString('id-ID') : '';
+                    var label = p.name + ' (' + (p.rate_limit || 'Unlimited') + ')' + (price ? ' - ' + price : '');
+                    profileSel.innerHTML += '<option value="' + p.id + '">' + label + '</option>';
+                });
+            })
+            .catch(function () { profileSel.innerHTML = '<option value="">Error memuat profile</option>'; });
+    }
+</script>
+{% endblock %}

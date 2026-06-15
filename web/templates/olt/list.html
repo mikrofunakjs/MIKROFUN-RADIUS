@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div>
+        <h2 class="text-3xl font-black flex items-center gap-3 text-primary">
+            <i class="bi bi-hdd-rack-fill"></i> OLT Infrastructure
+        </h2>
+        <p class="text-sm opacity-60 font-medium">Monitoring & Manajemen Perangkat Optical Line Terminal</p>
+    </div>
+    <div class="flex gap-2 w-full md:w-auto">
+        <a href="{{ url_for('olt.import_excel') }}" class="btn btn-outline btn-sm gap-2">
+            <i class="bi bi-file-earmark-excel"></i> Import XLSX
+        </a>
+        <a href="{{ url_for('olt.add') }}" class="btn btn-primary btn-sm gap-2 shadow-lg shadow-primary/20">
+            <i class="bi bi-plus-circle-fill"></i> Register OLT
+        </a>
+    </div>
+</div>
+
+<!-- Info Guide -->
+<div class="alert shadow-sm mb-8 border border-info/20 bg-info/5 text-info-content">
+    <i class="bi bi-info-circle-fill text-2xl text-info"></i>
+    <div>
+        <h3 class="font-bold">Panduan Infrastruktur OLT</h3>
+        <div class="text-xs opacity-80 mt-1">OLT (Optical Line Terminal) adalah perangkat sentral di sisi provider.
+            Tambahkan data OLT beserta IP Management dan kapasitas PON port-nya. Data ini digunakan untuk memantau
+            utilitas jaringan fiber optic Anda.</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for o in olts %}
+    <div
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary/30 transition-all group overflow-hidden">
+        <!-- Card Header with Accent -->
+        <div class="h-1.5 w-full bg-primary/10 group-hover:bg-primary transition-colors"></div>
+
+        <div class="card-body p-6">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary text-xl font-black">
+                        {{ o.name[0]|upper }}
+                    </div>
+                    <div>
+                        <h3 class="font-black text-lg leading-tight">{{ o.name }}</h3>
+                        <p class="text-[10px] uppercase font-bold opacity-40 tracking-widest">{{ o.brand or 'Generic' }}
+                            {{ o.model or '' }}</p>
+                    </div>
+                </div>
+                <div class="badge badge-success badge-xs gap-1 font-bold p-2.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> ONLINE
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <!-- IP & Port Info -->
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2 opacity-70">
+                        <i class="bi bi-hdd-network"></i>
+                        <span class="font-medium">Management IP</span>
+                    </div>
+                    <code
+                        class="text-primary font-bold bg-primary/5 px-2 py-0.5 rounded text-xs">{{ o.ip_address }}</code>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2 opacity-70">
+                        <i class="bi bi-diagram-3"></i>
+                        <span class="font-medium">Fiber Ports</span>
+                    </div>
+                    <span class="font-black">{{ o.total_ports }} PON Ports</span>
+                </div>
+            </div>
+
+            <!-- Capacity Visualization -->
+            <div class="mb-6">
+                <div class="flex justify-between items-end mb-1">
+                    <span class="text-[10px] font-black uppercase opacity-40">Port Utilization</span>
+                    <span class="text-xs font-bold text-primary">0%</span>
+                </div>
+                <div class="w-full bg-base-200 h-2 rounded-full overflow-hidden">
+                    <div class="bg-primary h-full transition-all duration-1000" style="width: 5%"></div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-between items-center pt-4 border-t border-base-100">
+                <div class="flex gap-1">
+                    <a href="{{ url_for('olt.edit', id=o.id) }}" class="btn btn-ghost btn-sm btn-square"
+                        title="Edit Configuration">
+                        <i class="bi bi-gear-fill"></i>
+                    </a>
+                    <a href="{{ url_for('olt.delete', id=o.id) }}" class="btn btn-ghost btn-sm btn-square text-error"
+                        onclick="return confirm('Apakah Anda yakin ingin menghapus infrastruktur OLT {{ o.name }}?')"
+                        title="Decommission">
+                        <i class="bi bi-trash3-fill"></i>
+                    </a>
+                </div>
+                <button class="btn btn-primary btn-sm px-4 rounded-xl">
+                    Full Details <i class="bi bi-arrow-right-short"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-span-full">
+        <div class="card bg-base-100 border-2 border-dashed border-base-300 py-16 text-center">
+            <div class="opacity-20 mb-4">
+                <i class="bi bi-hdd-rack text-8xl"></i>
+            </div>
+            <h3 class="text-xl font-bold opacity-60">Belum ada infrastruktur OLT</h3>
+            <p class="text-sm opacity-40 mt-1 max-w-xs mx-auto">Daftarkan perangkat OLT Anda untuk memantau kapasitas
+                port dan sebaran ODP secara real-time.</p>
+            <div class="mt-6">
+                <a href="{{ url_for('olt.add') }}" class="btn btn-primary btn-sm px-8">Tambah OLT Pertama</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

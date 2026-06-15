@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}CS Operation Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">Hallo, {{ session.username|title }}! 👋</h1>
+        <p class="text-base-content/70 mt-1">Selamat datang di Panel Operasional Customer Service.</p>
+    </div>
+
+    <!-- Quick Stats for CS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center text-2xl">
+                        <i class="bi bi-person-check-fill"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-gray-500 uppercase">Klien Aktif</div>
+                        <div class="text-2xl font-black text-gray-800">{{ stats.active_customers }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-error/10 text-error flex items-center justify-center text-2xl">
+                        <i class="bi bi-person-dash-fill"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-gray-500 uppercase">Klien Isolir / Nunggak</div>
+                        <div class="text-2xl font-black text-error">{{ stats.isolated_customers }}</div>
+                        <a href="{{ url_for('customers.index') }}"
+                            class="text-[10px] text-primary hover:underline">Follow up sekarang &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center text-2xl">
+                        <i class="bi bi-headset"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-gray-500 uppercase">Tiket Keluhan Terbuka</div>
+                        <div class="text-2xl font-black text-gray-800">{{ stats.open_tickets }}</div>
+                        {% if stats.open_tickets > 0 %}
+                        <a href="{{ url_for('helpdesk.index') }}"
+                            class="text-[10px] text-primary font-bold hover:underline">Tugaskan Teknisi &rarr;</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-info/10 text-info flex items-center justify-center text-2xl">
+                        <i class="bi bi-ticket-perforated"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-gray-500 uppercase">Persetujuan Voucher</div>
+                        <div class="text-2xl font-black text-gray-800">{{ stats.pending_vouchers }}</div>
+                        {% if stats.pending_vouchers > 0 %}
+                        <a href="{{ url_for('vouchers.history') }}"
+                            class="text-[10px] text-primary font-bold hover:underline">Proses Cetak &rarr;</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Main Operational Area -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- Tickets Panel -->
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body p-0">
+                <div class="px-6 py-4 border-b border-base-200 flex justify-between items-center bg-gray-50/50">
+                    <h2 class="font-bold text-gray-800"><i class="bi bi-list-task mr-2 text-primary"></i> 5 Tiket
+                        Keluhan Terbaru</h2>
+                    <a href="{{ url_for('helpdesk.index') }}" class="btn btn-xs btn-outline">Lihat Semua</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <tbody>
+                            {% for t in tickets %}
+                            <tr class="hover:bg-gray-50">
+                                <td>
+                                    <div class="font-bold text-gray-800">{{ t.subject }}</div>
+                                    <div class="text-xs text-gray-500">{{ t.customer_name }} &bull; {{
+                                        t.created_at.strftime('%d %b %H:%M') }}</div>
+                                </td>
+                                <td class="text-right">
+                                    {% if t.status == 'open' %}
+                                    <span class="badge badge-warning badge-sm">Buka</span>
+                                    {% elif t.status == 'in_progress' %}
+                                    <span class="badge badge-info badge-sm">Dikerjakan</span>
+                                    {% else %}
+                                    <span class="badge badge-success badge-sm text-white">Selesai</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center py-8 text-gray-400">
+                                    <i class="bi bi-emoji-smile text-3xl mb-2 block"></i>
+                                    Tidak ada tiket keluhan aktif.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Panel -->
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body">
+                <h2 class="font-bold text-gray-800 border-b pb-3 mb-4"><i
+                        class="bi bi-lightning-charge mr-2 text-warning"></i> Jalan Pintas CS</h2>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <a href="{{ url_for('customers.index') }}"
+                        class="btn h-auto py-4 bg-blue-50 hover:bg-blue-100 border-0 flex flex-col gap-2 items-center justify-center text-blue-800">
+                        <i class="bi bi-person-lines-fill text-3xl"></i>
+                        <span class="font-bold">Daftar Pelanggan</span>
+                    </a>
+
+                    <a href="{{ url_for('vouchers.history') }}"
+                        class="btn h-auto py-4 bg-orange-50 hover:bg-orange-100 border-0 flex flex-col gap-2 items-center justify-center text-orange-800">
+                        <i class="bi bi-printer-fill text-3xl"></i>
+                        <span class="font-bold">Loket Kasir Voucher</span>
+                    </a>
+
+                    <a href="{{ url_for('billing.index') }}"
+                        class="btn h-auto py-4 bg-green-50 hover:bg-green-100 border-0 flex flex-col gap-2 items-center justify-center text-green-800">
+                        <i class="bi bi-receipt-cutoff text-3xl"></i>
+                        <span class="font-bold">Konfirmasi Tagihan</span>
+                    </a>
+
+                    <a href="{{ url_for('helpdesk.index') }}"
+                        class="btn h-auto py-4 bg-purple-50 hover:bg-purple-100 border-0 flex flex-col gap-2 items-center justify-center text-purple-800">
+                        <i class="bi bi-headset text-3xl"></i>
+                        <span class="font-bold">Buat Tiket Baru</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

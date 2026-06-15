@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-router text-info"></i> ACS — Panduan Setup TR-069
+        </h2>
+        <p class="text-sm opacity-60">Konfigurasi yang harus diisi di router pelanggan agar bisa dikontrol dari
+            MikroFun.</p>
+    </div>
+
+    <!-- ACS URL Info Card -->
+    <div class="card bg-primary text-primary-content shadow mb-6">
+        <div class="card-body">
+            <h3 class="font-bold text-lg mb-3">📡 URL ACS Server MikroFun</h3>
+            <div class="flex items-center gap-3 flex-wrap">
+                <code id="acsUrl" class="bg-black/20 rounded-lg px-4 py-2 text-lg font-mono font-bold select-all">
+                    http://{{ server_ip }}:7547/acs/cwmp
+                </code>
+                <button onclick="copyUrl()" class="btn btn-ghost btn-sm gap-1">
+                    <i class="bi bi-clipboard"></i> Salin
+                </button>
+            </div>
+            <p class="text-sm opacity-75 mt-2">
+                * Gunakan HTTPS jika MikroFun sudah menggunakan SSL/TLS.
+            </p>
+        </div>
+    </div>
+
+    <!-- Config Steps -->
+    <div class="card bg-base-100 shadow border border-base-200 mb-5">
+        <div class="card-body">
+            <h3 class="font-bold mb-4">📋 Langkah Konfigurasi di Router Pelanggan</h3>
+            <div class="steps steps-vertical">
+                <div class="step step-primary">
+                    <div class="step-content text-left ml-4">
+                        <div class="font-bold text-sm">Login ke router pelanggan</div>
+                        <p class="text-xs opacity-60">Masuk ke halaman admin router (biasanya 192.168.1.1)</p>
+                    </div>
+                </div>
+                <div class="step step-primary">
+                    <div class="step-content text-left ml-4">
+                        <div class="font-bold text-sm">Cari menu TR-069 / CWMP / Remote Management</div>
+                        <p class="text-xs opacity-60">Biasanya ada di menu Administration, Management, atau Advanced.
+                        </p>
+                    </div>
+                </div>
+                <div class="step step-primary">
+                    <div class="step-content text-left ml-4">
+                        <div class="font-bold text-sm">Isi parameter berikut:</div>
+                        <div class="overflow-x-auto mt-2">
+                            <table class="table table-sm table-bordered text-xs">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Nilai</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>ACS URL</td>
+                                        <td class="font-mono">http://{{ server_ip }}:7547/acs/cwmp</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Enable CWMP / TR-069</td>
+                                        <td>✅ Enable / ON</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Inform Enable</td>
+                                        <td>✅ Enable</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Inform Interval</td>
+                                        <td>300 (detik)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>ACS Username</td>
+                                        <td>mikrofun <span class="opacity-50">(opsional)</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>ACS Password</td>
+                                        <td><span class="opacity-50">kosongkan atau isi bebas</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="step step-primary">
+                    <div class="step-content text-left ml-4">
+                        <div class="font-bold text-sm">Simpan dan tunggu 1-5 menit</div>
+                        <p class="text-xs opacity-60">Router akan otomatis check-in ke MikroFun ACS. Device akan muncul
+                            di menu ACS → Manajemen CPE.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Port Info -->
+    <div class="alert alert-info mb-5">
+        <i class="bi bi-info-circle text-lg"></i>
+        <div>
+            <div class="font-bold">Pastikan Port 7547 Terbuka di VPS</div>
+            <p class="text-sm">Jalankan perintah berikut di VPS untuk membuka port ACS:</p>
+            <code class="text-xs bg-black/20 rounded px-2 py-1 mt-1 block">sudo ufw allow 7547/tcp</code>
+        </div>
+    </div>
+
+    <!-- Compatible Devices -->
+    <div class="card bg-base-100 shadow border border-base-200 mb-5">
+        <div class="card-body">
+            <h3 class="font-bold mb-3">🔌 Perangkat yang Kompatibel (TR-069)</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {% for brand in ['ZTE F670/F609', 'Huawei HG8245', 'TP-Link TD-W89xx', 'Fiberhome AN5506',
+                'Alcatel-Lucent', 'Mikrotik* (via script)'] %}
+                <div class="badge badge-ghost gap-1 py-3"><i class="bi bi-check-circle text-success"></i> {{ brand }}
+                </div>
+                {% endfor %}
+            </div>
+            <p class="text-xs opacity-50 mt-3">* Router Mikrotik tidak support TR-069 native, tapi bisa dijembatani
+                dengan tool terpisah.</p>
+        </div>
+    </div>
+
+    <a href="{{ url_for('acs.index') }}" class="btn btn-ghost btn-sm">
+        ← Kembali ke Device List
+    </a>
+</div>
+
+<script>
+    function copyUrl() {
+        var url = document.getElementById('acsUrl').textContent.trim();
+        navigator.clipboard.writeText(url).then(function () {
+            alert('URL ACS disalin: ' + url);
+        });
+    }
+</script>
+{% endblock %}

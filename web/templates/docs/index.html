@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto pb-10">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold flex items-center gap-3">
+            <i class="bi bi-journal-text text-primary"></i> Pusat Panduan & Bantuan
+        </h2>
+        <p class="text-sm opacity-60 mt-2">Panduan lengkap dan menyeluruh mengenai seluruh fitur MikroFun Radius untuk
+            Admin.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+        <!-- Table of Contents (Sidebar) -->
+        <div class="lg:col-span-1 hidden lg:block">
+            <div class="sticky top-6">
+                <ul class="menu bg-base-100 w-full rounded-box shadow-sm border border-base-200 text-sm">
+                    <li class="menu-title text-primary"><i class="bi bi-list-stars"></i> Daftar Isi</li>
+                    <li><a href="#dashboard"><i class="bi bi-speedometer2"></i> 1. Dashboard</a></li>
+                    <li><a href="#pppoe"><i class="bi bi-house-door"></i> 2. Internet Rumahan (PPPoE)</a></li>
+                    <li><a href="#hotspot"><i class="bi bi-wifi"></i> 3. Internet Voucher (Hotspot)</a></li>
+                    <li><a href="#billing"><i class="bi bi-receipt"></i> 4. Tagihan & Pembayaran</a></li>
+                    <li><a href="#network"><i class="bi bi-hdd-network"></i> 5. Manajemen Jaringan</a></li>
+                    <li><a href="#landing"><i class="bi bi-window"></i> 6. Landing Page & Web</a></li>
+                    <li><a href="#helpdesk"><i class="bi bi-headset"></i> 7. Helpdesk & Teknisi</a></li>
+                    <li><a href="#notif"><i class="bi bi-bell"></i> 8. Notifikasi & Gateway</a></li>
+                    <li><a href="#security"><i class="bi bi-shield-check"></i> 9. Keamanan Akun & Backup</a></li>
+                    <li><a href="#premium"><i class="bi bi-shield-lock"></i> 10. Lisensi Premium</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Content (FAQ Accordions) -->
+        <div class="lg:col-span-3 space-y-12">
+
+            <!-- 1. Dashboard -->
+            <section id="dashboard" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-speedometer2 text-primary"></i> 1. Dashboard Utama</h3>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-dashboard" checked />
+                    <div class="collapse-title text-md font-bold text-gray-800">Apa fungsi halaman Dashboard?</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Dashboard adalah halaman pertama saat Admin login. Berfungsi untuk merangkum status seluruh
+                            bisnis Anda secara sekilas:</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>Total pelanggan aktif, terisolir (menunggak), dan total router yang online.</li>
+                            <li>Terdapat 3 tombol peringatan cepat: <b class="text-error">Pelanggan Menunggak
+                                    (Tunggakan)</b>, <b class="text-success">Tagihan Lunas Bulan Ini</b>, dan peringatan
+                                <b class="text-error">Router Offline</b>.
+                            </li>
+                            <li>Akses cepat ke portal klien dan teknisi.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. PPPoE -->
+            <section id="pppoe" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-house-door text-info"></i> 2. Internet Rumahan (PPPoE)</h3>
+
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-pppoe" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Bagaimana Cara Mendaftarkan Pelanggan
+                        Bulanan Baru?</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <ul class="list-decimal pl-5 space-y-1">
+                            <li>Pertama, pastikan Anda sudah menambahkan <b>Paket Internet</b> (Profil PPPoE) di menu <b
+                                    class="text-primary">Master Data -> Daftar Profil</b>.</li>
+                            <li>Buka menu <b class="text-primary">Internet Rumahan -> Data Pelanggan</b>.</li>
+                            <li>Klik tombol biru <b>+ Tambah Pelanggan Baru</b> di sudut kanan atas.</li>
+                            <li>Isi informasi PPPoE (Username & Password harus sama dengan konfigurasi di Modem
+                                Pelanggan), pilih paket langganan, dan tentukan TANGGAL JATUH TEMPO.</li>
+                            <li>Klik Simpan. Sistem MikroFun akan otomatis membuatkan Secret PPPoE pada mikrotik Anda
+                                (jika Auto-Sync aktif).</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-pppoe" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Bagaimana Cara Mengisolir (Blokir)
+                        Pelanggan Menunggak?</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>MikroFun Radius mendukung dua cara:</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><b>Otomatis</b>: Aplikasi memiliki <i>Cron Job</i> (Background Task) yang secara konstan
+                                mengecek tanggal jatuh tempo. Jika pelanggan belum membayar hingga H+1 tenggat waktu,
+                                sistem otomatis mengganti Profil Mikrotik mereka ke profil isolir (kecepatan 0 atau
+                                dibelokkan ke web peringatan).</li>
+                            <li><b>Manual</b>: Di Data Pelanggan, klik tombol <b>Aksi -> Paksa Isolir</b>. Kapanpun Anda
+                                mau, koneksi mereka akan langsung diputus. Untuk membuka blokir, perbarui status
+                                pembayarannya atau klik tombol <b>Aksi -> Buka Isolir</b>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Hotspot -->
+            <section id="hotspot" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-wifi text-warning"></i> 3. Internet Voucher (Hotspot)</h3>
+
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-hotspot" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Bagaimana Cara Membuat Kode Voucher
+                        (Generate Batch)?</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <ul class="list-decimal pl-5 space-y-1">
+                            <li>Pastikan ada paket voucher di <b class="text-primary">Master Data -> Daftar Profil</b>
+                                (Tipe: Voucher).</li>
+                            <li>Pergi ke menu <b class="text-primary">Internet Voucher -> Data Voucher</b>.</li>
+                            <li>Klik <b>Generate Voucher</b>. Masukkan jumlah voucher yang ingin dibuat (misal 50
+                                lembar), beserta format karakternya.</li>
+                            <li>Setelah digenerate, mikrotik akan menerima 50 data User Hotspot baru, dan Anda akan
+                                dialihkan ke halaman Print/Cetak untuk menggunting kode voucher fisik.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-hotspot" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Bagaimana Klien Membeli Voucher Secara
+                        Online?</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Aplikasi ini memiliki E-Commerce Bawaan di Portal Klien.</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>Klien mengakses Web Landing Page dan masuk ke <b>Portal Klien</b> (membuat akun
+                                sendiri).</li>
+                            <li>Klien membuka menu <b>Beli Voucher</b>, dan memilih Paket Hotspot yang tersedia.</li>
+                            <li>Klien membayar (Via QRIS/Transfer Midtrans atau Transfer Manual).</li>
+                            <li>Jika via Midtrans, voucher akan otomatis dikirim (Di Generate "On The Fly") ke layar
+                                Klien seketika setelah pembayaran sukses. Jika manual, Anda harus memverifikasi bukti
+                                transfernya di menu <b>Riwayat Penjualan -> Setujui</b> agar Klien mendapatkan kodenya.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Billing -->
+            <section id="billing" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-receipt text-success"></i> 4. Tagihan & Pembayaran (Billing)</h3>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-billing" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Bagaimana Sistem Pembayaran Bekerja?
+                    </div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Ada dua metode utama bagi pelanggan PPPoE untuk melunasi tagihan bulanan:</p>
+                        <ol class="list-decimal pl-5 space-y-1">
+                            <li><b>Otomatis lewat Payment Gateway (Midtrans/Tripay):</b> Direkomendasikan! Jika Klien
+                                membayar lewat portal menggunakan VA/QRIS, Gateway akan mengirim laporan (Webhook) ke
+                                MikroFun secara instan. MikroFun akan mengubah status klien dari "Nunggak" menjadi
+                                "Aktif", memperpanjang masa aktif 1 bulan penuh, dan menyalakan kembali internetnya
+                                meski Admin sedang tidur.</li>
+                            <li><b>Upload Bukti Transfer Manual:</b> Klien mentransfer ke BCA pribadi Admin, memfoto
+                                resi, lalu mengunggahnya. Admin dapat melihat di <b class="text-primary">Billing ->
+                                    Konfirmasi Manual</b>. Admin klik ikon "Mata" lalu pilih "Terima". Koneksi klien
+                                akan otomatis pulih.</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Network -->
+            <section id="network" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-hdd-network text-accent"></i> 5. Manajemen Jaringan (Router & ODP)</h3>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-network" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Menghubungkan & Konfigurasi Data Router
+                        / NAS</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Menu <b class="text-primary">Data Router / NAS</b> adalah jantung sistem MikroFun.</p>
+                        <ul class="list-decimal pl-5 space-y-1">
+                            <li>Klik <b>Tambah Router</b> untuk mendaftarkan Mikrotik baru yang terletak di pusat atau
+                                cabang.</li>
+                            <li>Isi <b>IP Address</b> (IP Publik atau Tunnel VPN Anda), <b>Username</b>, dan <b>Password
+                                    Mikrotik</b>. Port API default adalah 8728 (atau 8729 untuk API-SSL).</li>
+                            <li>Sistem ini menggunakan metode API Mikrotik untuk mendorong data secara sinkronis.
+                                Pastikan Layanan API pada menu `IP > Services` di Mikrotik Anda sudah diaktifkan.</li>
+                            <li>Centang opsi <b>"Status Aktif"</b> jika Anda sudah yakin. Sistem hanya akan menembakkan
+                                konfigurasi (seperti Secret PPPoE baru & otomatisasi Isolir) ke Router yang statusnya
+                                Aktif.</li>
+                            <li>Anda bebas memiliki lebih dari satu Router pada sistem MikroFun ini. Saat membuat
+                                Pelanggan Baru, pastikan Anda menempatkannya di Router yang benar.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-network" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Cara Membaca & Menambah Data ODP
+                        (Optical Distribution Point)</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Fitur <b class="text-primary">Data ODP / Peta</b> memungkinkan ISP memetakan tiang-tiang
+                            distribusi Fiber Optic secara visual di atas peta (Google Maps API / OpenStreetMap).</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><b>Menambah ODP:</b> Buka Peta ODP, tentukan lokasi titik koordinatnya di Peta. Isikan
+                                Kode ODP (misal `ODP-01-Maju`), Rasio Splitter (misal 1:8 atau 1:16), dan Warna Kabel
+                                (Tube).</li>
+                            <li><b>Memasukkan Pelanggan:</b> Saat mendaftarkan Pelanggan Baru di menu PPPoE, Anda bisa
+                                memilih ODP mana ia disambungkan, beserta Port Nomor ke-berapa.</li>
+                            <li><b>Kegunaan:</b> Saat terjadi `Red-Loss` atau kabel putus, Anda / Teknisi bisa langsung
+                                melihat rute kabel dan koordinat pasti kotak ODP mana di lapangan yang perlu dicek. Ini
+                                akan menghemat jam investigasi teknisi di jalanan raya!</li>
+                        </ul>
+                        <div class="alert alert-warning py-2 mt-2 shadow-sm text-xs">Catatan Premium: Fitur Peta ODP dan
+                            GPS Visual mungkin terkunci bagi pemegang versi Free.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Landing Page -->
+            <section id="landing" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-window text-indigo-500"></i> 6. Web Pelanggan (Landing Page)</h3>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-landing" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Manajemen Landing Page Public</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Aplikasi menyediakan Website Promosi yang terbuka untuk publik pada alamat root `/` jika
+                            bukan Admin.</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>Edit teks promosi, alamat WiFi, dan daftar paket internet di menu <b
+                                    class="text-primary">Settings -> Konfigurasi Landing Page</b>.</li>
+                            <li>Sistem memiliki 3 Template Tema Default, dan opsi mengunggah HTML/CSS sendiri melalui
+                                Custom Template.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. Helpdesk & Teknisi -->
+            <section id="helpdesk" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-headset text-pink-500"></i> 7. Helpdesk & Teknisi Lapangan</h3>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-helpdesk" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Alur Tiket Bantuan & Sistem Dispatch
+                        (Penugasan Teknisi)</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Bagaimana sebuah komplain diproses secara profesional menggunakan Sistem Dispatch Lapangan?
+                        </p>
+                        <ol class="list-decimal pl-5 space-y-1">
+                            <li><b>Laporan Diterima:</b> Klien mengajukan keluhan (misal: "LOS Merah") melalui fitur
+                                Bantuan (Tiket) di Portal Klien secara mandiri atau melalui WA CS. Jika via WA, Admin
+                                bisa mengeklik <b>Tambah Tiket Baru</b> atas nama klien tersebut di dashboard Admin.
+                            </li>
+                            <li><b>Dispatch (Tugaskan):</b> Admin membaca keluhannya, masuk ke Menu <b
+                                    class="text-primary">Helpdesk > Tiket Bantuan</b>, lalu klik tombol <b>Tugaskan
+                                    Teknisi</b>. Admin memilih Teknisi mana (Misal: "Budi") yang sedang menganggur untuk
+                                berangkat ke lokasi.</li>
+                            <li><b>Notifikasi Teknisi:</b> Teknisi (Budi) tidak perlu masuk PC. Ia cukup membuka Link
+                                <b>Aplikasi Mobile Teknisi</b> di HP Android/Sub-domain yang telah disediakan.</li>
+                            <li><b>Esekusi Lapangan:</b> Di HP Teknisi, akan muncul satu Pekerjaan Baru (Job). Ia
+                                mengklik <i>Accept</i>. Setelah selesai memanjat tiang atau melakukan perbaikan, Teknisi
+                                tersebut mengklik tombol <i>Selesai</i>.</li>
+                            <li><b>Konfirmasi Lunas:</b> Setelah Teknisi menekan selesai, tiket tersebut di layar Admin
+                                Pusat akan otomatis berpindah status dari <span class="badge badge-warning badge-xs">In
+                                    Progress</span> menjadi <span class="badge badge-success badge-xs">Selesai</span>.
+                                Pelanggan Klien pun bisa melihat laporannya telah ditanggulangi. Sangat efisien!</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. Notifications -->
+            <section id="notif" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-bell text-gray-600"></i> 8. API & Notifikasi</h3>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-notif" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Menyambungkan WhatsApp / Telegram</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Buka <b class="text-primary">Settings -> Profil Aplikasi</b>.</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><b>Fonnte (WhatsApp)</b>: Masukkan API Token dari fonnte.com untuk mengirim pengingat
+                                tagihan ke nomor WA Pelanggan (Premium Only).</li>
+                            <li><b>Tripay/Midtrans</b>: Isikan M-ID, Server Key, dan PIN untuk integrasi Gateway
+                                Pembayaran Otomatis.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. Security & Backups -->
+            <section id="security" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-shield-check text-green-600"></i> 9. Keamanan Akun & Backup Data</h3>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-security" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Bagaimana Cara Mengubah Password Admin &
+                        Staff?</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Agar server tetap aman dari pihak tak bertanggung jawab, jadikan "Update Password" sebagai
+                            kebiasaan wajib.</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><b>Untuk Admin Utama:</b> Ubah username super-admin atau password saat ini dengan
+                                mengeklik foto profil meluncur di pojok layar, masuk ke Menu <b>Edit Profil</b>.</li>
+                            <li><b>Untuk Teknisi Lapangan / Staff CS:</b> Admin pusat harus mendaftarkan mereka terlebih
+                                dahulu melalui <b class="text-primary">Master Data -> Daftar Staff/Teknisi</b>. Jika
+                                pegawai keluar, **segera klik ikon tong sampah / blokir** akun mereka agar layar Portal
+                                Teknisi Mobile di HP pegawai lama putus seketika, mencegah pencurian data pelanggan.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-security" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Panduan Backup & Restore Database Master
+                    </div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>Berbeda dengan layanan Cloud Hosting biasa, MikroFun menyimpan seluruh profil Mikrotik,
+                            tagihan midtrans, dan ODP Anda di dalam satu entitas Database SQL Server ini. Data ini
+                            adalah asuransi bisnis Anda.</p>
+                        <ul class="list-decimal pl-5 space-y-1">
+                            <li><b>Backup Berkala Mutlak:</b> Arahkan kursor ke <b class="text-primary">Settings ->
+                                    Profil Aplikasi & Database</b>. Cari tombol <b>Download Backup (.SQL)</b> lalu
+                                simpan file unduhan hasil <i>export</i> tersebut ke komputer lokal Anda maupun ke
+                                Flashdisk. Lakukan setidaknya *tiap Seminggu Sekali* atau sebulan sekali.</li>
+                            <li><b>Manfaat Backup:</b> Jika VPS Linux/Windows Anda diserang Ransomware atau Hard disk
+                                mikrotik rusak parah, Anda dpt membeli server baru, kemudian sekadar mengupload file
+                                `.SQL` tersebut melalui opsi <b>Restore Database</b>. Maka dalam detik itu juga seluruh
+                                tagihan pelanggan kembali normal.</li>
+                            <li><i>Tips: Jangan mencentang Auto-Backup jika Disk Space Mikrotik Anda terbatas. Unduh
+                                    secara manual jauh lebih dianjurkan bagi RT-RW Net Kecil.</i></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 10. Premium -->
+            <section id="premium" class="scroll-mt-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2 border-b pb-2"><i
+                        class="bi bi-shield-lock text-error"></i> 10. Lisensi Aplikasi</h3>
+                <div class="collapse collapse-plus bg-base-100 mb-2 border border-base-200 shadow-sm">
+                    <input type="radio" name="faq-premium" />
+                    <div class="collapse-title text-md font-bold text-gray-800">Perbedaan Free dan Premium Version</div>
+                    <div class="collapse-content text-sm space-y-3 opacity-80">
+                        <p>MikroFun dapat digunakan secara gratis tanpa batas waktu, namun ada batasan fitur tertentu
+                            (Locked) yang hanya terbuka pada Lisensi Berbayar:</p>
+                        <ul class="list-disc pl-5 font-medium">
+                            <li>Otomasi Payment Gateway (Tripay/Midtrans)</li>
+                            <li>Notifikasi Tagihan WhatsApp Fonnte otomatis</li>
+                            <li>Sistem Peta ODP Koordinat Visual</li>
+                            <li>Manajemen dan Aplikasi Mandiri Teknisi Lapangan (Dispatch Mobile)</li>
+                            <li>Kapasitas Generate Voucher Massal (Free maks 250)</li>
+                        </ul>
+                        <p class="mt-4"><a href="/settings/upgrade" class="btn btn-sm btn-primary">Upgrade Versi
+                                Premium!</a></p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

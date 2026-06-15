@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex items-center gap-3 mb-6">
+    <a href="{{ url_for('vouchers.index') }}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i></a>
+    <div>
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-bar-chart-fill text-primary"></i> Statistik Voucher
+        </h2>
+        <p class="text-xs opacity-50">Overview performa dan penggunaan voucher</p>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    {% for s in summary %}
+    <div class="stat bg-base-100 rounded-xl border border-base-200 shadow-sm">
+        <div class="stat-title text-xs capitalize">{{ s.status }}</div>
+        <div class="stat-value text-xl
+            {{ 'text-info' if s.status=='unused' else
+               'text-success' if s.status=='active' else
+               'text-error' if s.status=='expired' else '' }}">
+            {{ s.c }}
+        </div>
+        {% if s.total %}
+        <div class="stat-desc">Rp {{ "{:,.0f}".format(s.total|float) }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 2 Columns -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+    <!-- By Profile -->
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+            <h3 class="font-bold mb-3 flex items-center gap-2"><i class="bi bi-tag"></i> Per Profil / Paket</h3>
+            <div class="overflow-x-auto">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th class="text-xs">Profil</th>
+                            <th class="text-xs text-end">Total</th>
+                            <th class="text-xs text-end">Terpakai</th>
+                            <th class="text-xs text-end">Pendapatan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in by_profile %}
+                        <tr>
+                            <td class="text-sm font-medium">{{ p.name or 'Unknown' }}</td>
+                            <td class="text-sm text-end">{{ p.c }}</td>
+                            <td class="text-sm text-end text-success">{{ p.used_c }}</td>
+                            <td class="text-sm text-end font-bold">
+                                Rp {{ "{:,.0f}".format((p.revenue or 0)|float) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not by_profile %}
+                        <tr>
+                            <td colspan="4" class="text-center opacity-40 py-4">Belum ada data</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- By Date (Last 30 days) -->
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+            <h3 class="font-bold mb-3 flex items-center gap-2"><i class="bi bi-calendar3"></i> Generate per Hari (30
+                Hari)</h3>
+            <div class="overflow-y-auto max-h-80">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th class="text-xs">Tanggal</th>
+                            <th class="text-xs text-end">Generate</th>
+                            <th class="text-xs text-end">Terpakai</th>
+                            <th class="text-xs text-end">%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in by_date %}
+                        {% set pct = ((d.used_c / d.c)*100)|int if d.c else 0 %}
+                        <tr>
+                            <td class="text-xs">{{ d.day }}</td>
+                            <td class="text-sm text-end">{{ d.c }}</td>
+                            <td class="text-sm text-end text-success">{{ d.used_c }}</td>
+                            <td class="text-end">
+                                <div class="flex items-center gap-1 justify-end">
+                                    <progress class="progress progress-success w-12 h-2" value="{{ pct }}"
+                                        max="100"></progress>
+                                    <span class="text-xs">{{ pct }}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not by_date %}
+                        <tr>
+                            <td colspan="4" class="text-center opacity-40 py-4">Belum ada data 30 hari terakhir</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Batch List -->
+<div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body">
+        <h3 class="font-bold mb-3 flex items-center gap-2"><i class="bi bi-collection"></i> Batch Voucher</h3>
+        <div class="overflow-x-auto">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th class="text-xs">Nama Batch</th>
+                        <th class="text-xs text-end">Total</th>
+                        <th class="text-xs text-end">Unused</th>
+                        <th class="text-xs">Dibuat</th>
+                        <th class="text-xs text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in batches %}
+                    <tr class="hover">
+                        <td class="font-medium text-sm">{{ b.name }}</td>
+                        <td class="text-end text-sm">{{ b.total_v or 0 }}</td>
+                        <td class="text-end text-sm text-info">{{ b.unused_v or 0 }}</td>
+                        <td class="text-xs opacity-60">
+                            {{ b.created_at.strftime('%d/%m/%Y %H:%M') if b.created_at else '-' }}
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('vouchers.index', batch_id=b.id) }}"
+                                class="btn btn-xs btn-ghost">Lihat</a>
+                            <a href="{{ url_for('vouchers.print_batch', batch_id=b.id) }}" target="_blank"
+                                class="btn btn-xs btn-ghost text-primary">
+                                <i class="bi bi-printer"></i>
+                            </a>
+                            <a href="{{ url_for('vouchers.export', batch_id=b.id) }}"
+                                class="btn btn-xs btn-ghost text-success">
+                                <i class="bi bi-file-earmark-excel"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not batches %}
+                    <tr>
+                        <td colspan="5" class="text-center opacity-40 py-6">Belum ada batch</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

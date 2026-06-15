@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Page Header -->
+<div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+    <h2 class="text-2xl font-bold flex items-center gap-2">
+        <i class="bi bi-sliders"></i> Profiles {{ type|upper }}
+    </h2>
+    <div class="flex gap-2 items-center">
+        <a href="{{ url_for('profiles.import_excel') }}" class="btn btn-outline btn-success btn-sm">
+            <i class="bi bi-file-earmark-excel"></i> Import
+        </a>
+        <a href="{{ url_for('profiles.add', type=type) }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Tambah Profile
+        </a>
+    </div>
+</div>
+
+<!-- Filter: Router / Wilayah -->
+<div class="flex flex-wrap gap-2 mb-4 items-center">
+    <span class="text-xs opacity-50 font-semibold uppercase">Filter Wilayah:</span>
+    <a href="{{ url_for('profiles.index', type=type) }}"
+        class="btn btn-xs {{ 'btn-neutral' if not router_filter else 'btn-ghost' }}">Semua</a>
+    {% for r in routers %}
+    <a href="{{ url_for('profiles.index', type=type, router_id=r.id) }}"
+        class="btn btn-xs {{ 'btn-primary' if router_filter|string == r.id|string else 'btn-ghost' }}">
+        {{ r.name }}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- MOBILE CARDS (PWA) -->
+<div class="block lg:hidden flex flex-col gap-4 mb-8">
+    {% for p in profiles %}
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-4 gap-2">
+            <div class="flex justify-between items-start">
+                <h3 class="font-bold text-primary text-lg">{{ p.name }}</h3>
+                <span class="font-mono font-bold text-success text-sm bg-success/10 px-2 py-1 rounded">
+                    Rp {{ "{:,.0f}".format(p.price|float) if p.price else '0' }}
+                </span>
+            </div>
+
+            <div class="flex flex-wrap gap-2 text-xs mt-1">
+                {% if p.router_name %}
+                <span class="badge badge-info badge-sm gap-1 text-white">
+                    <i class="bi bi-hdd-network"></i> {{ p.router_name }}
+                </span>
+                {% else %}
+                <span class="badge badge-ghost badge-sm opacity-50">Global</span>
+                {% endif %}
+                <code class="badge badge-ghost badge-sm font-mono">{{ p.rate_limit or 'No Limit' }}</code>
+                {% if p.quota_limit %}
+                <span class="badge badge-primary badge-sm gap-1">
+                    <i class="bi bi-pie-chart"></i> {{ (p.quota_limit / 1073741824)|round(1) }} GB
+                </span>
+                {% else %}
+                <span class="badge badge-outline badge-sm opacity-50">Unlimited</span>
+                {% endif %}
+                {% if type == 'voucher' %}
+                <span class="badge badge-ghost badge-sm">{{ p.validity or '24' }} 
+                    {% if p.validity_unit == 'days' %}Hari
+                    {% elif p.validity_unit == 'months' %}Bulan
+                    {% else %}Jam{% endif %}</span>
+                {% endif %}
+            </div>
+
+            <div class="divider mt-1 mb-1"></div>
+
+            <div class="flex justify-end gap-2">
+                <a href="{{ url_for('profiles.edit', id=p.id) }}" class="btn btn-sm btn-outline btn-primary flex-1"><i
+                        class="bi bi-pencil"></i> Edit</a>
+                <a href="{{ url_for('profiles.delete', id=p.id) }}" class="btn btn-sm btn-outline btn-error flex-1"
+                    onclick="return confirm('Hapus profile ini?')"><i class="bi bi-trash"></i> Hapus</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center opacity-50 py-10">
+        <i class="bi bi-inbox text-4xl mb-2 block"></i>
+        <span>Belum ada profile di wilayah ini</span>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- DESKTOP TABLE -->
+<div class="hidden lg:block">
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body p-0">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <!-- Head -->
+                    <thead class="bg-base-200 text-base-content/70 uppercase text-xs">
+                        <tr>
+                            <th class="ps-6">Nama</th>
+                            <th>Wilayah / Router</th>
+                            <th>Rate Limit</th>
+                            <th>Pool</th>
+                            {% if type == 'voucher' %}
+                            <th>Validity</th>
+                            {% endif %}
+                            <th>Kuota</th>
+                            <th>Harga</th>
+                            <th class="text-end pe-6">Aksi</th>
+                        </tr>
+                    </thead>
+                    <!-- Body -->
+                    <tbody>
+                        {% for p in profiles %}
+                        <tr class="hover">
+                            <td class="ps-6 font-bold text-primary">{{ p.name }}</td>
+                            <td>
+                                {% if p.router_name %}
+                                <span class="badge badge-info badge-sm gap-1 text-white">
+                                    <i class="bi bi-hdd-network"></i> {{ p.router_name }}
+                                </span>
+                                {% else %}
+                                <span class="badge badge-ghost badge-sm opacity-50">Global</span>
+                                {% endif %}
+                            </td>
+                            <td><code class="badge badge-ghost badge-sm font-mono">{{ p.rate_limit or '-' }}</code></td>
+                            <td><span class="badge badge-outline">{{ p.pool_name or '-' }}</span></td>
+                            {% if type == 'voucher' %}
+                            <td>
+                                {{ p.validity or '24' }}
+                                {% if p.validity_unit == 'days' %}Hari
+                                {% elif p.validity_unit == 'months' %}Bulan
+                                {% else %}Jam{% endif %}
+                            </td>
+                            {% endif %}
+                            <td>
+                                {% if p.quota_limit %}
+                                <span class="font-bold text-primary">{{ (p.quota_limit / 1073741824)|round(1) }} GB</span>
+                                {% else %}
+                                <span class="text-xs opacity-40 italic">Unlimited</span>
+                                {% endif %}
+                            </td>
+                            <td class="font-mono">Rp {{ "{:,.0f}".format(p.price|float) if p.price else '0' }}</td>
+                            <td class="text-end pe-6">
+                                <div class="join">
+                                    <a href="{{ url_for('profiles.edit', id=p.id) }}"
+                                        class="btn btn-sm btn-ghost join-item" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{{ url_for('profiles.delete', id=p.id) }}"
+                                        class="btn btn-sm btn-ghost text-error join-item"
+                                        onclick="return confirm('Hapus profile ini?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not profiles %}
+                        <tr>
+                            <td colspan="7" class="text-center text-opacity-50 py-8">
+                                <div class="flex flex-col items-center gap-2">
+                                    <i class="bi bi-inbox text-4xl opacity-20"></i>
+                                    <span>Belum ada profile di wilayah ini</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

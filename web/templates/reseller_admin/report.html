@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Laporan Mitra: {{ reseller.username }}{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="mb-6">
+    <a href="{{ url_for('reseller_admin.index') }}" class="btn btn-ghost btn-sm mb-3">
+        <i class="bi bi-arrow-left"></i> Kembali ke Daftar Mitra
+    </a>
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="bi bi-person-hearts text-primary"></i> Laporan Mitra: {{ reseller.username }}
+            </h1>
+            <p class="text-sm opacity-60 mt-1">Diskon: {{ reseller.discount_percent }}% &nbsp;|&nbsp; Saldo Saat Ini: <b
+                    class="text-success">{{ reseller.balance|currency }}</b></p>
+        </div>
+        <a href="/reseller/dashboard" target="_blank" class="btn btn-primary gap-2">
+            <i class="bi bi-shop"></i> Buka Portal Mitra
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body py-4">
+            <p class="text-xs font-bold opacity-60 uppercase">Total Deposit Masuk</p>
+            <p class="text-2xl font-bold text-success font-mono">{{ total_topup|currency }}</p>
+        </div>
+    </div>
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body py-4">
+            <p class="text-xs font-bold opacity-60 uppercase">Total Belanja Voucher</p>
+            <p class="text-2xl font-bold text-error font-mono">{{ total_purchases|currency }}</p>
+        </div>
+    </div>
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body py-4">
+            <p class="text-xs font-bold opacity-60 uppercase">Estimasi Profit Mitra</p>
+            <p class="text-2xl font-bold text-info font-mono">{{ total_profit_est|currency }}</p>
+            <p class="text-[10px] opacity-50">Harga jual - harga modal</p>
+        </div>
+    </div>
+</div>
+
+<!-- 2 Column: Transactions + Vouchers -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Riwayat Saldo -->
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+            <h3 class="card-title text-base"><i class="bi bi-clock-history text-primary mr-2"></i> Riwayat Saldo</h3>
+            <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+                <table class="table table-sm">
+                    <thead class="bg-base-200 text-xs uppercase sticky top-0">
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Tipe</th>
+                            <th class="text-right">Nominal</th>
+                            <th>Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in transactions %}
+                        <tr class="hover">
+                            <td class="text-xs">{{ t.created_at.strftime('%d/%m/%y %H:%M') if t.created_at else '-' }}
+                            </td>
+                            <td>
+                                {% if t.type == 'topup' %}
+                                <span class="badge badge-success badge-sm">+ Deposit</span>
+                                {% else %}
+                                <span class="badge badge-error badge-sm">- Beli</span>
+                                {% endif %}
+                            </td>
+                            <td
+                                class="text-right font-mono font-bold {{ 'text-success' if t.type == 'topup' else 'text-error' }}">
+                                {{ '+' if t.type == 'topup' else '-' }}{{ t.amount|currency }}
+                            </td>
+                            <td class="text-xs opacity-70">{{ t.description or '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-8 opacity-40">Belum ada transaksi</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voucher yang Dicetak -->
+    <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+            <h3 class="card-title text-base"><i class="bi bi-ticket-perforated text-orange-500 mr-2"></i> Voucher
+                Dicetak ({{ vouchers|length }})</h3>
+            <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+                <table class="table table-sm">
+                    <thead class="bg-base-200 text-xs uppercase sticky top-0">
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Kode</th>
+                            <th>Paket</th>
+                            <th class="text-right">Modal</th>
+                            <th class="text-right">Jual</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in vouchers %}
+                        <tr class="hover">
+                            <td class="text-xs">{{ v.created_at.strftime('%d/%m/%y') if v.created_at else '-' }}</td>
+                            <td class="font-mono font-bold text-primary text-xs">{{ v.code }}</td>
+                            <td class="text-xs">{{ v.profile_name or '-' }}</td>
+                            <td class="text-right text-xs font-mono">Rp {{ v.buy_price|currency if v.buy_price else '-'
+                                }}</td>
+                            <td class="text-right text-xs font-mono">{{ v.price|currency }}</td>
+                            <td>
+                                {% if v.status == 'unused' %}<span class="badge badge-ghost badge-xs">Unused</span>
+                                {% elif v.status == 'active' %}<span class="badge badge-success badge-xs">Aktif</span>
+                                {% elif v.status == 'used' %}<span class="badge badge-neutral badge-xs">Used</span>
+                                {% else %}<span class="badge badge-error badge-xs">Expired</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-8 opacity-40">Belum ada voucher dicetak</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-8">
+    <h2 class="text-2xl font-bold">Telegram Bot Integrasi</h2>
+    <p class="text-sm opacity-60">Konfigurasi notifikasi Telegram untuk pemberitahuan pembayaran, backup, dan peringatan
+        sistem.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 relative">
+
+    <!-- Pengaturan Telegram -->
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body">
+            <h3 class="card-title text-base opacity-70 mb-4">
+                <i class="bi bi-gear"></i> Konfigurasi Bot
+            </h3>
+
+            <form method="POST" action="{{ url_for('telegram_bot.index') }}">
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-bold">Bot Token API</span>
+                        <span class="badge badge-info badge-soft badge-sm text-white">BotFather</span>
+                    </label>
+                    <input type="text" name="telegram_bot_token"
+                        class="input input-sm border-base-300 w-full font-mono bg-base-50"
+                        value="{{ settings.get('telegram_bot_token', '') }}" placeholder="123456789:ABCdefGHI..." />
+                </div>
+
+                <div class="form-control mb-6">
+                    <label class="label">
+                        <span class="label-text font-bold">Chat ID (Target Pengiriman)</span>
+                        <span class="badge badge-error badge-soft badge-sm text-white">User Info</span>
+                    </label>
+                    <input type="text" name="telegram_chat_id"
+                        class="input input-sm border-base-300 w-full font-mono bg-base-50"
+                        value="{{ settings.get('telegram_chat_id', '') }}"
+                        placeholder="Contoh: 123456789 atau -100123456" />
+                </div>
+
+                <div class="card-actions justify-end mt-4">
+                    <button type="button" class="btn btn-outline btn-info btn-sm" onclick="testTelegram(this)">
+                        <i class="bi bi-send-check"></i> Test Telegram
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm px-6">
+                        <i class="bi bi-save"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Panduan Integrasi Telegram -->
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body">
+            <h3 class="card-title text-base opacity-70 mb-4">
+                <i class="bi bi-book"></i> Panduan Setup Bot Telegram
+            </h3>
+
+            <ul class="steps steps-vertical text-sm">
+                <li class="step step-primary">
+                    <div class="text-left ml-2">
+                        <h4 class="font-bold">Buat Bot Baru di @BotFather</h4>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Buka Telegram, cari <b>@BotFather</b> lalu chat <code>/newbot</code>.
+                            Ikuti langkahnya sampai mendapatkan sebuah <b>HTTP API Token</b> pajang.
+                            Paste Token tersebut di kolom "Bot Token API".
+                        </p>
+                    </div>
+                </li>
+                <li class="step step-primary">
+                    <div class="text-left ml-2">
+                        <h4 class="font-bold">Mulai Percakapan dengan Bot Anda</h4>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Setelah bot dibuat, cari username bot Anda di Telegram lalu klik <b>Start</b> atau kirim
+                            perintah <code>/start</code>.
+                            Ini wajib dilakukan agar bot memiliki izin untuk mengirim pesan kepada Anda.
+                        </p>
+                    </div>
+                </li>
+                <li class="step step-primary">
+                    <div class="text-left ml-2">
+                        <h4 class="font-bold">Dapatkan Chat ID Anda</h4>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Chat ID adalah alamat ID Unik target penerima pesan.
+                            Jika pesannya ingin dikirim ke Telegram Pribadi Anda, cari bot <b>@userinfobot</b> lalu klik
+                            <b>Start</b>.
+                            Bot itu akan membalas dengan deretan angka "Id". Paste Id tersebut di kolom "Chat ID".
+                        </p>
+                        <p class="text-[11px] text-info mt-2">
+                            <i class="bi bi-info-circle"></i> <b>Tips Grup:</b> Jika ingin notifikasi masuk ke Grup,
+                            gabungkan bot Anda ke Grup tersebut, panggil botnya, dan cek Chat ID grupnya (Biasanya
+                            diawali dengan tanda minus <code>-</code>).
+                        </p>
+                    </div>
+                </li>
+                <li class="step">
+                    <div class="text-left ml-2">
+                        <h4 class="font-bold">Simpan dan Testing</h4>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Klik <b>Simpan</b>, kemudian klik tombol <b>Test Telegram</b>.
+                            Jika Anda menerima notifikasi "MikroFun Test Message" di Telegram, maka persiapannya sudah
+                            selesai!
+                        </p>
+                    </div>
+                </li>
+            </ul>
+
+        </div>
+    </div>
+
+    <!-- Manfaat & Fitur Telegram -->
+    <div class="card bg-base-100 shadow-sm border border-base-200 lg:col-span-2 mt-2">
+        <div class="card-body">
+            <h3 class="card-title text-base opacity-70 mb-4">
+                <i class="bi bi-star flex-shrink-0"></i> Fitur & Manfaat Telegram Bot
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div class="flex items-start gap-3">
+                    <div class="bg-success/10 text-success p-2 rounded-lg"><i class="bi bi-receipt text-xl"></i></div>
+                    <div>
+                        <h4 class="font-bold text-sm">Notifikasi Pembayaran Real-Time</h4>
+                        <p class="text-xs text-gray-500 mt-1">Laporan instan ke HP Bapak saat ada pelanggan membayar
+                            tagihan atau membeli voucher melalui Tripay/Midtrans. Tidak perlu refresh aplikasi
+                            terus-menerus.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="bg-info/10 text-info p-2 rounded-lg"><i class="bi bi-cloud-arrow-up text-xl"></i></div>
+                    <div>
+                        <h4 class="font-bold text-sm">Auto-Backup Cloud Database</h4>
+                        <p class="text-xs text-gray-500 mt-1">Bot akan mengirimkan file SQL konfigurasi langsung ke
+                            obrolan Bapak. Jika VPS rusak atau error, data pelanggan tetap aman di awan Telegram Bapak.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="bg-error/10 text-error p-2 rounded-lg"><i class="bi bi-router text-xl"></i></div>
+                    <div>
+                        <h4 class="font-bold text-sm">Peringatan Dini Router Offline</h4>
+                        <p class="text-xs text-gray-500 mt-1">Sistem memonitor jaringan secara aktif. Jika Mikrotik
+                            terputus atau mati listrik, bot akan otomatis mengirim peringatan sebelum pelanggan
+                            marah/komplain.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="bg-primary/10 text-primary p-2 rounded-lg"><i class="bi bi-person-plus text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm">Laporan Pendaftaran Pelanggan Baru</h4>
+                        <p class="text-xs text-gray-500 mt-1">Admin pusat langsung mendapat pemberitahuan saat ada
+                            penambahan ODP pelanggan PPPoE atau Hotspot yang dimasukkan ke sistem.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="bg-warning/10 text-warning p-2 rounded-lg"><i class="bi bi-graph-up-arrow text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm">Laporan Harian (Daily Report)</h4>
+                        <p class="text-xs text-gray-500 mt-1">Menerima ringkasan mutasi pendapatan harian dan statistik
+                            total pelanggan aktif otomatis ke Telegram tanpa harus membuka layar komputer.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function testTelegram(btn) {
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Testing...';
+        btn.disabled = true;
+
+        fetch('{{ url_for("telegram_bot.test_send") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ BERHASIL: ' + data.message);
+                } else {
+                    alert('❌ GAGAL: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('❌ ERROR: Terjadi kesalahan saat mencoba mengirim pesan.');
+                console.error(err);
+            })
+            .finally(() => {
+                btn.innerHTML = ogText;
+                btn.disabled = false;
+            });
+    }
+</script>
+{% endblock %}

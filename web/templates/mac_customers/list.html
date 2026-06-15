@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Page Header & Stats -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+    <div>
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-display text-primary"></i> Internet Static / DHCP
+        </h2>
+        <p class="text-xs opacity-50 font-medium">Manajemen pelanggan IP Statis & DHCP Lease</p>
+    </div>
+    <div class="flex gap-2 w-full md:w-auto">
+        <a href="{{ url_for('mac_customers.add') }}" class="btn btn-primary btn-sm flex-1 md:flex-none">
+            <i class="bi bi-plus-lg"></i> Tambah Pelanggan
+        </a>
+        <a href="{{ url_for('mac_customers.import_excel') }}" class="btn btn-outline btn-sm gap-1">
+            <i class="bi bi-file-earmark-excel"></i> Import
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Header -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-4 items-center text-center">
+            <div class="text-[10px] uppercase font-bold opacity-50 tracking-wider">Total Pelanggan</div>
+            <div class="text-2xl font-black text-primary">{{ stats.total }}</div>
+        </div>
+    </div>
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-4 items-center text-center">
+            <div class="text-[10px] uppercase font-bold opacity-50 tracking-wider">Online</div>
+            <div class="text-2xl font-black text-success">{{ stats.online_count }}</div>
+        </div>
+    </div>
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-4 items-center text-center">
+            <div class="text-[10px] uppercase font-bold opacity-50 tracking-wider">Offline</div>
+            <div class="text-2xl font-black text-base-content/30">{{ stats.offline_count }}</div>
+        </div>
+    </div>
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-4 items-center text-center">
+            <div class="text-[10px] uppercase font-bold opacity-50 tracking-wider">Terisolir</div>
+            <div class="text-2xl font-black text-warning">{{ stats.isolir_count }}</div>
+        </div>
+    </div>
+    <div class="card bg-primary text-primary-content shadow-md border-none col-span-2 md:col-span-1">
+        <div class="card-body p-4 items-center text-center">
+            <div class="text-[10px] uppercase font-bold opacity-80 tracking-wider">Estimasi Omzet</div>
+            <div class="text-xl font-black">Rp {{ "{:,.0f}".format(stats.total_revenue or 0).replace(',', '.') }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters & Search -->
+<div class="bg-base-100 p-4 rounded-xl shadow-sm border border-base-200 mb-6">
+    <form action="{{ url_for('mac_customers.index') }}" method="GET" class="flex flex-col md:flex-row gap-3">
+        <div class="join w-full md:w-auto flex-1">
+            <input type="text" name="q" placeholder="Cari Nama / MAC / IP..."
+                class="input input-bordered join-item w-full" value="{{ request.args.get('q', '') }}">
+            <button class="btn btn-neutral join-item px-6"><i class="bi bi-search"></i></button>
+        </div>
+
+        <div class="flex gap-2">
+            <select name="status" class="select select-bordered w-full md:w-auto" onchange="this.form.submit()">
+                <option value="">Semua Status</option>
+                <option value="active" {% if request.args.get('status')=='active' %}selected{% endif %}>Aktif</option>
+                <option value="isolir" {% if request.args.get('status')=='isolir' %}selected{% endif %}>Isolir</option>
+            </select>
+
+            <select name="profile_id" class="select select-bordered w-full md:w-auto" onchange="this.form.submit()">
+                <option value="">Semua Paket</option>
+                {% for p in profiles %}
+                <option value="{{ p.id }}" {% if request.args.get('profile_id')==p.id|string %}selected{% endif %}>{{
+                    p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+</div>
+
+<!-- Bulk Actions -->
+<form action="{{ url_for('mac_customers.bulk_action') }}" method="POST" id="bulkForm">
+    <div id="bulkToolbar"
+        class="hidden animate-in fade-in slide-in-from-top-2 flex flex-wrap items-center gap-3 mb-4 p-3 bg-primary/10 rounded-xl border border-primary/20">
+        <span class="text-xs font-bold text-primary uppercase ml-2"><i class="bi bi-check-all"></i> Terpilih:</span>
+        <div class="flex gap-2">
+            <button type="submit" name="action" value="check_status" class="btn btn-xs btn-primary">Cek Status</button>
+            <button type="submit" name="action" value="activate"
+                class="btn btn-xs btn-success text-white">Aktifkan</button>
+            <button type="submit" name="action" value="isolir" class="btn btn-xs btn-warning">Isolir</button>
+            <button type="submit" name="action" value="delete" class="btn btn-xs btn-error text-white"
+                onclick="return confirm('Hapus data terpilih?')">Hapus</button>
+        </div>
+    </div>
+
+    <!-- Mobile View -->
+    <div class="lg:hidden flex flex-col gap-4 mb-10">
+        {% for c in customers %}
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" class="checkbox checkbox-primary checkbox-sm row-checkbox"
+                            name="customer_ids" value="{{ c.id }}">
+                        <div>
+                            <h3 class="font-bold text-lg leading-none">{{ c.name or '-' }}</h3>
+                            <span class="text-[10px] opacity-50 font-mono">{{ c.username }}</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1">
+                        {% if c.status == 'active' %}
+                        <span class="badge badge-success badge-sm badge-outline">Aktif</span>
+                        {% else %}
+                        <span class="badge badge-warning badge-sm">Isolir</span>
+                        {% endif %}
+
+                        {% if c.active_session_count and c.active_session_count > 0 %}
+                        <span class="text-[10px] text-success font-bold flex items-center gap-1">
+                            <span class="relative flex h-2 w-2">
+                                <span
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                            </span> ONLINE
+                        </span>
+                        {% else %}
+                        <span class="text-[10px] text-base-content/30 font-bold flex items-center gap-1">
+                            <span class="h-2 w-2 rounded-full bg-base-300"></span> OFFLINE
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 bg-base-200/50 p-3 rounded-xl border border-base-200">
+                    <div class="flex flex-col">
+                        <span class="text-[9px] uppercase font-bold opacity-40">MAC Address</span>
+                        <span class="text-xs font-mono font-medium truncate">{{ c.mac_address or '-' }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[9px] uppercase font-bold opacity-40">IP Address</span>
+                        <span class="text-xs font-mono text-info font-bold truncate">{{ c.static_ip or '-' }}</span>
+                    </div>
+                    <div class="flex flex-col mt-1">
+                        <span class="text-[9px] uppercase font-bold opacity-40">Paket</span>
+                        <span class="text-xs font-semibold">{{ c.profile_name or '-' }}</span>
+                    </div>
+                    <div class="flex flex-col mt-1">
+                        <span class="text-[9px] uppercase font-bold opacity-40">Jatuh Tempo</span>
+                        <span class="text-xs font-bold text-primary">{{ c.due_date or '-' }}</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center mt-3 pt-3 border-t border-base-200">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] opacity-50">Monthly Fee</span>
+                        <span class="font-bold text-sm">Rp {{ "{:,.0f}".format(c.profile_price or 0).replace(',', '.')
+                            }}</span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button type="button" onclick="sendWABill({{ c.id }})"
+                            class="btn btn-square btn-sm btn-ghost text-success"><i class="bi bi-whatsapp"></i></button>
+                        <a href="{{ url_for('mac_customers.edit', id=c.id) }}"
+                            class="btn btn-square btn-sm btn-ghost text-primary"><i class="bi bi-pencil-square"></i></a>
+                        <a href="{{ url_for('mac_customers.delete', id=c.id) }}"
+                            class="btn btn-square btn-sm btn-ghost text-error"
+                            onclick="return confirm('Hapus pelanggan?')"><i class="bi bi-trash"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-20 opacity-30">
+            <i class="bi bi-people text-6xl block mb-2"></i>
+            <p>Belum ada data pelanggan</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Desktop View -->
+    <div class="hidden lg:block card bg-base-100 shadow-sm border border-base-200">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra table-md">
+                <thead class="bg-base-200/50">
+                    <tr>
+                        <th class="w-10 text-center"><input type="checkbox" class="checkbox checkbox-xs" id="selectAll">
+                        </th>
+                        <th>Identitas & Alamat</th>
+                        <th>Network Info (MAC/IP)</th>
+                        <th>Paket & Layanan</th>
+                        <th>Billing Info</th>
+                        <th>Status</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in customers %}
+                    <tr class="hover">
+                        <td class="text-center">
+                            <input type="checkbox" class="checkbox checkbox-primary checkbox-xs row-checkbox"
+                                name="customer_ids" value="{{ c.id }}">
+                        </td>
+                        <td>
+                            <div class="flex flex-col">
+                                <span class="font-bold text-base-content">{{ c.name or '-' }}</span>
+                                <span class="text-[10px] font-mono opacity-50">{{ c.username }}</span>
+                                {% if c.address %}
+                                <span class="text-[10px] italic opacity-60 truncate max-w-[150px] mt-0.5"><i
+                                        class="bi bi-geo-alt"></i> {{ c.address }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-1.5 font-mono text-xs">
+                                    <span class="opacity-40 uppercase text-[9px] font-bold">MAC</span>
+                                    <span>{{ c.mac_address or '-' }}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 font-mono text-xs text-info">
+                                    <span class="opacity-40 uppercase text-[9px] font-bold">IP</span>
+                                    <span class="font-bold">{{ c.static_ip or '-' }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex flex-col">
+                                <span class="badge badge-outline badge-primary font-bold text-[10px]">{{ c.profile_name
+                                    or '-' }}</span>
+                                <span class="text-[10px] mt-1 opacity-70"><i class="bi bi-hdd-network"></i> {{
+                                    c.router_name or '-' }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex flex-col">
+                                <span class="font-bold text-primary">Rp {{ "{:,.0f}".format(c.profile_price or
+                                    0).replace(',', '.') }}</span>
+                                <span class="text-[10px] opacity-60">Tempo: <span class="font-bold font-mono">{{
+                                        c.due_date if c.due_date else '-' }}</span></span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex flex-col gap-1">
+                                {% if c.status == 'active' %}
+                                <span class="badge badge-success badge-xs badge-outline">Aktif</span>
+                                {% else %}
+                                <span class="badge badge-warning badge-xs">Terisolir</span>
+                                {% endif %}
+
+                                {% if c.active_session_count and c.active_session_count > 0 %}
+                                <span class="text-[10px] text-success font-bold flex items-center gap-1">
+                                    <span class="relative flex h-2 w-2">
+                                        <span
+                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                                    </span> ONLINE
+                                </span>
+                                {% else %}
+                                <span class="text-[10px] text-base-content/20 font-bold flex items-center gap-1">
+                                    <span class="h-2 w-2 rounded-full bg-base-300"></span> OFFLINE
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <div class="join join-horizontal">
+                                <button type="button" onclick="sendWABill({{ c.id }})"
+                                    class="btn btn-ghost btn-xs text-success join-item tooltip" data-tip="WA Tagihan"><i
+                                        class="bi bi-whatsapp"></i></button>
+                                <a href="{{ url_for('mac_customers.edit', id=c.id) }}"
+                                    class="btn btn-ghost btn-xs text-primary join-item tooltip" data-tip="Edit"><i
+                                        class="bi bi-pencil-square"></i></a>
+                                <a href="{{ url_for('mac_customers.check_status', id=c.id) }}"
+                                    class="btn btn-ghost btn-xs text-info join-item tooltip"
+                                    data-tip="Refresh Status"><i class="bi bi-arrow-repeat"></i></a>
+                                {% if c.status == 'active' %}
+                                <a href="{{ url_for('mac_customers.isolir', id=c.id) }}"
+                                    class="btn btn-ghost btn-xs text-warning join-item tooltip" data-tip="Isolir"><i
+                                        class="bi bi-pause-circle"></i></a>
+                                {% else %}
+                                <a href="{{ url_for('mac_customers.activate', id=c.id) }}"
+                                    class="btn btn-ghost btn-xs text-success join-item tooltip" data-tip="Aktifkan"><i
+                                        class="bi bi-play-circle"></i></a>
+                                {% endif %}
+                                <a href="{{ url_for('mac_customers.delete', id=c.id) }}"
+                                    class="btn btn-ghost btn-xs text-error join-item tooltip" data-tip="Hapus"
+                                    onclick="return confirm('Hapus data?')"><i class="bi bi-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Selection Logic
+    const selectAll = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const bulkToolbar = document.getElementById('bulkToolbar');
+
+    function toggleBulk() {
+        const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+        if (checkedCount > 0) {
+            bulkToolbar.classList.remove('hidden');
+        } else {
+            bulkToolbar.classList.add('hidden');
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', (e) => {
+            rowCheckboxes.forEach(cb => cb.checked = e.target.checked);
+            toggleBulk();
+        });
+    }
+
+    rowCheckboxes.forEach(cb => {
+        cb.addEventListener('change', toggleBulk);
+    });
+
+    // WA Helper
+    function sendWABill(id) {
+        if (!confirm('Kirim pesan tagihan otomatis ke WhatsApp pelanggan ini?')) return;
+
+        const btn = event.currentTarget;
+        btn.disabled = true;
+
+        fetch(`/mac_customers/send_bill/${id}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Pesan berhasil dikirim!');
+                } else {
+                    alert('❌ Gagal: ' + data.message);
+                }
+            })
+            .catch(err => alert('❌ Error: ' + err))
+            .finally(() => btn.disabled = false);
+    }
+</script>
+{% endblock %}

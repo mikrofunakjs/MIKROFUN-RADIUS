@@ -1,0 +1,41 @@
+{% extends "client/base_app.html" %}
+
+{% block content %}
+<div class="bg-white sticky top-0 z-40 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+    <h1 class="text-lg font-bold">Pusat Bantuan</h1>
+    <a href="{{ url_for('client.ticket_create') }}" class="btn btn-sm btn-primary btn-circle">
+        <i class="bi bi-plus-lg"></i>
+    </a>
+</div>
+
+<div class="p-4 space-y-3">
+    {% for ticket in tickets %}
+    <a href="{{ url_for('client.ticket_view', id=ticket.id) }}"
+        class="block bg-white border border-gray-100 shadow-sm rounded-xl p-4 hover:bg-gray-50 transition active:scale-95">
+        <div class="flex justify-between items-start mb-2">
+            <span class="badge badge-sm badge-ghost text-xs font-normal">{{ ticket.category }}</span>
+            <span class="text-[10px] text-gray-400">{{ ticket.updated_at }}</span>
+        </div>
+        <h3 class="font-bold text-gray-900 line-clamp-1 mb-1">{{ ticket.subject }}</h3>
+        <div class="flex items-center gap-2">
+            {% if ticket.status == 'open' %}
+            <span class="badge badge-xs badge-error"></span> <span class="text-xs text-gray-500">Menunggu Respon</span>
+            {% elif ticket.status == 'answered' %}
+            <span class="badge badge-xs badge-success"></span> <span class="text-xs text-gray-900 font-bold">Ada
+                Balasan</span>
+            {% else %}
+            <span class="badge badge-xs badge-ghost"></span> <span class="text-xs text-gray-400">Selesai</span>
+            {% endif %}
+        </div>
+    </a>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-20 text-center opacity-60">
+        <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+            <i class="bi bi-chat-text text-2xl text-gray-500"></i>
+        </div>
+        <p class="font-bold text-gray-600">Belum ada tiket.</p>
+        <p class="text-xs text-gray-400 mt-1">Tekan tombol + untuk buat keluhan baru.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

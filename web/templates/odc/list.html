@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div>
+        <h2 class="text-3xl font-black flex items-center gap-3 text-primary">
+            <i class="bi bi-box-fill"></i> Data ODC (Cabinet)
+        </h2>
+        <p class="text-sm opacity-60 font-medium">Optical Distribution Cabinet - Titik Distribusi Utama</p>
+    </div>
+    <div class="flex gap-2 w-full md:w-auto">
+        <a href="{{ url_for('odc.import_excel') }}" class="btn btn-outline btn-sm gap-2">
+            <i class="bi bi-file-earmark-excel"></i> Import XLSX
+        </a>
+        <a href="{{ url_for('odc.add') }}" class="btn btn-primary btn-sm gap-2 shadow-lg shadow-primary/20">
+            <i class="bi bi-plus-circle-fill"></i> Tambah ODC
+        </a>
+    </div>
+</div>
+
+<!-- Info Guide -->
+<div class="alert shadow-sm mb-8 border border-info/20 bg-info/5 text-info-content">
+    <i class="bi bi-info-circle-fill text-2xl text-info"></i>
+    <div>
+        <h3 class="font-bold">Panduan Infrastruktur ODC</h3>
+        <div class="text-xs opacity-80 mt-1">ODC (Optical Distribution Cabinet) adalah titik terminal pembagi utama di
+            lapangan sebelum dibagi ke ODP. Daftarkan lokasi, koordinat, dan kapasitas port cabinet untuk mempermudah
+            operasional teknisi di lapangan.</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for o in odcs %}
+    <div
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary/30 transition-all group overflow-hidden">
+        <div class="h-1.5 w-full bg-primary/10 group-hover:bg-primary transition-colors"></div>
+        <div class="card-body p-6">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary text-xl font-black">
+                        {{ o.name[0]|upper }}
+                    </div>
+                    <div>
+                        <h3 class="font-black text-lg leading-tight">{{ o.name }}</h3>
+                        <p class="text-[10px] uppercase font-bold opacity-40 tracking-widest">ODC CABINET</p>
+                    </div>
+                </div>
+                <div class="badge badge-info badge-xs gap-1 font-bold p-2.5">
+                    <i class="bi bi-geo-alt"></i> {{ o.odp_count }} ODP
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2 opacity-70">
+                        <i class="bi bi-map-fill"></i>
+                        <span class="font-medium">Lokasi</span>
+                    </div>
+                    <span class="text-xs font-bold truncate max-w-[150px]">{{ o.address }}</span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2 opacity-70">
+                        <i class="bi bi-door-closed-fill"></i>
+                        <span class="font-medium">Kapasitas</span>
+                    </div>
+                    <span class="font-black">{{ o.capacity }} Ports</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-4 border-t border-base-100">
+                <div class="flex gap-1">
+                    <a href="{{ url_for('odc.edit', id=o.id) }}" class="btn btn-ghost btn-sm btn-square" title="Edit">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <a href="{{ url_for('odc.delete', id=o.id) }}" class="btn btn-ghost btn-sm btn-square text-error"
+                        onclick="return confirm('Hapus ODC ini?')" title="Hapus">
+                        <i class="bi bi-trash-fill"></i>
+                    </a>
+                </div>
+                <button class="btn btn-primary btn-sm px-4 rounded-xl">
+                    View ODPs <i class="bi bi-arrow-right-short"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-span-full">
+        <div class="card bg-base-100 border-2 border-dashed border-base-300 py-16 text-center">
+            <h3 class="text-xl font-bold opacity-60">Belum ada data ODC</h3>
+            <p class="text-sm opacity-40 mt-1">Daftarkan ODC untuk memetakan distribusi fiber optic.</p>
+            <div class="mt-6">
+                <a href="{{ url_for('odc.add') }}" class="btn btn-primary btn-sm px-8">Tambah ODC</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

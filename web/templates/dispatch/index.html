@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Dispatch Center & Logistik Teknis{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold">Dispatch Center</h1>
+        <p class="text-base-content/70">Pusat penugasan tiket perbaikan dan pemasangan lapangan.</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('add_job_modal').showModal()">
+        <i class="bi bi-briefcase"></i> + Buat Tugas Baru
+    </button>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="stat bg-base-100 shadow-sm border border-base-200 rounded-box">
+        <div class="stat-title">Tugas Aktif (Pending/Working)</div>
+        <div class="stat-value text-primary">{{ jobs | selectattr('status', 'in', ['pending', 'on_way', 'working']) |
+            list | length }}</div>
+    </div>
+    <div class="stat bg-base-100 shadow-sm border border-base-200 rounded-box">
+        <div class="stat-title">Selesai (Resolved)</div>
+        <div class="stat-value text-success">{{ jobs | selectattr('status', 'equalto', 'resolved') | list | length }}
+        </div>
+    </div>
+</div>
+
+<div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead class="bg-base-200 text-base-content">
+                    <tr>
+                        <th>Tugas</th>
+                        <th>Teknisi</th>
+                        <th>Prioritas & Tipe</th>
+                        <th>Status</th>
+                        <th>Tgl Selesai / Bukti</th>
+                        <th class="text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for j in jobs %}
+                    <tr>
+                        <td>
+                            <div class="font-bold">{{ j.title }}</div>
+                            <div class="text-xs opacity-70">Pelanggan: {{ j.customer_name or 'N/A' }}</div>
+                        </td>
+                        <td>
+                            {% if j.technician_name %}
+                            <div class="badge badge-outline"><i class="bi bi-person mr-1"></i> {{ j.technician_name }}
+                            </div>
+                            {% else %}
+                            <span class="text-base-content/50 italic text-xs">Belum Ditugaskan</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if j.priority == 'urgent' %}
+                            <span class="badge badge-error badge-sm">Urgent</span>
+                            {% elif j.priority == 'high' %}
+                            <span class="badge badge-warning badge-sm">Tinggi</span>
+                            {% elif j.priority == 'medium' %}
+                            <span class="badge badge-info badge-sm">Sedang</span>
+                            {% else %}
+                            <span class="badge badge-ghost badge-sm">Rendah</span>
+                            {% endif %}
+
+                            <div class="text-[10px] mt-1 uppercase">{{ j.job_type }}</div>
+                        </td>
+                        <td>
+                            {% if j.status == 'pending' %}
+                            <span class="badge badge-ghost">Pending</span>
+                            {% elif j.status == 'on_way' %}
+                            <span class="badge badge-info text-white"><i class="bi bi-bicycle mr-1"></i> Menuju
+                                Lokasi</span>
+                            {% elif j.status == 'working' %}
+                            <span class="badge badge-warning"><i class="bi bi-gear-wide-connected mr-1"></i>
+                                Dikerjakan</span>
+                            {% elif j.status == 'resolved' %}
+                            <span class="badge badge-success text-white"><i class="bi bi-check-circle mr-1"></i>
+                                Selesai</span>
+                            {% elif j.status == 'cancelled' %}
+                            <span class="badge badge-error text-white"><i class="bi bi-x-circle mr-1"></i> Batal</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if j.status == 'resolved' %}
+                            <div class="text-xs">{{ j.completed_at.strftime('%d %b %H:%M') if j.completed_at else '-' }}
+                            </div>
+                            {% if j.evidence_photo_1 %}
+                            <a href="{{ j.evidence_photo_1 }}" target="_blank"
+                                class="text-primary text-xs flex items-center gap-1 mt-1">
+                                <i class="bi bi-image"></i> Cek Bukti Foto
+                            </a>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-base-content/30 text-xs">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-ghost text-info" onclick="openEditModal({{ j|tojson }})">
+                                <i class="bi bi-pencil-square"></i> Edit
+                            </button>
+                            <form action="{{ url_for('dispatch.index') }}" method="POST" class="inline"
+                                onsubmit="return confirm('Hapus tugas ini secara permanen?')">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="job_id" value="{{ j.id }}">
+                                <button type="submit" class="btn btn-sm btn-ghost text-error">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not jobs %}
+                    <tr>
+                        <td colspan="6" class="text-center py-8 opacity-50">Belum ada daftar pekerjaan aktif.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Add Job -->
+<dialog id="add_job_modal" class="modal">
+    <div class="modal-box w-11/12 max-w-2xl">
+        <h3 class="font-bold text-lg mb-4"><i class="bi bi-briefcase"></i> Buat Tugas & Surat Perintah Kerja</h3>
+        <form method="POST" action="{{ url_for('dispatch.index') }}">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="ticket_id" id="add_ticket_id">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Tipe Pekerjaan</span></label>
+                    <select name="job_type" class="select select-bordered w-full" required>
+                        <option value="installation">Pemasangan Baru (Installation)</option>
+                        <option value="repair">Perbaikan / Gangguan (Repair)</option>
+                        <option value="maintenance">Pengecekan (Maintenance)</option>
+                        <option value="survey">Survei Lokasi ODP (Survey)</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Prioritas Tempur</span></label>
+                    <select name="priority" class="select select-bordered w-full" required>
+                        <option value="low">Rendah</option>
+                        <option value="medium" selected>Sedang</option>
+                        <option value="high">Tinggi</option>
+                        <option value="urgent">Mendesak! (Pelanggan VIP / Mati Total)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text">Judul Pekerjaan</span></label>
+                <input type="text" name="title" class="input input-bordered w-full"
+                    placeholder="Cth: Tarik kabel baru 150M ke Bapak A" required>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text">Pelanggan (Jika ada / berkaitan)</span></label>
+                <select name="customer_id" class="select select-bordered w-full">
+                    <option value="">-- Bukan Untuk Pelanggan Spesifik --</option>
+                    {% for c in customers %}
+                    <option value="{{ c.id }}">{{ c.name }} ({{ c.address[:30] }}...)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text">Tugaskan Ke Teknisi</span></label>
+                <select name="technician_id" class="select select-bordered w-full text-primary font-bold">
+                    <option value="">-- Belum Ditugaskan --</option>
+                    {% for t in technicians %}
+                    <option value="{{ t.id }}">Teknisi: {{ t.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-control mb-6">
+                <label class="label"><span class="label-text">Instruksi Detail / Catatan Tambahan</span></label>
+                <textarea name="description" class="textarea textarea-bordered h-24"
+                    placeholder="Tuliskan kendala teknis atau rincian lokasi..."></textarea>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn"
+                    onclick="document.getElementById('add_job_modal').close()">Batal</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Lempar Tugas ke
+                    Teknisi</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Modal Edit -->
+<dialog id="edit_job_modal" class="modal">
+    <div class="modal-box max-w-lg">
+        <h3 class="font-bold text-lg mb-4"><i class="bi bi-pencil-square"></i> Edit Status & Tugas</h3>
+        <form method="POST" action="{{ url_for('dispatch.index') }}">
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="job_id" id="edit_job_id">
+
+            <div class="form-control mb-4 hidden">
+                <label class="label"><span class="label-text">Judul Pekerjaan</span></label>
+                <input type="text" name="title" id="edit_title" class="input input-bordered w-full" required>
+            </div>
+            <div class="form-control mb-4 hidden">
+                <textarea name="description" id="edit_description" class="textarea"></textarea>
+                <input type="hidden" name="job_type" id="edit_job_type">
+                <input type="hidden" name="customer_id" id="edit_customer_id">
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text">Tugaskan Ke Teknisi</span></label>
+                <select name="technician_id" id="edit_technician_id"
+                    class="select select-bordered w-full text-primary font-bold">
+                    <option value="">-- Belum Ditugaskan --</option>
+                    {% for t in technicians %}
+                    <option value="{{ t.id }}">Teknisi: {{ t.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label"><span class="label-text">Prioritas</span></label>
+                <select name="priority" id="edit_priority" class="select select-bordered w-full" required>
+                    <option value="low">Rendah</option>
+                    <option value="medium">Sedang</option>
+                    <option value="high">Tinggi</option>
+                    <option value="urgent">Mendesak!</option>
+                </select>
+            </div>
+
+            <div class="form-control mb-6">
+                <label class="label"><span class="label-text">Ubah Status Paksa (Override)</span></label>
+                <select name="status" id="edit_status" class="select select-bordered w-full">
+                    <option value="pending">Pending</option>
+                    <option value="on_way">Menuju Lokasi</option>
+                    <option value="working">Sedang Dikerjakan</option>
+                    <option value="resolved">Telah Selesai (Resolved)</option>
+                    <option value="cancelled">Dibatalkan</option>
+                </select>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn"
+                    onclick="document.getElementById('edit_job_modal').close()">Batal</button>
+                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<script>
+    function openEditModal(jobData) {
+        document.getElementById('edit_job_id').value = jobData.id;
+        document.getElementById('edit_title').value = jobData.title;
+        document.getElementById('edit_description').value = jobData.description || '';
+        document.getElementById('edit_job_type').value = jobData.job_type;
+        document.getElementById('edit_customer_id').value = jobData.customer_id || '';
+
+        document.getElementById('edit_technician_id').value = jobData.technician_id || '';
+        document.getElementById('edit_priority').value = jobData.priority;
+        document.getElementById('edit_status').value = jobData.status;
+
+        document.getElementById('edit_job_modal').showModal();
+    }
+
+    // Pre-fill "Add Job" modal from URL parameters (Helpdesk Integration)
+    window.onload = function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketId = urlParams.get('ticket_id');
+        if (ticketId) {
+            document.getElementById('add_ticket_id').value = ticketId;
+            document.querySelector('input[name="title"]').value = urlParams.get('title') || '';
+            document.querySelector('textarea[name="description"]').value = urlParams.get('desc') || '';
+
+            const custId = urlParams.get('cust_id');
+            if (custId) {
+                document.querySelector('select[name="customer_id"]').value = custId;
+            }
+
+            // Set default type to repair for helpdesk
+            document.querySelector('select[name="job_type"]').value = 'repair';
+
+            document.getElementById('add_job_modal').showModal();
+        }
+    }
+</script>
+{% endblock %}
