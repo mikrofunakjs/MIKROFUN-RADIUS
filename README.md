@@ -24,7 +24,7 @@
 ## Instalasi
 
 ### Requirements
-- **OS:** Ubuntu 20.04 / Debian 11+
+- **OS:** Ubuntu 24.04
 - **RAM:** 1 GB minimum
 - **Port:** 80 (web), 1812-1813 (RADIUS), 3000 (WA Gateway)
 
