@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+    <div>
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="bi bi-journal-code text-warning"></i> Application Logs
+        </h2>
+        <p class="text-xs opacity-50 mt-1">{{ total }} log entries</p>
+    </div>
+    <!-- Filter tabs -->
+    <div class="flex items-center gap-2 flex-wrap">
+        <a href="{{ url_for('logs.index') }}"
+            class="btn btn-sm {{ 'btn-neutral' if not level_filter else 'btn-ghost' }}">All</a>
+        <a href="{{ url_for('logs.index', level='INFO') }}"
+            class="btn btn-sm {{ 'btn-info text-white' if level_filter=='INFO' else 'btn-ghost' }}">INFO</a>
+        <a href="{{ url_for('logs.index', level='WARNING') }}"
+            class="btn btn-sm {{ 'btn-warning' if level_filter=='WARNING' else 'btn-ghost' }}">WARNING</a>
+        <a href="{{ url_for('logs.index', level='ERROR') }}"
+            class="btn btn-sm {{ 'btn-error text-white' if level_filter=='ERROR' else 'btn-ghost' }}">ERROR</a>
+    </div>
+</div>
+
+<!-- Search + Clear -->
+<div class="flex flex-col md:flex-row gap-3 mb-4">
+    <form action="{{ url_for('logs.index') }}" method="GET" class="join flex-1">
+        {% if level_filter %}
+        <input type="hidden" name="level" value="{{ level_filter }}">
+        {% endif %}
+        <input type="text" name="q" placeholder="Cari pesan log..." value="{{ q }}"
+            class="input input-bordered input-sm join-item flex-1">
+        <button class="btn btn-sm btn-neutral join-item"><i class="bi bi-search"></i></button>
+    </form>
+
+    <form method="POST" action="{{ url_for('logs.clear') }}"
+        onsubmit="return confirm('Hapus semua log' + ('{{ level_filter }}' ? ' level {{ level_filter }}' : '') + '?')">
+        {% if level_filter %}
+        <input type="hidden" name="level" value="{{ level_filter }}">
+        {% endif %}
+        <button class="btn btn-sm btn-outline btn-error gap-1">
+            <i class="bi bi-trash"></i> Hapus Log{% if level_filter %} ({{ level_filter }}){% endif %}
+        </button>
+    </form>
+</div>
+
+<!-- Logs Table -->
+<div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm">
+                <thead class="bg-base-200 text-xs uppercase">
+                    <tr>
+                        <th class="w-40">Waktu</th>
+                        <th class="w-24 text-center">Level</th>
+                        <th>Pesan</th>
+                        <th class="text-end pe-4">Detail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr class="hover">
+                        <td class="font-mono text-xs whitespace-nowrap opacity-60">
+                            {{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else '-' }}
+                        </td>
+                        <td class="text-center">
+                            {% if log.level == 'ERROR' %}
+                            <span class="badge badge-error badge-sm text-white">ERROR</span>
+                            {% elif log.level == 'WARNING' %}
+                            <span class="badge badge-warning badge-sm">WARNING</span>
+                            {% else %}
+                            <span class="badge badge-info badge-sm text-white">INFO</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-sm max-w-xs truncate">{{ log.message }}</td>
+                        <td class="text-end pe-4">
+                            {% if log.detail %}
+                            <button class="btn btn-xs btn-ghost text-info" onclick="openDetail({{ loop.index0 }})">
+                                <i class="bi bi-eye"></i> Detail
+                            </button>
+                            <!-- Hidden detail for modal -->
+                            <pre id="detail-{{ loop.index0 }}" class="hidden">{{ log.detail }}</pre>
+                            {% else %}
+                            <span class="opacity-20 text-xs">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not logs %}
+                    <tr>
+                        <td colspan="4" class="text-center py-12 opacity-40">
+                            <i class="bi bi-check-circle text-3xl"></i>
+                            <p class="mt-2">Tidak ada log. Sistem berjalan normal.</p>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="flex justify-center mt-4 gap-2">
+    {% if page > 1 %}
+    <a href="{{ url_for('logs.index', page=page-1, level=level_filter, q=q) }}" class="btn btn-sm btn-ghost">
+        <i class="bi bi-chevron-left"></i>
+    </a>
+    {% endif %}
+    <span class="btn btn-sm btn-disabled">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %} <a href="{{ url_for('logs.index', page=page+1, level=level_filter, q=q) }}"
+        class="btn btn-sm btn-ghost">
+        <i class="bi bi-chevron-right"></i>
+        </a>
+        {% endif %}
+</div>
+{% endif %}
+
+<!-- Detail Modal -->
+<dialog id="detailModal" class="modal">
+    <div class="modal-box max-w-4xl">
+        <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
+            <i class="bi bi-bug text-error"></i> Error Detail / Traceback
+        </h3>
+        <pre id="modalContent"
+            class="bg-base-300 rounded-lg p-4 text-xs overflow-auto max-h-96 whitespace-pre-wrap break-all"></pre>
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn">Tutup</button>
+            </form>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<script>
+    function openDetail(idx) {
+        var content = document.getElementById('detail-' + idx);
+        if (content) {
+            document.getElementById('modalContent').textContent = content.textContent;
+            document.getElementById('detailModal').showModal();
+        }
+    }
+</script>
+{% endblock %}
