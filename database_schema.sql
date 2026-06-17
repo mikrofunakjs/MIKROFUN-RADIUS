@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(64) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'admin',
+    discount_percent DECIMAL(5,2) DEFAULT 0,
+    balance DECIMAL(15,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -71,6 +73,7 @@ CREATE TABLE IF NOT EXISTS customers (
     coordinates VARCHAR(128) NULL,
     mac_address VARCHAR(32) NULL,
     static_ip VARCHAR(32) NULL,
+    billing_type VARCHAR(20) DEFAULT 'postpaid',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -164,8 +167,22 @@ CREATE TABLE IF NOT EXISTS payments (
     payment_type VARCHAR(32) DEFAULT 'bill', -- bill, voucher
     profile_id INT NULL, -- if buying voucher
     voucher_code VARCHAR(32) NULL, -- Issued code
+    reseller_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+);
+
+-- Reseller Transactions
+CREATE TABLE IF NOT EXISTS reseller_transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reseller_id INT NOT NULL,
+    type VARCHAR(32) DEFAULT 'topup',
+    amount DECIMAL(15,2) DEFAULT 0,
+    description TEXT,
+    balance_before DECIMAL(15,2) DEFAULT 0,
+    balance_after DECIMAL(15,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (reseller_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Helpdesk Tickets

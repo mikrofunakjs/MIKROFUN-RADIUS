@@ -255,6 +255,39 @@ PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- Expand payments status ENUM to include processing and failed
 ALTER TABLE payments MODIFY COLUMN status ENUM('pending','processing','approved','rejected','failed') DEFAULT 'pending';
 
+-- Customers: add billing_type
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'customers' AND column_name = 'billing_type');
+SET @query = IF(@col_exists = 0, "ALTER TABLE customers ADD COLUMN billing_type VARCHAR(20) DEFAULT 'postpaid'", 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Users: add discount_percent
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'users' AND column_name = 'discount_percent');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE users ADD COLUMN discount_percent DECIMAL(5,2) DEFAULT 0', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Users: add balance
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'users' AND column_name = 'balance');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE users ADD COLUMN balance DECIMAL(15,2) DEFAULT 0', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Payments: add reseller_id
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'payments' AND column_name = 'reseller_id');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE payments ADD COLUMN reseller_id INT NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Reseller Transactions table
+CREATE TABLE IF NOT EXISTS reseller_transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reseller_id INT NOT NULL,
+    type VARCHAR(32) DEFAULT 'topup',
+    amount DECIMAL(15,2) DEFAULT 0,
+    description TEXT,
+    balance_before DECIMAL(15,2) DEFAULT 0,
+    balance_after DECIMAL(15,2) DEFAULT 0,
+    created_at DATETIME DEFAULT NOW(),
+    FOREIGN KEY (reseller_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Profiles: add missing columns
 SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'burst_limit');
 SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN burst_limit VARCHAR(32) NULL', 'SELECT "Exists"');
