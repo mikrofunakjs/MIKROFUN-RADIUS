@@ -573,6 +573,33 @@ def active_api():
     return jsonify(result)
 
 
+# ── API: Sync active users from MikroTik ────────────────────────────────────────
+@vouchers_bp.route('/active/mikrotik')
+def active_mikrotik():
+    """Pull real-time active hotspot users from ALL online MikroTik routers"""
+    if not session.get('logged_in'):
+        return jsonify([])
+
+    from web.mikrotik_api import MikrotikApi
+    routers = execute_query("SELECT * FROM routers WHERE status='online'", fetch=True) or []
+    
+    all_users = []
+    for router in routers:
+        try:
+            api = MikrotikApi(router.get('vpn_ip', router.get('ip_address', '')))
+            api.username = router.get('api_user', 'admin')
+            api.password = router.get('api_password', '')
+            active = api.get_hotspot_active()
+            for u in active:
+                u['router_name'] = router.get('name', 'Unknown')
+                u['router_ip'] = router.get('vpn_ip', router.get('ip_address', ''))
+            all_users.extend(active)
+        except Exception as e:
+            print(f"[MT Active] {router.get('name')} error: {e}")
+
+    return jsonify(all_users)
+
+
 # ── SOFT DISCONNECT (expire) ──────────────────────────────────────────────────
 @vouchers_bp.route('/disconnect/<int:id>', methods=['POST'])
 def disconnect(id):

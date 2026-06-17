@@ -417,3 +417,13 @@ class MikrotikApi:
         except Exception as e:
             return False, f"Sync error: {str(e)}"
 
+    def get_hotspot_active(self):
+        """Get all active hotspot users from MikroTik"""
+        try:
+            if not self.login(self.username, self.password):
+                return []
+            return self.query(['/ip/hotspot/active/print'])
+        except Exception as e:
+            print(f"Hotspot active query error: {e}")
+            return []
+

@@ -23,6 +23,9 @@
         <button onclick="location.reload()" class="btn btn-ghost btn-sm gap-1">
             <i class="bi bi-arrow-repeat"></i> Refresh
         </button>
+        <button onclick="syncFromMikrotik()" class="btn btn-outline btn-info btn-sm gap-1" id="btnSyncMT">
+            <i class="bi bi-router"></i> Sync MikroTik
+        </button>
         <a href="{{ url_for('vouchers.index') }}" class="btn btn-ghost btn-sm">
             <i class="bi bi-list-ul"></i> Semua Voucher
         </a>
@@ -184,5 +187,37 @@
         setInterval(updateMonitorLabel, 1000);
         refreshIn = 60;
     });
+
+    function syncFromMikrotik() {
+        var btn = document.getElementById('btnSyncMT');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Syncing...';
+        
+        fetch('/vouchers/active/mikrotik')
+            .then(r => r.json())
+            .then(data => {
+                if (data.length === 0) {
+                    alert('Tidak ada user aktif di MikroTik atau semua router offline.');
+                } else {
+                    var msg = 'Aktif di MikroTik (' + data.length + ' user):\n\n';
+                    var routerMap = {};
+                    data.forEach(u => {
+                        var rn = u.router_name || 'Unknown';
+                        if (!routerMap[rn]) routerMap[rn] = [];
+                        routerMap[rn].push(u.user || u.name || '?');
+                    });
+                    for (var r in routerMap) {
+                        msg += '[' + r + ']\n';
+                        routerMap[r].forEach(u => msg += '  - ' + u + '\n');
+                    }
+                    alert(msg);
+                }
+            })
+            .catch(e => alert('Gagal sync: ' + e))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-router"></i> Sync MikroTik';
+            });
+    }
 </script>
 {% endblock %}
