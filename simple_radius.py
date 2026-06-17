@@ -460,17 +460,17 @@ class RadiusServer:
                 
                 log.info(f"ACCEPT voucher: {username}")
                 
-                # Activate if needed
-                if voucher['status'] == 'unused':
-                    activate_voucher(username, voucher.get('duration_hours', 24))
-                    # Reload to get new expires_at
-                    voucher = find_voucher(username)
-
                 # Calculate Session-Timeout (Remaining seconds)
                 remaining_seconds = 0
-                if voucher.get('expires_at'):
-                   remaining = (voucher['expires_at'] - now).total_seconds()
-                   remaining_seconds = int(max(0, remaining))
+                if voucher['status'] == 'active':
+                    # Already active — calculate remaining
+                    if voucher.get('expires_at'):
+                       remaining = (voucher['expires_at'] - now).total_seconds()
+                       remaining_seconds = int(max(0, remaining))
+                else:
+                    # New/unused voucher — use duration from profile
+                    dur = voucher.get('duration_hours', 24)
+                    remaining_seconds = int(dur * 3600)
 
                 # CHECK QUOTA (NEW)
                 quota_limit = voucher.get('quota_limit') or voucher.get('p_quota_limit') or 0
@@ -481,7 +481,8 @@ class RadiusServer:
                     self._send_reject(pkt_id, authenticator, addr, "Quota Habis")
                     return
                 
-                # Send Accept with Profile, Timeout & Quota
+                # Send Accept with Profile, Timeout & Quota  
+                # (Voucher only becomes 'active' on ACCT START, not on auth accept)
                 self._send_accept_voucher(pkt_id, authenticator, addr,
                                   voucher, 
                                   remaining_seconds,
@@ -662,6 +663,10 @@ class RadiusServer:
         
         if rate_limit:
             attr_bytes += make_vsa_mikrotik(MIKROTIK_RATE_LIMIT_TYPE, rate_limit)
+        
+        # Add MikroTik Address-Pool VSA (type 9) — diperlukan MikroTik untuk IP Pool
+        if pool_name:
+            attr_bytes += make_vsa_mikrotik(9, pool_name)
             
         # Add Quota Limit (VSA 17) - Standard Mikrotik Xmit-Limit-64 equivalent for total limit usually handled by user info
         if quota_limit > 0:
@@ -817,19 +822,22 @@ class RadiusServer:
                         if r:
                             nas_id = r['id'] if isinstance(r, dict) else r[0]
 
-                    # 2. Check if this is actually a Voucher (to avoid unnecessary errors for PPPoE users)
-                    cur.execute("SELECT id FROM vouchers WHERE code=%s LIMIT 1", (username,))
-                    if cur.fetchone():
-                        # Update voucher with current session info
+                    # 2. Check if this is actually a Voucher
+                    cur.execute("SELECT id, duration_hours FROM vouchers WHERE code=%s LIMIT 1", (username,))
+                    vrow = cur.fetchone()
+                    if vrow:
+                        dur = vrow.get('duration_hours', 24) if isinstance(vrow, dict) else (vrow[1] if len(vrow) > 1 else 24)
                         if nas_id:
                             cur.execute(
-                                "UPDATE vouchers SET session_id=%s, nas_id=%s, status='active' WHERE code=%s AND status IN ('unused', 'active')",
-                                (session_id, nas_id, username)
+                                "UPDATE vouchers SET session_id=%s, nas_id=%s, status='active', activated_at=NOW(), "
+                                "expires_at=DATE_ADD(NOW(), INTERVAL %s HOUR) WHERE code=%s AND status IN ('unused', 'active')",
+                                (session_id, nas_id, dur, username)
                             )
                         else:
                             cur.execute(
-                                "UPDATE vouchers SET session_id=%s, status='active' WHERE code=%s AND status IN ('unused', 'active')",
-                                (session_id, username)
+                                "UPDATE vouchers SET session_id=%s, status='active', activated_at=NOW(), "
+                                "expires_at=DATE_ADD(NOW(), INTERVAL %s HOUR) WHERE code=%s AND status IN ('unused', 'active')",
+                                (session_id, dur, username)
                             )
                 except Exception as ex:
                     log.error(f"Fail update voucher nas info: {ex}")
