@@ -380,3 +380,40 @@ class MikrotikApi:
         except Exception as e:
             return False, f"Failed to sync Walled Garden: {str(e)}"
 
+    def sync_hotspot_profile(self, profile_name, rate_limit=None, shared_users=1, pool_name=None):
+        """Create or update MikroTik Hotspot User Profile (for RADIUS voucher)"""
+        try:
+            if not self.login(self.username, self.password):
+                return False, "Login failed"
+            
+            # Check if profile already exists
+            existing = self.query(['/ip/hotspot/user/profile/print', f'?name={profile_name}'])
+            
+            if existing:
+                # Update existing
+                cmd = ['/ip/hotspot/user/profile/set', f'=numbers={profile_name}']
+            else:
+                # Create new
+                cmd = ['/ip/hotspot/user/profile/add', f'=name={profile_name}']
+            
+            if rate_limit:
+                cmd.append(f'=rate-limit={rate_limit}')
+            if shared_users and int(shared_users) > 0:
+                cmd.append(f'=shared-users={shared_users}')
+            if pool_name:
+                cmd.append(f'=address-pool={pool_name}')
+            
+            self.send_command(cmd)
+            
+            trap = False
+            while True:
+                w = self.read_word()
+                if w is None or w == '': break
+                if w == '!trap' or w == '!fatal': trap = True
+            
+            if trap:
+                return False, f"Failed to sync profile: {profile_name}"
+            return True, f"Profile '{profile_name}' synced to MikroTik"
+        except Exception as e:
+            return False, f"Sync error: {str(e)}"
+

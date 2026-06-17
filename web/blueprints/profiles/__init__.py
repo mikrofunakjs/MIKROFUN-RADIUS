@@ -4,6 +4,32 @@ from web.database import execute_query
 
 profiles_bp = Blueprint('profiles', __name__)
 
+def sync_profile_to_routers(profile):
+    """Push hotspot user profile to all online MikroTik routers"""
+    if profile.get('type') != 'voucher':
+        return
+    
+    routers = execute_query("SELECT * FROM routers WHERE status='online'", fetch=True) or []
+    if not routers:
+        return
+    
+    from web.mikrotik_api import MikrotikApi
+    
+    for router in routers:
+        try:
+            api = MikrotikApi(router.get('vpn_ip', router.get('ip_address', '')))
+            api.username = router.get('api_user', 'admin')
+            api.password = router.get('api_password', '')
+            success, msg = api.sync_hotspot_profile(
+                profile.get('name'),
+                rate_limit=profile.get('rate_limit'),
+                shared_users=profile.get('shared_users', 1),
+                pool_name=profile.get('pool_name')
+            )
+            print(f"[Profile Sync] {router.get('name')}: {msg}")
+        except Exception as e:
+            print(f"[Profile Sync] {router.get('name')} error: {e}")
+
 @profiles_bp.route('/')
 def index():
     if not session.get('logged_in'):
@@ -70,6 +96,14 @@ def add():
         )
         if result:
             flash(f'Profile {p_type} berhasil ditambahkan!', 'success')
+            if p_type == 'voucher':
+                sync_profile_to_routers({
+                    'name': request.form.get('name'),
+                    'type': p_type,
+                    'rate_limit': request.form.get('rate_limit'),
+                    'pool_name': request.form.get('pool_name', ''),
+                    'shared_users': shared_users,
+                })
             return redirect(url_for('profiles.index', type=p_type))
         flash('Gagal menambahkan profile!', 'error')
 
@@ -121,6 +155,14 @@ def edit(id):
              request.form.get('description', ''), router_id, id)
         )
         flash('Profile berhasil diupdate!', 'success')
+        if current_type == 'voucher':
+            sync_profile_to_routers({
+                'name': request.form.get('name'),
+                'type': current_type,
+                'rate_limit': request.form.get('rate_limit'),
+                'pool_name': request.form.get('pool_name', ''),
+                'shared_users': shared_users,
+            })
         return redirect(url_for('profiles.index', type=current_type))
 
     routers = execute_query("SELECT * FROM routers ORDER BY name", fetch=True) or []
@@ -137,6 +179,14 @@ def delete(id):
 
     execute_query("DELETE FROM profiles WHERE id=%s", (id,))
     flash('Profile berhasil dihapus!', 'success')
+    if profile and profile.get('type') == 'voucher':
+        sync_profile_to_routers({
+            'name': profile.get('name'),
+            'type': 'voucher',
+            'rate_limit': '',
+            'pool_name': '',
+            'shared_users': 1,
+        })
     return redirect(url_for('profiles.index', type=redirect_type))
 
 
