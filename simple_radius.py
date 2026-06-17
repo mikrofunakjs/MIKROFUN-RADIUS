@@ -478,8 +478,8 @@ class RadiusServer:
                     remaining_seconds = int(dur * 3600)
 
                 # CHECK QUOTA (NEW)
-                quota_limit = voucher.get('quota_limit') or voucher.get('p_quota_limit') or 0
-                quota_used = voucher.get('quota_used') or 0
+                quota_limit = int(voucher.get('quota_limit') or voucher.get('p_quota_limit') or 0)
+                quota_used = int(voucher.get('quota_used') or 0)
                 
                 if quota_limit > 0 and quota_used >= quota_limit:
                     log.warning(f"REJECT voucher {username}: Quota exceeded ({quota_used}/{quota_limit})")
