@@ -551,13 +551,7 @@ class RadiusServer:
         log.info(f"     Msg-Auth (HMAC): {msg_auth.hex()}")
         log.info(f"     Resp-Auth (MD5): {resp_auth.hex()}")
         
-        try:
-            r_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            r_sock.connect(addr)
-            r_sock.send(final_pkt)
-            r_sock.close()
-        except Exception as e:
-            log.error(f"  ❌ Failed to send response: {e}")
+        self.auth_sock.sendto(final_pkt, addr)
     
     def _assemble_rate_limit(self, user):
         """Build Mikrotik Rate Limit string with Burst support"""
@@ -643,13 +637,7 @@ class RadiusServer:
         # Step 6: Build Final Packet
         final_pkt = struct.pack('!BBH', CODE_ACCESS_ACCEPT, pkt_id, length) + resp_auth + final_attrs
         
-        try:
-            r_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            r_sock.connect(addr)
-            r_sock.send(final_pkt)
-            r_sock.close()
-        except Exception as e:
-            log.error(f"  ❌ Failed to send response: {e}")
+        self.auth_sock.sendto(final_pkt, addr)
     def _send_accept_voucher(self, pkt_id, authenticator, addr, voucher, session_timeout=0, quota_limit=0, quota_used=0):
         """Build Access-Accept specifically for Vouchers with Session-Timeout & Quota"""
         rate_limit = self._assemble_rate_limit(voucher)
@@ -707,16 +695,8 @@ class RadiusServer:
         resp_auth = hashlib.md5(resp_auth_input).digest()
         
         final_pkt = struct.pack('!BBH', CODE_ACCESS_ACCEPT, pkt_id, length) + resp_auth + final_attrs
-        
-        # Gunakan connected socket agar response dari IP interface yg benar
-        try:
-            r_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            r_sock.connect(addr)
-            r_sock.send(final_pkt)
-            r_sock.close()
-            log.info(f"  ✅ Response sent to {addr[0]}:{addr[1]}")
-        except Exception as e:
-            log.error(f"  ❌ Failed to send response: {e}")
+        self.auth_sock.sendto(final_pkt, addr)
+        log.info(f"  ✅ Response sent to {addr[0]}:{addr[1]}")
 
     # ── Accounting ────────────────────────────────────────────────
     def handle_acct(self, data, addr):
