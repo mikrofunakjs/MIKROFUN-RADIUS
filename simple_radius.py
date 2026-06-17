@@ -351,6 +351,11 @@ class RadiusServer:
         self.acct_sock.bind(('0.0.0.0', ACCT_PORT))
         log.info(f"Auth listening on :{AUTH_PORT}")
         log.info(f"Acct listening on :{ACCT_PORT}")
+        
+        # Log secret info untuk debugging
+        s = get_secret()
+        log.info(f"RADIUS Secret (first 8 chars MD5): {hashlib.md5(s).hexdigest()[:8]}...")
+        log.info(f"Default secret: {DEFAULT_SECRET if isinstance(DEFAULT_SECRET, str) else DEFAULT_SECRET.decode()}")
 
         threading.Thread(target=self._loop, args=(self.auth_sock, self.handle_auth), daemon=True).start()
         threading.Thread(target=self._loop, args=(self.acct_sock, self.handle_acct), daemon=True).start()
@@ -546,7 +551,13 @@ class RadiusServer:
         log.info(f"     Msg-Auth (HMAC): {msg_auth.hex()}")
         log.info(f"     Resp-Auth (MD5): {resp_auth.hex()}")
         
-        self.auth_sock.sendto(final_pkt, addr)
+        try:
+            r_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            r_sock.connect(addr)
+            r_sock.send(final_pkt)
+            r_sock.close()
+        except Exception as e:
+            log.error(f"  ❌ Failed to send response: {e}")
     
     def _assemble_rate_limit(self, user):
         """Build Mikrotik Rate Limit string with Burst support"""
@@ -632,15 +643,22 @@ class RadiusServer:
         # Step 6: Build Final Packet
         final_pkt = struct.pack('!BBH', CODE_ACCESS_ACCEPT, pkt_id, length) + resp_auth + final_attrs
         
-        self.auth_sock.sendto(final_pkt, addr)
-
+        try:
+            r_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            r_sock.connect(addr)
+            r_sock.send(final_pkt)
+            r_sock.close()
+        except Exception as e:
+            log.error(f"  ❌ Failed to send response: {e}")
     def _send_accept_voucher(self, pkt_id, authenticator, addr, voucher, session_timeout=0, quota_limit=0, quota_used=0):
         """Build Access-Accept specifically for Vouchers with Session-Timeout & Quota"""
         rate_limit = self._assemble_rate_limit(voucher)
         pool_name = voucher.get('pool_name')
+        
         log.info(f"  📤 Sending Voucher ACCEPT to {addr[0]}:{addr[1]} timeout={session_timeout}s quota={quota_limit}")
         import hmac
         current_secret = get_secret()
+        log.info(f"  🔑 Secret hash: {hashlib.md5(current_secret).hexdigest()[:8]}... len={len(current_secret)}")
         
         reply = [
             (ATTR_SERVICE_TYPE, 2),       # Framed-User
@@ -689,7 +707,16 @@ class RadiusServer:
         resp_auth = hashlib.md5(resp_auth_input).digest()
         
         final_pkt = struct.pack('!BBH', CODE_ACCESS_ACCEPT, pkt_id, length) + resp_auth + final_attrs
-        self.auth_sock.sendto(final_pkt, addr)
+        
+        # Gunakan connected socket agar response dari IP interface yg benar
+        try:
+            r_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            r_sock.connect(addr)
+            r_sock.send(final_pkt)
+            r_sock.close()
+            log.info(f"  ✅ Response sent to {addr[0]}:{addr[1]}")
+        except Exception as e:
+            log.error(f"  ❌ Failed to send response: {e}")
 
     # ── Accounting ────────────────────────────────────────────────
     def handle_acct(self, data, addr):
