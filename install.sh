@@ -237,6 +237,21 @@ SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_s
 SET @query = IF(@col_exists = 0, 'ALTER TABLE vouchers ADD COLUMN nas_id INT NULL', 'SELECT "Exists"');
 PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
+-- Vouchers: add buy_price
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'vouchers' AND column_name = 'buy_price');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE vouchers ADD COLUMN buy_price DECIMAL(10,2) DEFAULT 0', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Vouchers: add quota_limit
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'vouchers' AND column_name = 'quota_limit');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE vouchers ADD COLUMN quota_limit BIGINT DEFAULT 0', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Vouchers: add reseller_id
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'vouchers' AND column_name = 'reseller_id');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE vouchers ADD COLUMN reseller_id INT NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 -- Expand payments status ENUM to include processing and failed
 ALTER TABLE payments MODIFY COLUMN status ENUM('pending','processing','approved','rejected','failed') DEFAULT 'pending';
 
@@ -267,6 +282,15 @@ PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'quota_limit');
 SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN quota_limit VARCHAR(32) NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Routers: add vpn_type and vpn_password
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'routers' AND column_name = 'vpn_type');
+SET @query = IF(@col_exists = 0, "ALTER TABLE routers ADD COLUMN vpn_type VARCHAR(32) DEFAULT 'direct_local'", 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'routers' AND column_name = 'vpn_password');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE routers ADD COLUMN vpn_password VARCHAR(64) NULL', 'SELECT "Exists"');
 PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 MIGRATION_SQL
 
