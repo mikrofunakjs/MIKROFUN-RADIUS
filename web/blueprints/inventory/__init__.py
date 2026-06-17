@@ -234,7 +234,7 @@ def add():
 
         try:
             execute_query(
-                "INSERT INTO assets (name, category, brand, mac_address, serial_number, purchase_price, purchase_date, Status, notes) "
+                "INSERT INTO assets (name, category, brand, mac_address, serial_number, purchase_price, purchase_date, status, notes) "
                 "VALUES (%s, %s, %s, %s, %s, %s, %s, 'available', %s)",
                 (name, category, brand, mac_address, serial_number, purchase_price, purchase_date, notes)
             )

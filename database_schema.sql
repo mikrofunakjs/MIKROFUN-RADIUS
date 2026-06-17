@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS odps (
     address VARCHAR(255),
     coordinates VARCHAR(64),
     capacity INT DEFAULT 8,
+    odc_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -287,6 +288,10 @@ CREATE TABLE IF NOT EXISTS `tunnels` (
   `mikrotik_web_port` int(11) DEFAULT 80,
   `public_winbox_port` int(11) DEFAULT NULL,
   `public_web_port` int(11) DEFAULT NULL,
+  `mikrotik_user` varchar(64) DEFAULT NULL,
+  `mikrotik_password` varchar(255) DEFAULT NULL,
+  `mikrotik_api_port` int(11) DEFAULT 8728,
+  `public_api_port` int(11) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 0,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
@@ -406,4 +411,104 @@ CREATE TABLE IF NOT EXISTS radusergroup (
   `priority` int(11) DEFAULT 1,
   PRIMARY KEY (`id`),
   KEY `username` (`username`(32))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- Voucher Batches
+-- =============================================
+CREATE TABLE IF NOT EXISTS voucher_batches (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) NOT NULL,
+  `profile_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- App Logs
+-- =============================================
+CREATE TABLE IF NOT EXISTS app_logs (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `level` varchar(10) DEFAULT 'INFO',
+  `message` varchar(500) DEFAULT NULL,
+  `detail` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- ACS Devices (CPE Manager)
+-- =============================================
+CREATE TABLE IF NOT EXISTS acs_devices (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `serial_number` varchar(64) DEFAULT NULL,
+  `oui` varchar(32) DEFAULT NULL,
+  `model` varchar(128) DEFAULT NULL,
+  `vendor` varchar(128) DEFAULT NULL,
+  `firmware` varchar(32) DEFAULT NULL,
+  `ip_address` varchar(64) DEFAULT NULL,
+  `ssid_24` varchar(64) DEFAULT NULL,
+  `ssid_50` varchar(64) DEFAULT NULL,
+  `last_inform` timestamp NULL DEFAULT NULL,
+  `customer_id` int(11) DEFAULT NULL,
+  `status` varchar(32) DEFAULT 'offline',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `serial_number` (`serial_number`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- ACS Tasks
+-- =============================================
+CREATE TABLE IF NOT EXISTS acs_tasks (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `device_serial` varchar(64) DEFAULT NULL,
+  `task_type` varchar(64) DEFAULT NULL,
+  `value` text DEFAULT NULL,
+  `param_path` varchar(255) DEFAULT NULL,
+  `status` varchar(32) DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `executed_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- WA Templates
+-- =============================================
+CREATE TABLE IF NOT EXISTS wa_templates (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `template_key` varchar(64) DEFAULT NULL,
+  `message_text` text DEFAULT NULL,
+  `placeholders` text DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- WA Reminders Sent
+-- =============================================
+CREATE TABLE IF NOT EXISTS wa_reminders_sent (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(11) DEFAULT NULL,
+  `due_date` date DEFAULT NULL,
+  `sent_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- Failed Ledger Queue
+-- =============================================
+CREATE TABLE IF NOT EXISTS failed_ledger_queue (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `source_type` varchar(32) DEFAULT NULL,
+  `source_id` int(11) DEFAULT NULL,
+  `ref_number` varchar(64) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `gross_amount` decimal(15,2) DEFAULT 0,
+  `cost_amount` decimal(15,2) DEFAULT 0,
+  `party_name` varchar(128) DEFAULT NULL,
+  `category` varchar(64) DEFAULT NULL,
+  `recorded_by` varchar(64) DEFAULT NULL,
+  `error_msg` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

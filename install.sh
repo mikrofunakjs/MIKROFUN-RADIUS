@@ -288,6 +288,28 @@ CREATE TABLE IF NOT EXISTS reseller_transactions (
     FOREIGN KEY (reseller_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- ODPs: add odc_id
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'odps' AND column_name = 'odc_id');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE odps ADD COLUMN odc_id INT NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Tunnels: add missing columns
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'tunnels' AND column_name = 'mikrotik_user');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE tunnels ADD COLUMN mikrotik_user VARCHAR(64) NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'tunnels' AND column_name = 'mikrotik_password');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE tunnels ADD COLUMN mikrotik_password VARCHAR(255) NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'tunnels' AND column_name = 'mikrotik_api_port');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE tunnels ADD COLUMN mikrotik_api_port INT DEFAULT 8728', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'tunnels' AND column_name = 'public_api_port');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE tunnels ADD COLUMN public_api_port INT NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 -- Profiles: add missing columns
 SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'burst_limit');
 SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN burst_limit VARCHAR(32) NULL', 'SELECT "Exists"');
