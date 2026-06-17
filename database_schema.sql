@@ -293,3 +293,85 @@ CREATE TABLE IF NOT EXISTS asset_logs (
   PRIMARY KEY (`id`),
   FOREIGN KEY (`asset_id`) REFERENCES assets(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- ODC (Optical Distribution Cabinet)
+-- =============================================
+CREATE TABLE IF NOT EXISTS odcs (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) NOT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `coordinates` varchar(64) DEFAULT NULL,
+  `capacity` int(11) DEFAULT 8,
+  `olt_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- OLT (Optical Line Terminal)
+-- =============================================
+CREATE TABLE IF NOT EXISTS olts (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) NOT NULL,
+  `ip_address` varchar(64) DEFAULT NULL,
+  `brand` varchar(64) DEFAULT NULL,
+  `api_port` int(11) DEFAULT 8728,
+  `username` varchar(64) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `total_ports` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- Income Ledger (Keuangan / Laporan)
+-- =============================================
+CREATE TABLE IF NOT EXISTS income_ledger (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `source_type` varchar(32) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `net_profit` decimal(15,2) DEFAULT 0,
+  `gross_amount` decimal(15,2) DEFAULT 0,
+  `cost_amount` decimal(15,2) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- Expenses (Pengeluaran)
+-- =============================================
+CREATE TABLE IF NOT EXISTS expenses (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `category` varchar(64) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `amount` decimal(15,2) DEFAULT 0,
+  `expense_date` date DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- FreeRADIUS radcheck (authentication)
+-- =============================================
+CREATE TABLE IF NOT EXISTS radcheck (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(64) NOT NULL,
+  `attribute` varchar(64) NOT NULL DEFAULT 'Cleartext-Password',
+  `op` char(2) NOT NULL DEFAULT ':=',
+  `value` varchar(253) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `username` (`username`(32))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =============================================
+-- FreeRADIUS radusergroup
+-- =============================================
+CREATE TABLE IF NOT EXISTS radusergroup (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(64) NOT NULL,
+  `groupname` varchar(64) NOT NULL,
+  `priority` int(11) DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `username` (`username`(32))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

@@ -239,6 +239,35 @@ PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- Expand payments status ENUM to include processing and failed
 ALTER TABLE payments MODIFY COLUMN status ENUM('pending','processing','approved','rejected','failed') DEFAULT 'pending';
+
+-- Profiles: add missing columns
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'burst_limit');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN burst_limit VARCHAR(32) NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'burst_threshold');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN burst_threshold VARCHAR(32) NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'burst_time');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN burst_time VARCHAR(32) NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'limit_at');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN limit_at VARCHAR(32) NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'validity_unit');
+SET @query = IF(@col_exists = 0, "ALTER TABLE profiles ADD COLUMN validity_unit ENUM('hours','days','months') DEFAULT 'hours'", 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'shared_users');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN shared_users INT DEFAULT 1', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = @db_name AND table_name = 'profiles' AND column_name = 'quota_limit');
+SET @query = IF(@col_exists = 0, 'ALTER TABLE profiles ADD COLUMN quota_limit VARCHAR(32) NULL', 'SELECT "Exists"');
+PREPARE stmt FROM @query; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 MIGRATION_SQL
 
 # 6. Firewall & WireGuard
