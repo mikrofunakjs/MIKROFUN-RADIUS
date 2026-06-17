@@ -51,7 +51,7 @@
                 <code class="badge badge-ghost badge-sm font-mono">{{ p.rate_limit or 'No Limit' }}</code>
                 {% if p.quota_limit %}
                 <span class="badge badge-primary badge-sm gap-1">
-                    <i class="bi bi-pie-chart"></i> {{ (p.quota_limit / 1073741824)|round(1) }} GB
+                    <i class="bi bi-pie-chart"></i> {{ (p.quota_limit|float / 1073741824)|round(1) }} GB
                 </span>
                 {% else %}
                 <span class="badge badge-outline badge-sm opacity-50">Unlimited</span>
@@ -129,7 +129,7 @@
                             {% endif %}
                             <td>
                                 {% if p.quota_limit %}
-                                <span class="font-bold text-primary">{{ (p.quota_limit / 1073741824)|round(1) }} GB</span>
+                                <span class="font-bold text-primary">{{ (p.quota_limit|float / 1073741824)|round(1) }} GB</span>
                                 {% else %}
                                 <span class="text-xs opacity-40 italic">Unlimited</span>
                                 {% endif %}

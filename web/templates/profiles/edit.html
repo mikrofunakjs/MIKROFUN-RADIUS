@@ -86,7 +86,7 @@
                         </label>
                         <div class="join w-full">
                             <input type="number" step="0.1" name="quota_limit" class="input input-bordered w-full join-item" 
-                                value="{{ (profile.quota_limit / 1073741824)|round(1) if profile.quota_limit else 0 }}">
+                                value="{{ (profile.quota_limit|float / 1073741824)|round(1) if profile.quota_limit else 0 }}">
                             <span class="btn btn-disabled join-item">GB</span>
                         </div>
                         <label class="label">
