@@ -211,8 +211,8 @@ def add():
 
         if not is_premium():
             current_count = execute_query("SELECT COUNT(*) as c FROM vouchers", fetch_one=True)['c']
-            if current_count + qty > 250:
-                flash('Free Version limited to 250 vouchers. Upgrade to Premium.', 'error')
+            if current_count + qty > 800:
+                flash('Batas Free: 800 voucher. Upgrade ke Premium untuk unlimited.', 'error')
                 return redirect(url_for('vouchers.add'))
 
         # Create / reuse batch
@@ -734,6 +734,13 @@ def import_excel():
             import os
             from openpyxl import load_workbook
             from web.app import app
+            
+            # CHECK LIMIT
+            if not is_premium():
+                c = execute_query("SELECT COUNT(*) as c FROM vouchers", fetch_one=True)['c']
+                if c >= 800:
+                    flash('Batas Free: 800 voucher. Hapus beberapa atau upgrade ke Premium.', 'error')
+                    return redirect(request.url)
             
             # Use app config for upload folder
             upload_dir = app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'web', 'static', 'uploads'))

@@ -269,9 +269,9 @@ def add():
         from web.license_service import is_premium
         if not is_premium():
              current_count = execute_query("SELECT COUNT(*) as c FROM customers", fetch_one=True)['c']
-             if current_count >= 50:
-                 flash('Free Version limited to 50 customers. Please upgrade to Premium.', 'error')
-                 return redirect(url_for('customers.add'))
+             if current_count >= 100:
+                  flash('Batas Free: 100 pelanggan. Upgrade ke Premium untuk unlimited.', 'error')
+                  return redirect(url_for('customers.add'))
 
         result = execute_query(
             "INSERT INTO customers (name, username, password, service_type, profile_id, router_id, phone, address, due_date, status, odp_id, port_number, coordinates, mac_address, static_ip, billing_type) "
