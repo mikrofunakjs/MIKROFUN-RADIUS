@@ -328,8 +328,18 @@
                         class="select select-bordered w-full bg-slate-50 mb-4" onchange="toggleGatewayChannels()">
                         <option value="tripay">Tripay</option>
                         <option value="duitku">Duitku</option>
+                        {% if xendit_available %}
+                        <option value="xendit">Xendit (Semua Metode)</option>
+                        {% endif %}
                     </select>
                     {% elif active_gateway == 'xendit' %}
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i class="bi bi-lightning-charge text-purple-600 text-xl"></i>
+                            <span class="font-bold text-purple-800">Pembayaran via Xendit</span>
+                        </div>
+                        <p class="text-xs text-purple-600 mt-1">Kamu akan diarahkan ke halaman pembayaran Xendit</p>
+                    </div>
                     <input type="hidden" name="payment_method" value="xendit">
                     {% else %}
                     <input type="hidden" name="payment_method" value="{{ active_gateway }}">
@@ -376,7 +386,13 @@
                         const tripaySel = document.getElementById('tripay_channels');
                         const duitkuSel = document.getElementById('duitku_channels');
 
-                        if (gateway === 'tripay') {
+                        if (gateway === 'xendit') {
+                            // Xendit — no channel selection needed
+                            tripayCont.classList.add('hidden');
+                            tripaySel.required = false;
+                            duitkuCont.classList.add('hidden');
+                            duitkuSel.required = false;
+                        } else if (gateway === 'tripay') {
                             tripayCont.classList.remove('hidden');
                             tripaySel.required = true;
                             duitkuCont.classList.add('hidden');

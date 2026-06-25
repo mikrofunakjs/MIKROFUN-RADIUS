@@ -331,8 +331,18 @@
                         onchange="toggleGatewayChannels()">
                         <option value="tripay">Tripay</option>
                         <option value="duitku">Duitku</option>
+                        {% if xendit_available %}
+                        <option value="xendit">Xendit (Semua Metode)</option>
+                        {% endif %}
                     </select>
                     {% elif active_gateway == 'xendit' %}
+                    <div class="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i class="bi bi-lightning-charge text-purple-400 text-xl"></i>
+                            <span class="font-bold text-purple-300">Pembayaran via Xendit</span>
+                        </div>
+                        <p class="text-xs text-purple-400 mt-1">Kamu akan diarahkan ke halaman pembayaran Xendit</p>
+                    </div>
                     <input type="hidden" name="payment_method" value="xendit">
                     {% else %}
                     <input type="hidden" name="payment_method" value="{{ active_gateway }}">
