@@ -132,14 +132,14 @@
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {% for v in voucher_profiles %}
-                    <button onclick="openVoucherModal('{{ v.id }}', {{ v.name|tojson }}, {{ v.price }})"
+                    <button onclick="openVoucherModal('{{ v.id }}', '{{ v.name }}', {{ (v.price|float or 0) + ((v.price|float or 0) * (v.tax_percent|float or 0) / 100) }})"
                         class="flex flex-col items-center justify-center p-4 rounded-3xl border-2 border-slate-100 hover:border-primary hover:bg-blue-50/50 hover:shadow-lg hover:-translate-y-1 transition-all group text-center w-full relative overflow-hidden focus:outline-none focus:ring-4 focus:ring-primary/20 bg-white">
                         <div
                             class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-3 text-xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-ticket-detailed-fill"></i>
                         </div>
                         <div class="font-bold text-slate-700 text-sm leading-tight mb-1">{{ v.name }}</div>
-                        <div class="text-sm font-black text-primary">Rp {{ "{:,.0f}".format(v.price|float) }}</div>
+                        <div class="text-sm font-black text-primary">{{ v.price|price_total(v.tax_percent) }}</div>
                     </button>
                     {% endfor %}
                 </div>

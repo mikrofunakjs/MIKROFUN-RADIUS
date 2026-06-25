@@ -54,7 +54,7 @@
             </div>
         </div>
         <div class="text-right">
-            <p class="text-xs font-bold text-gray-800">Rp {{ "{:,.0f}".format(v.price).replace(',', '.') }}</p>
+            <p class="text-xs font-bold text-gray-800">{{ v.price|price_total(v.tax_percent) }}</p>
             <p class="text-[10px] text-success font-semibold">- Rp {{ "{:,.0f}".format(v.buy_price).replace(',', '.') }}
             </p>
         </div>

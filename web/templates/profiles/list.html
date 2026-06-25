@@ -36,8 +36,8 @@
             <div class="flex justify-between items-start">
                 <h3 class="font-bold text-primary text-lg">{{ p.name }}</h3>
                 <span class="font-mono font-bold text-success text-sm bg-success/10 px-2 py-1 rounded">
+                    {{ p.price|price_total(p.tax_percent) }}
                     {% set tax = p.tax_percent|float if p.tax_percent else 0 %}
-                    Rp {{ "{:,.0f}".format((p.price|float or 0) + ((p.price|float or 0) * tax / 100)) if p.price else '0' }}
                     {% if tax > 0 %}<span class="text-[10px] opacity-60"> (inc. PPN {{ tax }}%)</span>{% endif %}
                 </span>
             </div>
@@ -137,8 +137,8 @@
                                 {% endif %}
                             </td>
                             <td class="font-mono">
+                                {{ p.price|price_total(p.tax_percent) }}
                                 {% set tax = p.tax_percent|float if p.tax_percent else 0 %}
-                                Rp {{ "{:,.0f}".format((p.price|float or 0) + ((p.price|float or 0) * tax / 100)) if p.price else '0' }}
                                 {% if tax > 0 %}<br><span class="text-[10px] opacity-50">inc. PPN {{ tax }}%</span>{% endif %}
                             </td>
                             <td class="text-end pe-6">

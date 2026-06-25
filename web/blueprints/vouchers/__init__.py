@@ -116,7 +116,7 @@ def index():
     )
     count  = (execute_query(f"SELECT COUNT(*) as c {base_q}", tuple(params), fetch_one=True) or {}).get('c', 0)
     vouchers = execute_query(
-        f"SELECT v.*, p.name as profile_name, p.validity, p.validity_unit, b.name as batch_name {base_q} "
+        f"SELECT v.*, p.name as profile_name, p.validity, p.validity_unit, b.name as batch_name, p.tax_percent {base_q} "
         f"ORDER BY v.id DESC LIMIT %s OFFSET %s",
         tuple(params) + (per_page, offset), fetch=True
     ) or []

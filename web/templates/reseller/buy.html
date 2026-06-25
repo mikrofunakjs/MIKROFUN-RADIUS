@@ -10,11 +10,12 @@
     <!-- Profile Cards -->
     <div class="space-y-3 mb-32">
         {% for p in profiles %}
+        {% set tax_total = (p.price|float or 0) + ((p.price|float or 0) * (p.tax_percent|float or 0) / 100) %}
         <label class="cursor-pointer block"
-            onclick="selectProfile(this, {{ p.id }}, '{{ p.name }}', {{ p.price - (p.price * discount_percent / 100) }})">
+            onclick="selectProfile(this, {{ p.id }}, '{{ p.name }}', {{ tax_total - (tax_total * discount_percent / 100) }})">
             <input type="radio" name="profile_id" value="{{ p.id }}" class="sr-only" required
                 data-profile-name="{{ p.name }}" data-normal-price="{{ p.price }}"
-                data-buy-price="{{ p.price - (p.price * discount_percent / 100) }}">
+                data-buy-price="{{ tax_total - (tax_total * discount_percent / 100) }}">
 
             <div id="card-{{ p.id }}"
                 class="bg-white rounded-2xl border-2 border-gray-100 p-4 transition-all duration-200 shadow-sm hover:border-gray-300">

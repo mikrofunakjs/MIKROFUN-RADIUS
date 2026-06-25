@@ -90,7 +90,7 @@ def dashboard():
     
     # Recent Purchases by this reseller
     recent = execute_query(
-        "SELECT v.*, p.name as profile_name FROM vouchers v "
+        "SELECT v.*, p.name as profile_name, p.tax_percent FROM vouchers v "
         "LEFT JOIN profiles p ON v.profile_id = p.id "
         "WHERE v.reseller_id=%s ORDER BY v.created_at DESC LIMIT 5",
         (session['user_id'],), fetch=True
@@ -459,7 +459,7 @@ def history():
     balance, discount_percent = get_reseller_data()
     
     vouchers = execute_query(
-        "SELECT v.*, p.name as profile_name FROM vouchers v "
+        "SELECT v.*, p.name as profile_name, p.tax_percent FROM vouchers v "
         "LEFT JOIN profiles p ON v.profile_id = p.id "
         "WHERE v.reseller_id=%s ORDER BY v.created_at DESC",
         (session['user_id'],), fetch=True

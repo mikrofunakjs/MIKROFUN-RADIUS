@@ -123,13 +123,13 @@
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {% for v in voucher_profiles %}
-                <button onclick="openVoucherModal('{{ v.id }}', '{{ v.name }}', {{ v.price }})"
+                <button onclick="openVoucherModal('{{ v.id }}', '{{ v.name }}', {{ (v.price|float or 0) + ((v.price|float or 0) * (v.tax_percent|float or 0) / 100) }})"
                     class="bg-white border-2 border-[#2c2928] p-5 flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1 focus:outline-none group">
                     <div class="mb-3 text-[#2c2928] group-hover:scale-110 transition-transform">
                         <i class="bi bi-ticket-perforated text-2xl"></i>
                     </div>
                     <div class="serif-text font-bold text-[#2c2928] mb-1 leading-tight">{{ v.name }}</div>
-                    <div class="text-sm font-black text-[#2c2928]">Rp {{ "{:,.0f}".format(v.price|float) }}</div>
+                    <div class="text-sm font-black text-[#2c2928]">{{ v.price|price_total(v.tax_percent) }}</div>
                 </button>
                 {% endfor %}
             </div>

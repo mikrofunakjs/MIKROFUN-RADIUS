@@ -155,7 +155,7 @@
                             <td class="font-mono font-bold text-primary tracking-wider">{{ v.code }}</td>
                             <td><span class="badge badge-outline badge-sm">{{ v.profile_name or '-' }}</span></td>
                             <td class="text-sm">{{ v.validity_str }}</td>
-                            <td class="text-sm">{{ v.price|currency }}</td>
+                            <td class="text-sm">{{ v.price|price_total(v.tax_percent) }}</td>
                             <td class="text-xs opacity-60">{{ v.batch_name or '-' }}</td>
                             <td class="text-xs">
                                 {{ v.created_by }}

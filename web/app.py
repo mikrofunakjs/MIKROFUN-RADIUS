@@ -201,6 +201,20 @@ def format_currency(value):
     except (ValueError, TypeError):
         return value
 
+# Custom filter: price + PPN
+@app.template_filter('price_total')
+def format_price_total(price, tax_percent=0):
+    """Display price including PPN: Rp 110.000"""
+    try:
+        if price is None:
+            return "Rp 0"
+        base = float(price)
+        tax = float(tax_percent or 0)
+        total = base + (base * tax / 100)
+        return f"Rp {total:,.0f}".replace(',', '.')
+    except (ValueError, TypeError):
+        return price
+
 # --- GLOBAL SECURITY HEADERS ---
 @app.after_request
 def add_security_headers(response):
