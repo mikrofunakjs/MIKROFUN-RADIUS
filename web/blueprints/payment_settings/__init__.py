@@ -55,6 +55,17 @@ def index():
                     (key, val, val)
                 )
                 
+        # Xendit Settings
+        xendit_keys = ['xendit_api_key', 'xendit_webhook_token', 'xendit_mode']
+        for key in xendit_keys:
+            val = request.form.get(key)
+            if val is not None:
+                execute_query(
+                    "INSERT INTO settings (setting_key, setting_value) VALUES (%s, %s) "
+                    "ON DUPLICATE KEY UPDATE setting_value=%s",
+                    (key, val, val)
+                )
+                
         # Active Gateway
         active_gateway = request.form.get('active_gateway', 'manual')
         execute_query(

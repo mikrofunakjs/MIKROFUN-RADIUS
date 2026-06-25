@@ -108,6 +108,13 @@
                 </div>
                 <div class="form-control">
                     <label class="label cursor-pointer justify-start gap-4">
+                        <input type="radio" name="active_gateway" value="xendit" class="radio radio-primary"
+                            {{ 'checked' if settings.get('active_gateway')=='xendit' else '' }}>
+                        <span class="label-text font-bold">Xendit</span>
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
                         <input type="radio" name="active_gateway" value="both" class="radio radio-primary" {{ 'checked'
                             if settings.get('active_gateway')=='both' else '' }}>
                         <span class="label-text font-bold">Dual Gateway (Tripay & Midtrans)</span>
@@ -267,6 +274,48 @@
                                     Key</span></label>
                             <input type="password" name="duitku_api_key" class="input input-bordered w-full font-mono"
                                 value="{{ settings.get('duitku_api_key', '') }}" placeholder="API Key">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Xendit Settings -->
+                <div class="card bg-base-100 shadow border border-base-200 mt-4">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4 flex items-center gap-2">
+                            <i class="bi bi-lightning-charge text-purple-500 text-xl"></i>
+                            Xendit Settings
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div class="form-control w-full">
+                                <label class="label"><span class="label-text font-bold">Mode</span></label>
+                                <select name="xendit_mode" class="select select-bordered w-full">
+                                    <option value="sandbox" {{ 'selected' if settings.get('xendit_mode')=='sandbox' else '' }}>
+                                        Sandbox (Test)</option>
+                                    <option value="production" {{ 'selected' if settings.get('xendit_mode')=='production' else '' }}>
+                                        Production (Live)</option>
+                                </select>
+                            </div>
+                            <div class="form-control w-full">
+                                <label class="label"><span class="label-text font-bold">API Key</span></label>
+                                <input type="password" name="xendit_api_key" class="input input-bordered w-full font-mono"
+                                    value="{{ settings.get('xendit_api_key', '') }}" placeholder="xnd_development_...">
+                            </div>
+                            <div class="form-control w-full">
+                                <label class="label"><span class="label-text font-bold">Webhook Token</span></label>
+                                <input type="password" name="xendit_webhook_token" class="input input-bordered w-full font-mono"
+                                    value="{{ settings.get('xendit_webhook_token', '') }}" placeholder="Verification token">
+                            </div>
+                        </div>
+                        <div class="mt-3 bg-base-200 rounded-lg p-3">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-purple-800 mb-1">Callback URL Xendit</p>
+                            <div class="join w-full">
+                                <input type="text" class="input input-bordered join-item w-full text-xs font-mono"
+                                    value="{{ request.url_root.rstrip('/') }}{{ url_for('api.callback_xendit') }}"
+                                    readonly id="url-xendit">
+                                <button type="button" class="btn btn-sm join-item"
+                                    onclick="navigator.clipboard.writeText(document.getElementById('url-xendit').value); alert('URL Xendit Disalin!')"><i
+                                        class="bi bi-clipboard"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>

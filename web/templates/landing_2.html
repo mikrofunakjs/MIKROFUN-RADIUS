@@ -332,6 +332,8 @@
                         <option value="tripay">Tripay</option>
                         <option value="duitku">Duitku</option>
                     </select>
+                    {% elif active_gateway == 'xendit' %}
+                    <input type="hidden" name="payment_method" value="xendit">
                     {% else %}
                     <input type="hidden" name="payment_method" value="{{ active_gateway }}">
                     {% endif %}

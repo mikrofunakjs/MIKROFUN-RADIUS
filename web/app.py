@@ -409,11 +409,13 @@ def landing():
             min_price = int(min(v['price'] for v in voucher_profiles))
         duitku_channels, _error = DuitkuHelper().get_payment_methods(min_price)
         
+    xendit_available = active_gateway in ('xendit', 'both')
+        
     # Otherwise render standard themes 1, 2, 3
     if template_choice not in ['1', '2', '3']:
         template_choice = '1'
         
-    return render_template(f'landing_{template_choice}.html', company=company, packages=packages, voucher_profiles=voucher_profiles, active_gateway=active_gateway, tripay_channels=tripay_channels, duitku_channels=duitku_channels, settings=settings_dict)
+    return render_template(f'landing_{template_choice}.html', company=company, packages=packages, voucher_profiles=voucher_profiles, active_gateway=active_gateway, tripay_channels=tripay_channels, duitku_channels=duitku_channels, xendit_available=xendit_available, settings=settings_dict)
 
 @app.route('/')
 def index():

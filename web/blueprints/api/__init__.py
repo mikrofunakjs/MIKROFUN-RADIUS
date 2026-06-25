@@ -373,6 +373,47 @@ def activate_reseller_topup(reseller_id, amount, reference):
         record_mitra_deposit(reseller_id, r['username'] if r else f'ID-{reseller_id}', amount, f"Gateway-{reference}")
     except Exception as _fe:
         print(f"[finance] warn: {_fe}")
+
+@api_bp.route('/callback/xendit', methods=['POST'])
+def callback_xendit():
+    """Xendit webhook callback for payment status"""
+    try:
+        callback_token = request.headers.get('x-callback-token', '')
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'message': 'Empty payload'}), 400
+
+        from web.xendit_helper import XenditHelper
+        helper = XenditHelper()
+
+        # Verify webhook token
+        if not helper.verify_callback(callback_token):
+            return jsonify({'success': False, 'message': 'Invalid callback token'}), 403
+
+        status = data.get('status', '')
+        external_id = data.get('external_id', '')
+        amount = data.get('amount', 0)
+
+        if status == 'PAID':
+            payment = execute_query(
+                "SELECT external_ref FROM payments WHERE external_ref=%s AND status='pending' LIMIT 1",
+                (external_id,), fetch_one=True
+            )
+            if payment:
+                process_successful_payment(payment['external_ref'], 'XENDIT')
+        elif status == 'EXPIRED':
+            payment = execute_query(
+                "SELECT external_ref FROM payments WHERE external_ref=%s AND status='pending' LIMIT 1",
+                (external_id,), fetch_one=True
+            )
+            if payment:
+                update_payment_status(payment['external_ref'], 'failed')
+
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Xendit Webhook Error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @api_bp.route('/public/buy_voucher', methods=['POST'])
 def public_buy_voucher():
     """Endpoint for landing page to initiate a voucher purchase via Tripay"""
@@ -470,6 +511,42 @@ def public_buy_voucher():
         if error or not data:
             flash(f'Gagal transaksi Duitku: {error}', 'error')
             return redirect('/landing-page')
+        execute_query(
+            "INSERT INTO payments (amount, payment_channel, external_ref, checkout_url, status, created_at, payment_type, profile_id, guest_email, guest_phone) "
+            "VALUES (%s, %s, %s, %s, 'pending', NOW(), 'voucher', %s, %s, %s)",
+            (amount, data['payment_method'], data['merchant_order_id'], data['checkout_url'], profile_id, guest_email, guest_phone)
+        )
+        return redirect(data['checkout_url'])
+    
+    # XENDIT
+    if payment_method == 'xendit':
+        from web.xendit_helper import XenditHelper
+        xendit = XenditHelper()
+
+        import time
+        customer_data = {
+            'first_name': 'Guest',
+            'email': guest_email,
+            'phone': guest_phone
+        }
+        order_items = [
+            {'name': f"Voucher: {profile['name']}", 'price': int(amount), 'quantity': 1}
+        ]
+
+        merchant_ref = f"VPUB-{int(time.time())}-{int(amount)}"
+        host = request.headers.get('Host', request.host)
+        proto = request.headers.get('X-Forwarded-Proto', 'http')
+        tracking_url = f"{proto}://{host}/api/public/track_voucher?ref={merchant_ref}"
+
+        data, error = xendit.request_transaction(
+            int(amount), customer_data, order_items,
+            return_url=tracking_url, merchant_ref=merchant_ref
+        )
+
+        if error or not data:
+            flash(f'Gagal transaksi Xendit: {error}', 'error')
+            return redirect('/landing-page')
+
         execute_query(
             "INSERT INTO payments (amount, payment_channel, external_ref, checkout_url, status, created_at, payment_type, profile_id, guest_email, guest_phone) "
             "VALUES (%s, %s, %s, %s, 'pending', NOW(), 'voucher', %s, %s, %s)",
