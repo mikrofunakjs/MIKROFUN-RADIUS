@@ -96,7 +96,7 @@ def safe_render_template_string(source, **context):
         return f"<div style='color:red; border:1px solid red; padding:10px;'><b>Template Error:</b> {str(e)}</div>"
 
 # --- APPLICATION VERSION ---
-APP_VERSION = "7.4.167"
+APP_VERSION = "7.5.0"
 app.config['APP_VERSION'] = APP_VERSION
 def format_rupiah(value):
     try:

@@ -172,6 +172,8 @@
             <select id="gateway_selector" class="select select-bordered w-full bg-gray-50 font-bold"
                 onchange="toggleGatewayTabs()">
                 <option value="tripay">Tripay (QRIS / VA / Retail)</option>
+                <option value="duitku">Duitku</option>
+                <option value="xendit">Xendit (Semua Metode)</option>
                 <option value="midtrans">Midtrans (Instant / E-Wallet)</option>
             </select>
         </div>
@@ -192,6 +194,24 @@
                 <input type="hidden" name="method_code" id="duitku-method">
                 <button type="submit" id="btn-pay-duitku" class="btn btn-primary w-full btn-lg shadow-lg" disabled>
                     Lanjutkan Pembayaran (Duitku)
+                </button>
+            </form>
+        </div>
+
+        <!-- XENDIT SECTION -->
+        <div id="xendit-section" class="{{ 'hidden' if active_gateway != 'xendit' else '' }} mb-6">
+            <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="bi bi-lightning-charge text-purple-600 text-xl"></i>
+                    <span class="font-bold text-purple-800">Pembayaran via Xendit</span>
+                </div>
+                <p class="text-sm text-purple-700">Kamu akan diarahkan ke halaman pembayaran Xendit yang mendukung berbagai metode: Virtual Account, QRIS, E-Wallet, dan Retail.</p>
+            </div>
+            <form method="POST" id="form-xendit" onsubmit="document.getElementById('xendit-amount').value = document.getElementById('online-amount').value">
+                <input type="hidden" name="payment_method" value="xendit">
+                <input type="hidden" name="amount" id="xendit-amount">
+                <button type="submit" class="btn btn-primary w-full btn-lg shadow-lg">
+                    <i class="bi bi-lightning-charge mr-1"></i> Bayar via Xendit
                 </button>
             </form>
         </div>
@@ -226,23 +246,20 @@
         <script>
             function toggleGatewayTabs() {
                 const gateway = document.getElementById('gateway_selector').value;
-                if (gateway === 'tripay') {
-                    document.getElementById('tripay-section').classList.remove('hidden');
-                    document.getElementById('midtrans-section').classList.add('hidden');
-                    if (document.getElementById('duitku-section')) document.getElementById('duitku-section').classList.add('hidden');
-                } else if (gateway === 'midtrans') {
-                    document.getElementById('midtrans-section').classList.remove('hidden');
-                    document.getElementById('tripay-section').classList.add('hidden');
-                    if (document.getElementById('duitku-section')) document.getElementById('duitku-section').classList.add('hidden');
-                } else {
-                    if (document.getElementById('duitku-section')) {
-                        document.getElementById('duitku-section').classList.remove('hidden');
-                        document.getElementById('tripay-section').classList.add('hidden');
-                        document.getElementById('midtrans-section').classList.add('hidden');
-                        const amount = document.getElementById('online-amount').value;
-                        if (amount >= 10000) fetchDuitkuChannels(amount);
-                    }
-                }
+                // Hide all
+                ['tripay-section','duitku-section','xendit-section','midtrans-section'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                });
+                // Show selected
+                const sectionMap = {
+                    'tripay': 'tripay-section',
+                    'duitku': 'duitku-section',
+                    'xendit': 'xendit-section',
+                    'midtrans': 'midtrans-section',
+                };
+                const target = sectionMap[gateway];
+                if (target) document.getElementById(target).classList.remove('hidden');
             }
         </script>
 

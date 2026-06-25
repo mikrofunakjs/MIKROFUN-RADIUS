@@ -57,19 +57,20 @@ class XenditHelper:
             payload = {
                 "external_id": external_id,
                 "amount": int(amount),
-                "payer_email": customer_data.get('email', ''),
+                "payer_email": customer_data.get('email', '') or 'guest@mikrofun.local',
                 "description": order_items[0]['name'] if order_items else "Voucher MikroFun",
-                "invoice_duration": 86400,  # 24 hours
-                "success_redirect_url": return_url or '',
+                "invoice_duration": 86400,
+                "success_redirect_url": return_url or 'https://mikrofun.site',
                 "currency": "IDR",
             }
 
-            # Add customer name if available
+            # Add customer info (Xendit expects given_names as string, not array)
             if customer_data.get('first_name'):
                 payload["customer"] = {
-                    "given_names": customer_data.get('first_name', ''),
-                    "mobile_number": customer_data.get('phone', ''),
+                    "given_names": str(customer_data.get('first_name', '')),
                 }
+                if customer_data.get('phone'):
+                    payload["customer"]["mobile_number"] = str(customer_data.get('phone', ''))
 
             url = f"{XENDIT_API_URL}/v2/invoices"
             resp = requests.post(url, json=payload, headers=self._headers(), timeout=15)
@@ -83,8 +84,13 @@ class XenditHelper:
                     'invoice_id': data.get('id', ''),
                 }, None
             else:
-                err = resp.json() if resp.text else {}
-                msg = err.get('message', f'HTTP {resp.status_code}')
+                try:
+                    err = resp.json()
+                except:
+                    err = {}
+                msg = err.get('message', '') or err.get('error', '') or f'HTTP {resp.status_code}'
+                # Include full error for debugging
+                print(f"[Xendit] Error response: {resp.text[:500]}")
                 return None, msg
 
         except requests.exceptions.Timeout:

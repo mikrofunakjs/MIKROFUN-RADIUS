@@ -204,6 +204,35 @@ def pay():
             )
             return redirect(data['checkout_url'])
 
+        # --- XENDIT PAYMENT ---
+        elif payment_method == 'xendit':
+            from web.xendit_helper import XenditHelper
+            xendit = XenditHelper()
+
+            customer_data = {
+                'first_name': user.get('name') or user['username'],
+                'email': user.get('email') or f"{user['username']}@mikrofun.local",
+                'phone': user.get('phone') or '08123456789'
+            }
+            order_items = [{'name': 'Tagihan Internet', 'price': int(amount), 'quantity': 1}]
+
+            import time
+            merchant_ref = f"CLIENT-{user['id']}-{int(time.time())}"
+            data, error = xendit.request_transaction(
+                int(amount), customer_data, order_items, merchant_ref=merchant_ref
+            )
+
+            if error or not data:
+                flash(f'Gagal transaksi Xendit: {error}', 'error')
+                return redirect(url_for('client.pay'))
+
+            execute_query(
+                "INSERT INTO payments (customer_id, amount, payment_channel, external_ref, checkout_url, status, created_at) "
+                "VALUES (%s, %s, %s, %s, %s, 'pending', NOW())",
+                (user['id'], amount, data['payment_method'], data['merchant_order_id'], data['checkout_url'])
+            )
+            return redirect(data['checkout_url'])
+
         # --- MANUAL TRANSFER / MOOTA ---
         elif payment_method == 'moota':
             # Auto generate 3 digit unique code
@@ -254,12 +283,17 @@ def pay():
     # Get Bank Accounts
     banks = execute_query("SELECT * FROM bank_accounts WHERE is_active=1", fetch=True) or []
     
-    # Get Customer Bill (Profile Price)
+    # Get Customer Bill (Profile Price + PPN)
     customer_info = execute_query(
-        "SELECT c.id, p.price FROM customers c JOIN profiles p ON c.profile_id = p.id WHERE c.id = %s",
+        "SELECT c.id, p.price, p.tax_percent FROM customers c JOIN profiles p ON c.profile_id = p.id WHERE c.id = %s",
         (user['id'],), fetch_one=True
     )
-    total_bill = customer_info['price'] if customer_info else 0
+    if customer_info:
+        base_price = float(customer_info.get('price', 0) or 0)
+        tax_percent = float(customer_info.get('tax_percent', 0) or 0)
+        total_bill = int(base_price + (base_price * tax_percent / 100))
+    else:
+        total_bill = 0
     
     # Get Payment History
     payments = execute_query("SELECT * FROM payments WHERE customer_id=%s ORDER BY created_at DESC LIMIT 20", (user['id'],), fetch=True) or []
