@@ -13,19 +13,20 @@ from decimal import Decimal, ROUND_HALF_UP
 import traceback
 
 def _insert_ledger(source_type, source_id, ref_number, description,
-                   gross_amount, cost_amount, party_name, category, recorded_by):
+                   gross_amount, cost_amount, party_name, category, recorded_by, tax_amount=0):
     """Core insert ke income_ledger. Jika gagal, tulis ke failed_ledger_queue untuk retry."""
     try:
         gross = Decimal(str(gross_amount))
         cost = Decimal(str(cost_amount))
+        tax = Decimal(str(tax_amount))
         net_profit = float(gross - cost)
         execute_query(
             "INSERT INTO income_ledger "
-            "(source_type, source_id, ref_number, description, gross_amount, cost_amount, net_profit, "
+            "(source_type, source_id, ref_number, description, gross_amount, tax_amount, cost_amount, net_profit, "
             "party_name, category, recorded_by) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (source_type, source_id, ref_number, description,
-             float(gross), float(cost), net_profit,
+             float(gross), float(tax), float(cost), net_profit,
              party_name, category, recorded_by)
         )
     except Exception:
@@ -110,6 +111,21 @@ def record_client_payment(payment, customer_name='-'):
     amount = float(payment.get('amount', 0))
     payment_id = payment.get('id')
     payment_channel = payment.get('payment_channel') or payment.get('sender_bank') or 'Manual'
+    
+    # Calculate PPN if profile has tax_percent
+    tax_amount = 0
+    profile_id = payment.get('profile_id')
+    if profile_id:
+        try:
+            profile = execute_query("SELECT price, tax_percent FROM profiles WHERE id=%s", (profile_id,), fetch_one=True)
+            if profile and profile.get('tax_percent'):
+                tax_rate = float(profile['tax_percent'])
+                # Tax is portion of the total: amount * tax_rate / (100 + tax_rate)
+                if tax_rate > 0:
+                    tax_amount = round(amount * tax_rate / (100 + tax_rate), 2)
+        except Exception:
+            pass
+    
     desc = f"Tagihan Pelanggan [{customer_name}] — {payment_channel} — Rp {amount:,.0f}"
     _insert_ledger(
         source_type='client_payment',
@@ -121,6 +137,7 @@ def record_client_payment(payment, customer_name='-'):
         party_name=customer_name,
         category='subscription',
         recorded_by='admin',
+        tax_amount=tax_amount,
     )
 
 

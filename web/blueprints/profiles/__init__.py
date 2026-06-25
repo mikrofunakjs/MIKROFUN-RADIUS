@@ -77,8 +77,8 @@ def add():
             quota_limit = 0
 
         result = execute_query(
-            "INSERT INTO profiles (name, rate_limit, burst_limit, burst_threshold, burst_time, limit_at, pool_name, shared_users, price, validity, validity_unit, quota_limit, description, type, router_id) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "INSERT INTO profiles (name, rate_limit, burst_limit, burst_threshold, burst_time, limit_at, pool_name, shared_users, price, tax_percent, validity, validity_unit, quota_limit, description, type, router_id) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (request.form.get('name'), 
              request.form.get('rate_limit'),
              request.form.get('burst_limit') or None,
@@ -88,6 +88,7 @@ def add():
              request.form.get('pool_name', ''), 
              shared_users,
              price,
+             float(request.form.get('tax_percent', 0) or 0),
              validity,
              request.form.get('validity_unit', 'hours'),
              quota_limit,
@@ -139,7 +140,7 @@ def edit(id):
 
         execute_query(
             "UPDATE profiles SET name=%s, rate_limit=%s, burst_limit=%s, burst_threshold=%s, "
-            "burst_time=%s, limit_at=%s, pool_name=%s, shared_users=%s, price=%s, validity=%s, validity_unit=%s, quota_limit=%s, description=%s, router_id=%s WHERE id=%s",
+            "burst_time=%s, limit_at=%s, pool_name=%s, shared_users=%s, price=%s, tax_percent=%s, validity=%s, validity_unit=%s, quota_limit=%s, description=%s, router_id=%s WHERE id=%s",
             (request.form.get('name'), 
              request.form.get('rate_limit'),
              request.form.get('burst_limit') or None,
@@ -149,6 +150,7 @@ def edit(id):
              request.form.get('pool_name', ''),
              shared_users,
              price,
+             float(request.form.get('tax_percent', 0) or 0),
              validity,
              request.form.get('validity_unit', 'hours'),
              quota_limit,

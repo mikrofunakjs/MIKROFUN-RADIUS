@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     limit_at VARCHAR(32),
     pool_name VARCHAR(32),
     price DECIMAL(10,2) DEFAULT 0,
+    tax_percent DECIMAL(5,2) DEFAULT 0 COMMENT 'PPN percentage, 0 = no tax',
     validity INT DEFAULT 0,
     validity_unit ENUM('hours','days','months') DEFAULT 'hours',
     shared_users INT DEFAULT 1,
@@ -367,6 +368,7 @@ CREATE TABLE IF NOT EXISTS income_ledger (
   `description` text DEFAULT NULL,
   `net_profit` decimal(15,2) DEFAULT 0,
   `gross_amount` decimal(15,2) DEFAULT 0,
+  `tax_amount` decimal(15,2) DEFAULT 0 COMMENT 'PPN collected',
   `cost_amount` decimal(15,2) DEFAULT 0,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)

@@ -110,8 +110,23 @@
                         </label>
                         <div class="join w-full">
                             <span class="btn btn-disabled join-item">Rp</span>
-                            <input type="number" name="price" class="input input-bordered w-full join-item" value="0">
+                            <input type="number" name="price" id="profile_price" class="input input-bordered w-full join-item" value="0"
+                                oninput="updateTaxPreview()">
                         </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">PPN (%) <span class="badge badge-ghost badge-xs">Opsional</span></span>
+                        </label>
+                        <div class="join w-full">
+                            <input type="number" step="0.1" name="tax_percent" id="tax_percent" class="input input-bordered w-full join-item" value="0"
+                                oninput="updateTaxPreview()">
+                            <span class="btn btn-disabled join-item">%</span>
+                        </div>
+                        <label class="label" id="tax_preview">
+                            <span class="label-text-alt opacity-60">Total + PPN: Rp 0</span>
+                        </label>
                     </div>
                 </div>
 
@@ -244,6 +259,14 @@
 </div>
 
 <script>
+function updateTaxPreview() {
+    const price = parseFloat(document.getElementById('profile_price').value) || 0;
+    const tax = parseFloat(document.getElementById('tax_percent').value) || 0;
+    const total = price + (price * tax / 100);
+    const preview = document.getElementById('tax_preview');
+    preview.innerHTML = '<span class="label-text-alt opacity-60">Total + PPN: Rp ' + total.toLocaleString('id-ID') + '</span>';
+}
+
 async function fetchPools() {
     const routerSelect = document.querySelector('select[name="router_id"]');
     const poolSelect = document.getElementById('pool_name');

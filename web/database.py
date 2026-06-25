@@ -494,6 +494,17 @@ def ensure_schema_updates():
             cur.execute("ALTER TABLE profiles ADD COLUMN validity_unit ENUM('hours', 'days', 'months') DEFAULT 'hours'")
             print("Added 'validity_unit' to profiles")
 
+        # PPN / Tax columns
+        cur.execute("SHOW COLUMNS FROM profiles LIKE 'tax_percent'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE profiles ADD COLUMN tax_percent DECIMAL(5,2) DEFAULT 0")
+            print("Added 'tax_percent' to profiles")
+
+        cur.execute("SHOW COLUMNS FROM income_ledger LIKE 'tax_amount'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE income_ledger ADD COLUMN tax_amount DECIMAL(15,2) DEFAULT 0")
+            print("Added 'tax_amount' to income_ledger")
+
         conn.commit()
         cur.close()
         conn.close()
