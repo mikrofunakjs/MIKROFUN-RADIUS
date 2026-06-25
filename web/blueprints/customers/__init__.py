@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from web.database import execute_query
 from web.decorators import cs_or_admin_required
+from werkzeug.security import generate_password_hash
 import datetime
 import math
 
@@ -273,10 +274,13 @@ def add():
                   flash('Batas Free: 100 pelanggan. Upgrade ke Premium untuk unlimited.', 'error')
                   return redirect(url_for('customers.add'))
 
+        # Hash password before storing
+        hashed_password = generate_password_hash(password)
+
         result = execute_query(
             "INSERT INTO customers (name, username, password, service_type, profile_id, router_id, phone, address, due_date, status, odp_id, port_number, coordinates, mac_address, static_ip, billing_type) "
             "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'active',%s,%s,%s,%s,%s,%s)",
-            (name, username, password, service_type, profile_id, router_id, phone, address, due_date, odp_id, port_number, coordinates, mac_address, static_ip, billing_type)
+            (name, username, hashed_password, service_type, profile_id, router_id, phone, address, due_date, odp_id, port_number, coordinates, mac_address, static_ip, billing_type)
         )
         if result:
             from web.telegram_helper import send_telegram_message
@@ -369,16 +373,31 @@ def edit(id):
         mac_address = request.form.get('mac_address', '').strip().upper() or None
         static_ip = request.form.get('static_ip', '').strip() or None
         billing_type = request.form.get('billing_type', 'prepaid')
+        new_password = request.form.get('password', '').strip()
         
-        execute_query(
-            "UPDATE customers SET name=%s, password=%s, profile_id=%s, router_id=%s, "
-            "phone=%s, address=%s, due_date=%s, odp_id=%s, port_number=%s, coordinates=%s, mac_address=%s, static_ip=%s, billing_type=%s WHERE id=%s",
-            (request.form.get('name'), request.form.get('password'),
-             request.form.get('profile_id'), request.form.get('router_id'),
-             request.form.get('phone',''), request.form.get('address',''), due_date,
-             request.form.get('odp_id') or None, request.form.get('port_number') or None, 
-             request.form.get('coordinates',''), mac_address, static_ip, billing_type, id)
-        )
+        if new_password:
+            # Hash new password if provided
+            hashed_password = generate_password_hash(new_password)
+            execute_query(
+                "UPDATE customers SET name=%s, password=%s, profile_id=%s, router_id=%s, "
+                "phone=%s, address=%s, due_date=%s, odp_id=%s, port_number=%s, coordinates=%s, mac_address=%s, static_ip=%s, billing_type=%s WHERE id=%s",
+                (request.form.get('name'), hashed_password,
+                 request.form.get('profile_id'), request.form.get('router_id'),
+                 request.form.get('phone',''), request.form.get('address',''), due_date,
+                 request.form.get('odp_id') or None, request.form.get('port_number') or None, 
+                 request.form.get('coordinates',''), mac_address, static_ip, billing_type, id)
+            )
+        else:
+            # No password change — don't touch password column
+            execute_query(
+                "UPDATE customers SET name=%s, profile_id=%s, router_id=%s, "
+                "phone=%s, address=%s, due_date=%s, odp_id=%s, port_number=%s, coordinates=%s, mac_address=%s, static_ip=%s, billing_type=%s WHERE id=%s",
+                (request.form.get('name'),
+                 request.form.get('profile_id'), request.form.get('router_id'),
+                 request.form.get('phone',''), request.form.get('address',''), due_date,
+                 request.form.get('odp_id') or None, request.form.get('port_number') or None, 
+                 request.form.get('coordinates',''), mac_address, static_ip, billing_type, id)
+            )
         flash('Customer berhasil diupdate!', 'success')
         return redirect(url_for('customers.index'))
 
@@ -693,10 +712,11 @@ def import_excel():
                         continue
 
                 # Insert
+                hashed_pw = generate_password_hash(password)
                 ok = execute_query(
                     "INSERT INTO customers (name, username, password, service_type, profile_id, phone, address, due_date, status, billing_type, odp_id, router_id) "
                     "VALUES (%s,%s,%s,'pppoe',%s,%s,%s,%s,'active', %s, %s, %s)",
-                    (name, username, password, profile_id, phone, address, due_date or None, row_data.get('billing_type', 'prepaid'), odp_id, router_id)
+                    (name, username, hashed_pw, profile_id, phone, address, due_date or None, row_data.get('billing_type', 'prepaid'), odp_id, router_id)
                 )
                 if ok:
                     results.append({'row': row_num, 'name': name, 'status': 'success', 'message': 'Berhasil ditambahkan'})
@@ -781,10 +801,11 @@ def import_api_mikrotik():
             address = 'client'
             
             # Insert to customers
+            hashed_pw = generate_password_hash(password)
             ok = execute_query(
                 "INSERT INTO customers (name, username, password, service_type, profile_id, router_id, phone, address, due_date, status, billing_type, mac_address, created_at) "
                 "VALUES (%s,%s,%s,'pppoe',%s,%s,%s,%s,%s,'active',%s,NULL,NOW())",
-                (name, username, password, profile_id, router_id, phone, address, due_date, billing_type)
+                (name, username, hashed_pw, profile_id, router_id, phone, address, due_date, billing_type)
             )
             
             if ok:

@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
+from werkzeug.security import check_password_hash, generate_password_hash
 import os
 import datetime
 
@@ -14,13 +15,34 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Check against customers table
+        # Fetch user by username only (password now hashed)
         user = execute_query(
-            "SELECT * FROM customers WHERE username=%s AND password=%s",
-            (username, password), fetch_one=True
+            "SELECT * FROM customers WHERE username=%s",
+            (username,), fetch_one=True
         )
         
+        is_valid = False
         if user:
+            stored_pw = user.get('password', '')
+            
+            # Werkzeug hashes contain ':' (e.g., scrypt:32768:8:1$salt$hash)
+            if ':' in stored_pw:
+                try:
+                    is_valid = check_password_hash(stored_pw, password)
+                except Exception:
+                    is_valid = (stored_pw == password)
+            else:
+                # Plaintext (legacy)
+                is_valid = (stored_pw == password)
+                # Auto-upgrade to hash
+                if is_valid:
+                    try:
+                        new_hash = generate_password_hash(password)
+                        execute_query("UPDATE customers SET password=%s WHERE username=%s", (new_hash, username))
+                    except Exception:
+                        pass
+        
+        if is_valid:
             session['client_user'] = user
             return redirect(url_for('client.dashboard'))
         else:

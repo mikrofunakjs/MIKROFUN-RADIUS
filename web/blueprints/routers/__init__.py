@@ -112,23 +112,33 @@ def add():
                 if vpn_type == 'l2tp':
                     add_ipsec_secret(name, vpn_password_str)
                 
-            # Detect Real Public IP for WireGuard Endpoint
-            try:
-                # Always try to fetch actual public IP for VPN stability
-                accessible_ip = requests.get('https://api.ipify.org', timeout=3).text.strip()
-            except:
-                # Fallback to Host Header if API fail
-                accessible_ip = request.host.split(':')[0]
-                if accessible_ip in ['127.0.0.1', 'localhost']:
-                    try:
-                        import socket
-                        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        s.settimeout(1)
-                        s.connect(('8.8.8.8', 1))
-                        accessible_ip = s.getsockname()[0]
-                        s.close()
-                    except:
-                        accessible_ip = "YOUR_SERVER_IP"
+            # Detect IP for VPN endpoint / RADIUS address
+            import socket
+            if vpn_type in ('direct_local', 'public_ip'):
+                # Local/direct mode — use LAN IP, not public ISP IP
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.settimeout(1)
+                    s.connect(('8.8.8.8', 1))
+                    accessible_ip = s.getsockname()[0]
+                    s.close()
+                except:
+                    accessible_ip = request.host.split(':')[0]
+            else:
+                # VPN modes — use public IP for remote MikroTik endpoint
+                try:
+                    accessible_ip = requests.get('https://api.ipify.org', timeout=3).text.strip()
+                except:
+                    accessible_ip = request.host.split(':')[0]
+                    if accessible_ip in ['127.0.0.1', 'localhost']:
+                        try:
+                            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            s.settimeout(1)
+                            s.connect(('8.8.8.8', 1))
+                            accessible_ip = s.getsockname()[0]
+                            s.close()
+                        except:
+                            accessible_ip = "YOUR_SERVER_IP"
                 
             script = generate_mikrotik_script(name, vpn_ip, priv_key, accessible_ip, vpn_type, vpn_password_str)
             session['mikrotik_script'] = script

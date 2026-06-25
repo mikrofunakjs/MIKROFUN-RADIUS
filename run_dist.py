@@ -39,6 +39,8 @@ print(f"Version: {app.config.get('APP_VERSION', 'Unknown')}")
 
 from monitor_router_status import start_monitor
 from cleanup_vouchers import start_cleanup
+from auto_isolate import start_auto_isolate
+from wa_reminder import start_wa_reminder
 
 # Auto-Heal Database Schema before starting threads
 try:
@@ -112,6 +114,12 @@ monitor_thread.start()
 
 cleanup_thread = threading.Thread(target=start_cleanup, daemon=True)
 cleanup_thread.start()
+
+isolate_thread = threading.Thread(target=start_auto_isolate, daemon=True)
+isolate_thread.start()
+
+reminder_thread = threading.Thread(target=start_wa_reminder, daemon=True)
+reminder_thread.start()
 
 print(f"Starting Web Panel on port {PORT}...")
 print("Press Ctrl+C to stop.")

@@ -15,6 +15,7 @@ import hashlib
 import threading
 import mysql.connector
 import datetime
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import sys
 import os
@@ -416,8 +417,32 @@ class RadiusServer:
         # 1. Try customer lookup (PPPoE/Member)
         user = find_customer(username)
         if user:
-            # Check password
-            if user['password'].strip() == password.strip():
+            # Check password (hashed with werkzeug, fallback to plaintext)
+            stored_pw = user.get('password', '')
+            is_valid = False
+            if ':' in stored_pw:
+                try:
+                    is_valid = check_password_hash(stored_pw, password.strip())
+                except Exception:
+                    is_valid = (stored_pw.strip() == password.strip())
+            else:
+                is_valid = (stored_pw.strip() == password.strip())
+                # Auto-upgrade plaintext password to hash
+                if is_valid:
+                    try:
+                        new_hash = generate_password_hash(password.strip())
+                        conn = get_db()
+                        if conn:
+                            cur = conn.cursor()
+                            cur.execute("UPDATE customers SET password=%s WHERE username=%s", (new_hash, username))
+                            conn.commit()
+                            cur.close()
+                            conn.close()
+                            log.info(f"  🔒 Password for {username} auto-upgraded to hash")
+                    except Exception as e:
+                        log.warning(f"  ⚠️ Auto-upgrade failed for {username}: {e}")
+
+            if is_valid:
                 # Check Limit Login
                 if not check_simultaneous_use(username, user.get('shared_users'), mac):
                     log.warning(f"REJECT {username}: Simultaneous-Use limit reached")
@@ -830,22 +855,38 @@ class RadiusServer:
                             nas_id = r['id'] if isinstance(r, dict) else r[0]
 
                     # 2. Check if this is actually a Voucher
-                    cur.execute("SELECT id, duration_hours FROM vouchers WHERE code=%s LIMIT 1", (username,))
+                    cur.execute("SELECT id, duration_hours, status FROM vouchers WHERE code=%s LIMIT 1", (username,))
                     vrow = cur.fetchone()
                     if vrow:
                         dur = vrow.get('duration_hours', 24) if isinstance(vrow, dict) else (vrow[1] if len(vrow) > 1 else 24)
-                        if nas_id:
-                            cur.execute(
-                                "UPDATE vouchers SET session_id=%s, nas_id=%s, status='active', activated_at=NOW(), "
-                                "expires_at=DATE_ADD(NOW(), INTERVAL %s HOUR) WHERE code=%s AND status IN ('unused', 'active')",
-                                (session_id, nas_id, dur, username)
-                            )
+                        vstatus = vrow.get('status', '') if isinstance(vrow, dict) else (vrow[2] if len(vrow) > 2 else '')
+                        
+                        if vstatus == 'unused':
+                            # First activation: set status, activated_at, and expires_at
+                            if nas_id:
+                                cur.execute(
+                                    "UPDATE vouchers SET session_id=%s, nas_id=%s, status='active', activated_at=NOW(), "
+                                    "expires_at=DATE_ADD(NOW(), INTERVAL %s HOUR) WHERE code=%s AND status='unused'",
+                                    (session_id, nas_id, dur, username)
+                                )
+                            else:
+                                cur.execute(
+                                    "UPDATE vouchers SET session_id=%s, status='active', activated_at=NOW(), "
+                                    "expires_at=DATE_ADD(NOW(), INTERVAL %s HOUR) WHERE code=%s AND status='unused'",
+                                    (session_id, dur, username)
+                                )
                         else:
-                            cur.execute(
-                                "UPDATE vouchers SET session_id=%s, status='active', activated_at=NOW(), "
-                                "expires_at=DATE_ADD(NOW(), INTERVAL %s HOUR) WHERE code=%s AND status IN ('unused', 'active')",
-                                (session_id, dur, username)
-                            )
+                            # Already active — only update session tracking, keep expires_at unchanged
+                            if nas_id:
+                                cur.execute(
+                                    "UPDATE vouchers SET session_id=%s, nas_id=%s WHERE code=%s",
+                                    (session_id, nas_id, username)
+                                )
+                            else:
+                                cur.execute(
+                                    "UPDATE vouchers SET session_id=%s WHERE code=%s",
+                                    (session_id, username)
+                                )
                 except Exception as ex:
                     log.error(f"Fail update voucher nas info: {ex}")
             elif status == 2: # Stop
@@ -859,19 +900,18 @@ class RadiusServer:
                     (username, session_id)
                 )
             
-            # --- QUOTA TRACKING (NEW) ---
-            if status in [2, 3]: # Stop or Interim Update
-                # Calculate total usage from radacct for this session
-                # Or use the input/output octets provided in the packet
-                # Simplest: Update the voucher's quota_used based on THIS ACCT packet's bytes
-                # But packets are cumulative in a session usually, so we should actually 
-                # calculate the total usage for the username overall or per session.
-                # Let's sum all radacct for this username to be safe.
-                cur.execute(
-                    "UPDATE vouchers v SET v.quota_used = (SELECT SUM(acctinputoctets + acctoutputoctets) FROM radacct WHERE username=%s) "
-                    "WHERE v.code = %s",
-                    (username, username)
-                )
+            # --- QUOTA TRACKING ---
+            # Only update quota on session STOP (status=2).
+            # Increment by this session's bytes from the accounting packet,
+            # NOT by SUM of all radacct history (which double-counts old sessions).
+            if status == 2:
+                total_bytes = input_octets + output_octets
+                if total_bytes > 0:
+                    cur.execute(
+                        "UPDATE vouchers SET quota_used = quota_used + %s WHERE code = %s",
+                        (total_bytes, username)
+                    )
+                    log.info(f"  📊 Quota for {username}: +{total_bytes} bytes (session {acct_session_id})")
             
             conn.commit()
             cur.close()

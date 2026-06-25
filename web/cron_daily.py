@@ -18,9 +18,8 @@ def generate_daily_report():
     try:
         # Active Customers PPPoE and MAC
         active_pppoe = execute_query("SELECT COUNT(*) as c FROM customers WHERE service_type='pppoe' AND status='active'", fetch_one=True)
-        active_mac = execute_query("SELECT COUNT(*) as c FROM customers BY service_type IN ('mac', 'dhcp') AND status='active'", fetch_one=True) # Usually service_type='mac' but sometimes it could be missing or general
         
-        # Proper stat fetch without strict service constraints
+        # Active MAC/DHCP customers (non-PPPoE)
         active_mac = execute_query("SELECT COUNT(*) as c FROM customers WHERE (service_type != 'pppoe' OR service_type IS NULL) AND status='active'", fetch_one=True)
         
         nunggak_cust = execute_query("SELECT COUNT(*) as c FROM customers WHERE status IN ('expired', 'isolir')", fetch_one=True)

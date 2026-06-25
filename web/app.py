@@ -114,25 +114,15 @@ def format_rupiah(value):
 
 UPDATE_URL = "https://mikrofun.site/updates/radius_version.json"
 
-@app.context_processor
-def inject_app_settings():
-    from web.database import execute_query
-    from web.license_service import get_isp_name
-    try:
-        res = execute_query("SELECT setting_value FROM settings WHERE setting_key='company_logo'", fetch_one=True)
-        app_logo = res['setting_value'] if res else None
-    except:
-        app_logo = None
-
-    app_name = get_isp_name()
-    return dict(app_name=app_name, app_logo=app_logo, app_version=APP_VERSION)
+# Global cache for update check (shared across all users, not per-session)
+_update_cache = {'info': None, 'last_check': 0}
 
 def check_update():
-    """Checks for updates (cached)"""
+    """Checks for updates (global-cached, non-blocking timeout)"""
     import requests
     try:
-        # Timeout to prevent hanging
-        r = requests.get(UPDATE_URL, timeout=3)
+        # 1.5s connect + 1.5s read = max 3s total including DNS
+        r = requests.get(UPDATE_URL, timeout=(1.5, 1.5))
         if r.status_code == 200:
             data = r.json()
             remote_version = data.get('version', APP_VERSION)
@@ -155,38 +145,44 @@ def check_update():
     return None
 
 @app.context_processor
+def inject_app_settings():
+    from web.database import execute_query
+    from web.license_service import get_isp_name
+    try:
+        res = execute_query("SELECT setting_value FROM settings WHERE setting_key='company_logo'", fetch_one=True)
+        app_logo = res['setting_value'] if res else None
+    except:
+        app_logo = None
+
+    app_name = get_isp_name()
+    return dict(app_name=app_name, app_logo=app_logo, app_version=APP_VERSION)
+
+@app.context_processor
 def inject_update_status():
-    # In production, CACHE this result (e.g., in session or global var with timestamp)
-    # strictly checking every request is bad for performance.
-    # For now, we'll check session to limit frequency.
-    
-    update_info = session.get('update_info') 
-    last_check = session.get('last_update_check')
-    
+    """Inject update availability into all templates. Uses global cache (not session)
+    so only the first request every hour triggers the HTTP check."""
     import time
+    
     now = time.time()
     
-    # Check every hour (3600s)
-    if not update_info or not last_check or (now - last_check > 3600):
-        new_info = check_update()
-        if new_info:
-            session['update_info'] = new_info
-        else:
-            session.pop('update_info', None) # Clear if no update found
-        session['last_update_check'] = now
-        update_info = new_info
+    # Check every hour using global cache (shared across all users)
+    if _update_cache['info'] is None or (now - _update_cache['last_check'] > 3600):
+        _update_cache['info'] = check_update()
+        _update_cache['last_check'] = now
     
-    # Validation: Ensure cached version is actually newer
+    update_info = _update_cache['info']
+    
+    # Validation: Ensure cached version is actually newer than current
     if update_info:
         cached_version = update_info.get('version', '')
         try:
             def parse_v(v): return tuple(map(int, (v.split("."))))
             if parse_v(cached_version) <= parse_v(APP_VERSION):
-                session.pop('update_info', None)
+                _update_cache['info'] = None
                 update_info = None
         except:
             if cached_version <= APP_VERSION:
-                session.pop('update_info', None)
+                _update_cache['info'] = None
                 update_info = None
         
     return dict(update_available=update_info)
