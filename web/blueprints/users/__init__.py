@@ -1,9 +1,8 @@
-"""
-Users / Staff Management Blueprint
-"""
+"""Users / Staff Management Blueprint"""
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
 from web.decorators import admin_required
+from werkzeug.security import generate_password_hash
 
 users_bp = Blueprint('users', __name__, template_folder='../../templates/users')
 
@@ -22,9 +21,10 @@ def index():
             if exist:
                 flash("Username sudah digunakan!", "error")
             else:
+                hashed_pw = generate_password_hash(password)
                 execute_query(
                     "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
-                    (username, password, role)
+                    (username, hashed_pw, role)
                 )
                 flash("Berhasil menambah staff komando.", "success")
                 
@@ -40,8 +40,9 @@ def index():
                 role = 'admin' # Force role protection
                 
             if password:
+                hashed_pw = generate_password_hash(password)
                 execute_query("UPDATE users SET username=%s, password=%s, role=%s WHERE id=%s", 
-                              (username, password, role, user_id))
+                              (username, hashed_pw, role, user_id))
             else:
                 execute_query("UPDATE users SET username=%s, role=%s WHERE id=%s", 
                               (username, role, user_id))

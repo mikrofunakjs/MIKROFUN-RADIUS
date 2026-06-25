@@ -30,7 +30,7 @@ def format_duration(dur):
 # RADIUS CoA HELPER (Disconnect-Request – RFC 3576)
 # ─────────────────────────────────────────────────────────────────────────────
 def _send_coa_disconnect(nas_ip: str, nas_secret: str, session_id: str,
-                         username: str = '', nas_port: int = 1700) -> bool:
+                         username: str = '', nas_port: int = 3799) -> bool:
     """
     Send a RADIUS Disconnect-Request (CoA) to a NAS to terminate a session.
     Mikrotik uses port 1700 by default (Radius > Incoming).
@@ -684,12 +684,12 @@ def coa_disconnect(id):
     execute_query("UPDATE vouchers SET status='expired' WHERE id=%s", (id,))
 
     if nas_ip:
-        # 1. Try RADIUS CoA on port 1700 (Mikrotik standard)
-        coa_ok = _send_coa_disconnect(nas_ip, nas_secret, session_id, username, nas_port=1700)
+        # 1. Try RADIUS CoA on port 3799 (RFC 3576 standard)
+        coa_ok = _send_coa_disconnect(nas_ip, nas_secret, session_id, username)
         
-        # 2. Try RADIUS CoA on port 3799 (RFC standard fallback) if 1700 failed
+        # 2. Fallback to port 1700 (older MikroTik default)
         if not coa_ok:
-            coa_ok = _send_coa_disconnect(nas_ip, nas_secret, session_id, username, nas_port=3799)
+            coa_ok = _send_coa_disconnect(nas_ip, nas_secret, session_id, username, nas_port=1700)
         
         # 3. Try Mikrotik API guarantee drop as primary backup
         api_ok, api_msg = False, "No API Credentials"

@@ -21,10 +21,10 @@ def login():
         password = request.form.get('password', '')
 
         user = execute_query(
-            "SELECT * FROM users WHERE username=%s",
+            "SELECT * FROM users WHERE username=%s AND role IN ('technician', 'admin')",
             (username,), fetch_one=True
         )
-        if user and user.get('role') in ('technician', 'admin'):
+        if user:
             from werkzeug.security import check_password_hash
             is_valid = False
             if ':' in user.get('password', ''):
@@ -37,14 +37,11 @@ def login():
             if is_valid:
                 session['logged_in'] = True
                 session['username'] = user['username']
-                session['role'] = 'technician'
+                session['role'] = user['role']
                 session['user_id'] = user.get('id', 0)
                 session.permanent = True
                 return redirect(url_for('tech.dashboard'))
-        elif user and user.get('role') == 'admin':
-            flash('Akun Admin tidak dapat digunakan di Portal Teknisi.', 'error')
-        else:
-            flash('Username atau PIN salah/tidak ditemukan.', 'error')
+        flash('Username atau PIN salah/tidak ditemukan.', 'error')
 
     return render_template('tech/login.html')
 
