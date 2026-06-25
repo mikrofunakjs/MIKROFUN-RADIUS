@@ -249,3 +249,36 @@ def delete(id):
         execute_query("DELETE FROM routers WHERE id=%s", (id,))
         flash('Router berhasil dihapus!', 'success')
     return redirect(url_for('routers.index'))
+
+@routers_bp.route('/api/pools/<int:router_id>')
+def api_get_pools(router_id):
+    """Fetch IP Pools from MikroTik router via API"""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    router = execute_query("SELECT * FROM routers WHERE id=%s", (router_id,), fetch_one=True)
+    if not router:
+        return jsonify({'error': 'Router not found'}), 404
+    
+    try:
+        from web.mikrotik_api import MikrotikApi
+        target_ip = router.get('vpn_ip') or router.get('ip_address', '')
+        if not target_ip:
+            return jsonify({'error': 'Router has no IP/VPN IP configured'}), 400
+        
+        api = MikrotikApi(target_ip, int(router.get('api_port', 8728)), timeout=5)
+        if not api.login(router.get('api_user', 'admin'), router.get('api_password', '')):
+            return jsonify({'error': 'API login failed — check credentials'}), 400
+        
+        # Fetch IP Pools
+        pools = api.query(['/ip/pool/print', '=.proplist=name'])
+        api.close()
+        
+        if pools is None:
+            return jsonify({'error': 'Failed to fetch pools (API trap)'}), 500
+        
+        pool_names = [p.get('name', '') for p in pools if p.get('name')]
+        return jsonify({'success': True, 'pools': pool_names})
+    
+    except Exception as e:
+        return jsonify({'error': f'Connection failed: {str(e)}'}), 500

@@ -40,11 +40,17 @@
                         <label class="label">
                             <span class="label-text font-medium">Pool Name</span>
                         </label>
-                        <input type="text" name="pool_name" class="input input-bordered w-full"
-                            placeholder="contoh: pool-pppoe">
+                        <div class="join w-full">
+                            <select name="pool_name" id="pool_name" class="select select-bordered w-full join-item">
+                                <option value="">— Manual / Tidak Pakai Pool —</option>
+                            </select>
+                            <button type="button" id="fetch-pools-btn" class="btn btn-outline join-item" 
+                                onclick="fetchPools()" title="Ambil daftar pool dari MikroTik">
+                                <i class="bi bi-cloud-download"></i> Fetch
+                            </button>
+                        </div>
                         <label class="label">
-                            <span class="label-text-alt opacity-60">Kosongkan jika tidak menggunakan IP Pool
-                                khusus</span>
+                            <span class="label-text-alt opacity-60">Pilih router dulu lalu klik Fetch untuk ambil pool dari MikroTik. Bisa juga diketik manual.</span>
                         </label>
                     </div>
                 </div>
@@ -236,4 +242,53 @@
         </div>
     </div>
 </div>
+
+<script>
+async function fetchPools() {
+    const routerSelect = document.querySelector('select[name="router_id"]');
+    const poolSelect = document.getElementById('pool_name');
+    const fetchBtn = document.getElementById('fetch-pools-btn');
+    
+    if (!routerSelect || !routerSelect.value) {
+        alert('Pilih Router / Wilayah terlebih dahulu!');
+        return;
+    }
+    
+    fetchBtn.disabled = true;
+    fetchBtn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> Fetching...';
+    
+    try {
+        const resp = await fetch(`/routers/api/pools/${routerSelect.value}`);
+        const data = await resp.json();
+        
+        // Keep the first "manual" option
+        poolSelect.innerHTML = '<option value="">— Manual / Tidak Pakai Pool —</option>';
+        
+        if (data.success && data.pools) {
+            data.pools.forEach(pool => {
+                const opt = document.createElement('option');
+                opt.value = pool;
+                opt.textContent = pool;
+                poolSelect.appendChild(opt);
+            });
+        } else if (data.error) {
+            // Add error info as an option
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '⚠️ ' + data.error;
+            opt.disabled = true;
+            poolSelect.appendChild(opt);
+        }
+    } catch (e) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '⚠️ Gagal fetch. Cek koneksi router.';
+        opt.disabled = true;
+        poolSelect.appendChild(opt);
+    }
+    
+    fetchBtn.disabled = false;
+    fetchBtn.innerHTML = '<i class="bi bi-cloud-download"></i> Fetch';
+}
+</script>
 {% endblock %}
