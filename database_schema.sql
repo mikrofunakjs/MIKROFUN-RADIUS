@@ -1,9 +1,8 @@
 -- =============================================
 -- MikroFun Database Schema
+-- Note: Database should be created and selected before running this file.
+--       Example: mysql -u user -p database_name < database_schema.sql
 -- =============================================
-
-CREATE DATABASE IF NOT EXISTS radius_db;
-USE radius_db;
 
 -- Admin Login
 CREATE TABLE IF NOT EXISTS users (
@@ -250,8 +249,6 @@ CREATE TABLE IF NOT EXISTS radacct (
 -- =============================================
 -- MikroFun Technician Jobs Schema
 -- =============================================
-
-USE radius_db;
 
 CREATE TABLE IF NOT EXISTS technician_jobs (
     id INT AUTO_INCREMENT PRIMARY KEY,
