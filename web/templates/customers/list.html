@@ -198,7 +198,7 @@
                     class="flex items-center justify-between bg-primary/5 p-3 rounded-xl border border-primary/10 mb-4">
                     <div>
                         <p class="text-[9px] uppercase font-bold opacity-40">Tagihan Bulanan</p>
-                        <p class="text-sm font-black text-primary">Rp {{ c.profile_price|currency }}</p>
+                        <p class="text-sm font-black text-primary">{{ c.profile_price|price_total(c.tax_percent) }}</p>
                     </div>
                     <div class="text-right">
                         <p class="text-[9px] uppercase font-bold opacity-40">Tempo</p>
@@ -312,7 +312,7 @@
                                     <span class="badge badge-success badge-xs font-black text-[8px] px-2">PREPAID</span>
                                     {% endif %}
                                 </div>
-                                <span class="font-black text-primary text-sm">Rp {{ c.profile_price|currency }}</span>
+                                <span class="font-black text-primary text-sm">{{ c.profile_price|price_total(c.tax_percent) }}</span>
                                 <div class="flex items-center gap-2 mt-0.5">
                                     <span class="text-[10px] font-bold opacity-50 uppercase tracking-tighter">Tempo: {{
                                         c.due_date if c.due_date else 'Flat' }}</span>

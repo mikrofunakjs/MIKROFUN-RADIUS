@@ -48,7 +48,7 @@
                                 <option value="">-- Pilih Router dulu --</option>
                                 {% for p in profiles %}
                                 <option value="{{ p.id }}">{{ p.name }} ({{ p.rate_limit or 'Unlimited' }}) - Rp {{
-                                    "{:,.0f}".format(p.price|float) }}</option>
+                                    {{ p.price|price_total(p.tax_percent) }}</option>
                                 {% endfor %}
                             </select>
                             <label class="label"><span class="label-text-alt opacity-60">Difilter otomatis saat router
@@ -227,7 +227,9 @@
                     profileSel.innerHTML += '<option value="" disabled>Tidak ada profil untuk router ini</option>';
                 }
                 profiles.forEach(function (p) {
-                    var price = p.price ? 'Rp ' + Number(p.price).toLocaleString('id-ID') : '';
+                    var tax = Number(p.tax_percent || 0);
+                    var total = Number(p.price || 0) + (Number(p.price || 0) * tax / 100);
+                    var price = total > 0 ? 'Rp ' + total.toLocaleString('id-ID') : '';
                     var label = p.name + ' (' + (p.rate_limit || 'Unlimited') + ')' + (price ? ' - ' + price : '');
                     profileSel.innerHTML += '<option value="' + p.id + '">' + label + '</option>';
                 });

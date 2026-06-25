@@ -333,7 +333,7 @@
                         <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-top: 2px;">Aktif {{ p.validity }} {{ p.validity_unit }}</div>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-weight: 900; color: var(--primary); font-size: 16px;">Rp {{ p.price|currency if p.price else 'Gratis' }}</div>
+                        <div style="font-weight: 900; color: var(--primary); font-size: 16px;">{{ p.price|price_total(p.tax_percent) if p.price else 'Gratis' }}</div>
                         <div style="font-size: 9px; opacity: 0.5;">Sekali Bayar</div>
                     </div>
                 </div>

@@ -42,7 +42,7 @@ def index():
     
     # 2. Optimized Main Query with LIMIT
     query = (
-        "SELECT c.*, p.name as profile_name, p.price as profile_price, r.name as router_name, "
+        "SELECT c.*, p.name as profile_name, p.price as profile_price, p.tax_percent, r.name as router_name, "
         "(SELECT COUNT(*) FROM active_sessions s WHERE LOWER(TRIM(s.username)) = LOWER(TRIM(c.username))) as active_session_count, "
         "(SELECT COALESCE(SUM(acctinputoctets),0) FROM radacct ra WHERE LOWER(TRIM(ra.username)) = LOWER(TRIM(c.username))) as total_upload, "
         "(SELECT COALESCE(SUM(acctoutputoctets),0) FROM radacct ra WHERE LOWER(TRIM(ra.username)) = LOWER(TRIM(c.username))) as total_download "

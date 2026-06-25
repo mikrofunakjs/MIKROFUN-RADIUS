@@ -391,12 +391,12 @@
                                 </div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-weight: 800; color: #fff; font-size: 18px; letter-spacing: -0.5px;">Rp {{ p.price|currency if p.price else 'Gratis' }}</div>
+                                <div style="font-weight: 800; color: #fff; font-size: 18px; letter-spacing: -0.5px;">{{ p.price|price_total(p.tax_percent) if p.price else 'Gratis' }}</div>
                             </div>
                         </div>
 
                         <!-- Tombol Beli -->
-                        <button onclick="openCheckout('{{ p.name }}', {{ p.price or 0 }})" style="width: 100%; border: none; background: rgba(37, 99, 235, 0.1); color: var(--primary); padding: 10px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s; margin-top: 5px; border: 1px solid rgba(37, 99, 235, 0.2);" onmouseover="this.style.background='var(--primary)'; this.style.color='white';" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.color='var(--primary)';">
+                        <button onclick="openCheckout('{{ p.name }}', {{ (p.price|float or 0) + ((p.price|float or 0) * (p.tax_percent|float or 0) / 100) }})" style="width: 100%; border: none; background: rgba(37, 99, 235, 0.1); color: var(--primary); padding: 10px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s; margin-top: 5px; border: 1px solid rgba(37, 99, 235, 0.2);" onmouseover="this.style.background='var(--primary)'; this.style.color='white';" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.color='var(--primary)';">Pilih Paket</button>
                             BELI SEKARANG
                         </button>
                     </div>

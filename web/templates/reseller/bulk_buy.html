@@ -13,7 +13,7 @@
                 <select name="profile_id" class="select select-bordered w-full" required>
                     <option value="">-- Pilih Paket --</option>
                     {% for p in profiles %}
-                    <option value="{{ p.id }}">{{ p.name }} - Rp {{ "{:,.0f}".format(p.price|float) }}</option>
+                    <option value="{{ p.id }}">{{ p.name }} - {{ p.price|price_total(p.tax_percent) }}</option>
                     {% endfor %}
                 </select>
             </div>

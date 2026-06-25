@@ -200,12 +200,12 @@ def api_by_router():
 
     if router_id:
         profiles = execute_query(
-            "SELECT id, name, price, rate_limit FROM profiles WHERE type=%s AND (router_id=%s OR router_id IS NULL) ORDER BY price ASC",
+            "SELECT id, name, price, tax_percent, rate_limit FROM profiles WHERE type=%s AND (router_id=%s OR router_id IS NULL) ORDER BY price ASC",
             (p_type, router_id), fetch=True
         ) or []
     else:
         profiles = execute_query(
-            "SELECT id, name, price, rate_limit FROM profiles WHERE type=%s ORDER BY price ASC",
+            "SELECT id, name, price, tax_percent, rate_limit FROM profiles WHERE type=%s ORDER BY price ASC",
             (p_type,), fetch=True
         ) or []
 
