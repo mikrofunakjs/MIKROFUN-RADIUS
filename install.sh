@@ -105,6 +105,17 @@ if ! ./venv/bin/python -c "import flask" 2>/dev/null; then
     exit 1
 fi
 
+echo "Setting up WhatsApp Gateway (Node.js)..."
+if [ -d "$INSTALL_DIR/wa-service" ]; then
+    cd "$INSTALL_DIR/wa-service"
+    if command -v node &> /dev/null; then
+        npm install --silent 2>/dev/null || echo -e "${YELLOW}Warning: npm install failed. WA Gateway won't auto-start.${NC}"
+    else
+        echo -e "${YELLOW}Warning: Node.js not installed. WA Gateway requires Node.js.${NC}"
+    fi
+    cd "$INSTALL_DIR"
+fi
+
 echo "Setting up Schema..."
 
 if [ ! -f "$INSTALL_DIR/database_schema.sql" ]; then

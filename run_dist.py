@@ -105,6 +105,29 @@ def start_radius():
     except Exception as e:
         print(f"RADIUS Server Failed to Start: {e}")
 
+# Start Node.js Baileys WA Service
+def start_wa_service():
+    """Auto-start the Node.js WhatsApp Baileys gateway if available"""
+    wa_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wa-service')
+    server_js = os.path.join(wa_dir, 'server.js')
+    if not os.path.exists(server_js):
+        print("[WA Service] wa-service/server.js not found — skipping")
+        return
+    if not os.path.exists(os.path.join(wa_dir, 'node_modules')):
+        print("[WA Service] node_modules not installed — run 'npm install' in wa-service/")
+        return
+    try:
+        import subprocess
+        subprocess.Popen(
+            ['node', 'server.js'],
+            cwd=wa_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        print("[WA Service] Node.js Baileys started on port 3000")
+    except Exception as e:
+        print(f"[WA Service] Failed to start: {e}")
+
 # Threads
 radius_thread = threading.Thread(target=start_radius, daemon=True)
 radius_thread.start()
@@ -120,6 +143,9 @@ isolate_thread.start()
 
 reminder_thread = threading.Thread(target=start_wa_reminder, daemon=True)
 reminder_thread.start()
+
+# Start Node.js WA service (runs as subprocess, not thread)
+start_wa_service()
 
 print(f"Starting Web Panel on port {PORT}...")
 print("Press Ctrl+C to stop.")
