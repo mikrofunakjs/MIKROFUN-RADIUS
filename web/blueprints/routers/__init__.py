@@ -205,21 +205,32 @@ def get_script(id):
     if not router:
         return jsonify({'error': 'Router not found'}), 404
         
-    # Detect Real Public IP
-    try:
-        accessible_ip = requests.get('https://api.ipify.org', timeout=3).text.strip()
-    except:
-        accessible_ip = request.host.split(':')[0]
-        if accessible_ip in ['127.0.0.1', 'localhost']:
-            try:
-                import socket
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.settimeout(1)
-                s.connect(('8.8.8.8', 1))
-                accessible_ip = s.getsockname()[0]
-                s.close()
-            except:
-                accessible_ip = "YOUR_SERVER_IP"
+    # Detect IP for VPN endpoint / RADIUS address — mirror add() logic
+    import socket
+    vpn_type = router.get('vpn_type', 'wireguard')
+    if vpn_type in ('direct_local', 'public_ip'):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(1)
+            s.connect(('8.8.8.8', 1))
+            accessible_ip = s.getsockname()[0]
+            s.close()
+        except:
+            accessible_ip = request.host.split(':')[0]
+    else:
+        try:
+            accessible_ip = requests.get('https://api.ipify.org', timeout=3).text.strip()
+        except:
+            accessible_ip = request.host.split(':')[0]
+            if accessible_ip in ['127.0.0.1', 'localhost']:
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.settimeout(1)
+                    s.connect(('8.8.8.8', 1))
+                    accessible_ip = s.getsockname()[0]
+                    s.close()
+                except:
+                    accessible_ip = "YOUR_SERVER_IP"
         
     script = generate_mikrotik_script(
         router['name'], 

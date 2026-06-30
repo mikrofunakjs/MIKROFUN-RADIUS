@@ -22,7 +22,7 @@ def main():
         args.router_ip,
         secret_bytes,
         args.username,
-        co_port=args.port
+        coa_port=args.port
     )
     
     if success:
