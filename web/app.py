@@ -329,7 +329,7 @@ def internal_error(error):
                   exc=error if isinstance(error, Exception) else None)
     except Exception:
         pass
-    return render_template('errors/500.html', error=str(error)), 500
+    return render_template('errors/500.html', error='Terjadi kesalahan internal. Tim teknis sudah diberitahu.'), 500
 
 @app.errorhandler(Exception)
 def unhandled_exception(e):
@@ -338,7 +338,7 @@ def unhandled_exception(e):
         log_error(f'Unhandled Exception: {type(e).__name__}: {str(e)}', exc=e)
     except Exception:
         pass
-    return render_template('errors/500.html', error=str(e)), 500
+    return render_template('errors/500.html', error='Terjadi kesalahan internal. Tim teknis sudah diberitahu.'), 500
 
 @app.errorhandler(404)
 def not_found(e):
