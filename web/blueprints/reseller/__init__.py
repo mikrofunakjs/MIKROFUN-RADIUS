@@ -3,8 +3,11 @@ from flask import Blueprint, render_template, request, session, redirect, url_fo
 import string, random, datetime
 from web.database import execute_query
 from web.mikrotik_api import MikrotikApi
+import time
 
 reseller_bp = Blueprint('reseller', __name__)
+
+_failed_reseller_logins = {}
 
 def get_isp_name():
     row = execute_query("SELECT setting_value FROM settings WHERE setting_key='company_name'", fetch_one=True)
@@ -34,6 +37,17 @@ def login():
     if session.get('logged_in') and session.get('role') == 'reseller':
         return redirect(url_for('reseller.dashboard'))
 
+    ip = request.remote_addr
+    now = time.time()
+    
+    if ip in _failed_reseller_logins:
+        attempts, first_fail_time = _failed_reseller_logins[ip]
+        if now - first_fail_time > 180:
+            del _failed_reseller_logins[ip]
+        elif attempts >= 5:
+            flash('Terlalu banyak percobaan gagal. Silakan coba lagi nanti.', 'error')
+            return render_template('reseller/login.html', isp_name=get_isp_name())
+
     isp_name = get_isp_name()
 
     if request.method == 'POST':
@@ -54,12 +68,20 @@ def login():
             else:
                 is_valid = (user['password'] == password)
             if is_valid:
+                if ip in _failed_reseller_logins:
+                    del _failed_reseller_logins[ip]
                 session['logged_in'] = True
                 session['username'] = user['username']
                 session['user_id'] = user['id']
                 session['role'] = 'reseller'
                 session.permanent = True
                 return redirect(url_for('reseller.dashboard'))
+        
+        if ip not in _failed_reseller_logins:
+            _failed_reseller_logins[ip] = [1, now]
+        else:
+            _failed_reseller_logins[ip][0] += 1
+        time.sleep(min(_failed_reseller_logins[ip][0], 3))
         flash('Username atau password salah, atau akun bukan Mitra.', 'error')
 
     return render_template('reseller/login.html', isp_name=isp_name)

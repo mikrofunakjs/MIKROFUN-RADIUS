@@ -11,10 +11,23 @@ import datetime
 
 tech_bp = Blueprint('tech', __name__, template_folder='../../templates/tech')
 
+_failed_tech_logins = {}
+
 @tech_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if session.get('logged_in') and session.get('role') in ['technician', 'admin']:
         return redirect(url_for('tech.dashboard'))
+
+    ip = request.remote_addr
+    now = time.time()
+    
+    if ip in _failed_tech_logins:
+        attempts, first_fail_time = _failed_tech_logins[ip]
+        if now - first_fail_time > 180:
+            del _failed_tech_logins[ip]
+        elif attempts >= 5:
+            flash('Terlalu banyak percobaan gagal. Silakan coba lagi nanti.', 'error')
+            return render_template('tech/login.html')
 
     if request.method == 'POST':
         username = request.form.get('username', '')
@@ -35,12 +48,20 @@ def login():
             else:
                 is_valid = (user['password'] == password)
             if is_valid:
+                if ip in _failed_tech_logins:
+                    del _failed_tech_logins[ip]
                 session['logged_in'] = True
                 session['username'] = user['username']
                 session['role'] = user['role']
                 session['user_id'] = user.get('id', 0)
                 session.permanent = True
                 return redirect(url_for('tech.dashboard'))
+        
+        if ip not in _failed_tech_logins:
+            _failed_tech_logins[ip] = [1, now]
+        else:
+            _failed_tech_logins[ip][0] += 1
+        time.sleep(min(_failed_tech_logins[ip][0], 3))
         flash('Username atau PIN salah/tidak ditemukan.', 'error')
 
     return render_template('tech/login.html')

@@ -3,14 +3,28 @@ from web.database import execute_query
 from werkzeug.security import check_password_hash, generate_password_hash
 import os
 import datetime
+import time
 
 client_bp = Blueprint('client', __name__)
+
+_failed_client_logins = {}
 
 @client_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if session.get('client_user'):
         return redirect(url_for('client.dashboard'))
         
+    ip = request.remote_addr
+    now = time.time()
+    
+    if ip in _failed_client_logins:
+        attempts, first_fail_time = _failed_client_logins[ip]
+        if now - first_fail_time > 180:
+            del _failed_client_logins[ip]
+        elif attempts >= 5:
+            flash('Terlalu banyak percobaan gagal. Silakan coba lagi nanti.', 'error')
+            return render_template('client/login.html')
+            
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -43,9 +57,16 @@ def login():
                         pass
         
         if is_valid:
+            if ip in _failed_client_logins:
+                del _failed_client_logins[ip]
             session['client_user'] = user
             return redirect(url_for('client.dashboard'))
         else:
+            if ip not in _failed_client_logins:
+                _failed_client_logins[ip] = [1, now]
+            else:
+                _failed_client_logins[ip][0] += 1
+            time.sleep(min(_failed_client_logins[ip][0], 3))
             flash('Username atau Password salah!', 'error')
             
     return render_template('client/login.html')

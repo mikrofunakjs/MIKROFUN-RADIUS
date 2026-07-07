@@ -2,8 +2,11 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
 from werkzeug.security import generate_password_hash, check_password_hash
+import time
 
 auth_bp = Blueprint('auth', __name__)
+
+_failed_logins = {}
 
 @auth_bp.route('/setup', methods=['GET', 'POST'])
 def setup():
@@ -39,6 +42,18 @@ def setup():
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    ip = request.remote_addr
+    now = time.time()
+    
+    # Check rate limit (max 5 failed attempts per 3 minutes)
+    if ip in _failed_logins:
+        attempts, first_fail_time = _failed_logins[ip]
+        if now - first_fail_time > 180:
+            del _failed_logins[ip]
+        elif attempts >= 5:
+            flash('Terlalu banyak percobaan gagal. Silakan coba lagi nanti.', 'error')
+            return render_template('login.html')
+
     # Intercept login if no users exist
     try:
         user_count = execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True)
@@ -83,6 +98,9 @@ def login():
                     pass
 
         if is_valid:
+            if ip in _failed_logins:
+                del _failed_logins[ip]
+                
             session['logged_in'] = True
             session['username'] = user['username']
             session['user_id'] = user['id']
@@ -99,6 +117,14 @@ def login():
             else:
                 return redirect(url_for('index'))
         else:
+            if ip not in _failed_logins:
+                _failed_logins[ip] = [1, now]
+            else:
+                _failed_logins[ip][0] += 1
+                
+            # Delay to slow down brute force (max 3 seconds)
+            time.sleep(min(_failed_logins[ip][0], 3))
+            
             flash('Username atau password salah', 'error')
 
     return render_template('login.html')
