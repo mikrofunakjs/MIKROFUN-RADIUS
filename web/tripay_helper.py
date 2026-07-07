@@ -100,6 +100,8 @@ class TripayHelper:
         
         # We need the RAW JSON string exactly as received.
         # Assuming json_data is the raw string
+        if not self.private_key:
+            return False
         return hmac.new(
             self.private_key.encode('utf-8'),
             json_data.encode('utf-8'),
