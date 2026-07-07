@@ -258,8 +258,8 @@ def api_checkout():
 
     # Insert Pending Transaction into Payments Table
     execute_query("""
-        INSERT INTO payments (amount, payment_type, status, sender_bank, guest_phone, profile_id, payment_channel, payment_date)
-        VALUES (%s, 'voucher', 'pending', %s, %s, %s, %s, NOW())
+        INSERT INTO payments (amount, payment_type, status, sender_bank, guest_phone, profile_id, payment_channel)
+        VALUES (%s, 'voucher', 'pending', %s, %s, %s, %s)
     """, (amount, method, phone, profile['id'], actual_gateway))
     
     payment_id = execute_query("SELECT LAST_INSERT_ID() as id", fetch_one=True)['id']
