@@ -46,20 +46,24 @@ def hotspot_login():
     template_choice = settings.get('portal_template', 'default')
 
     if template_choice == 'custom' and settings.get('portal_custom_html'):
-        return render_template_string(
-            settings['portal_custom_html'],
-            mac=mac,
-            ip=ip,
-            is_nat_mode=False,
-            router_id=router_id,
-            link_login=link_login,
-            link_orig=link_orig,
-            error=error,
-            username=url_username,
-            hotspot_name=hotspot_name,
-            settings=settings,
-            profiles=profiles
-        )
+        from jinja2.sandbox import SandboxedEnvironment
+        try:
+            env = SandboxedEnvironment()
+            return env.from_string(settings['portal_custom_html']).render(
+                mac=mac,
+                ip=ip,
+                is_nat_mode=False,
+                router_id=router_id,
+                link_login=link_login,
+                link_orig=link_orig,
+                error=error,
+                username=url_username,
+                hotspot_name=hotspot_name,
+                settings=settings,
+                profiles=profiles
+            )
+        except Exception as e:
+            return f"<div style='color:red; border:1px solid red; padding:10px;'><b>Portal Template Error:</b> {str(e)}</div>"
 
     template_file = 'portal/login.html'
     if template_choice == 'isp_elegant':
