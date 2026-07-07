@@ -254,11 +254,13 @@ def api_checkout():
 
     merchant_ref = f"CP-{mac.replace(':','')}-{int(time.time())}" if mac else f"CP-VCH-{int(time.time())}"
 
+    actual_gateway = 'MIDTRANS' if active_gateway == 'midtrans' else 'TRIPAY'
+
     # Insert Pending Transaction into Payments Table
     execute_query("""
-        INSERT INTO payments (amount, payment_type, status, sender_bank, guest_phone, profile_id, payment_date)
-        VALUES (%s, 'voucher', 'pending', %s, %s, %s, NOW())
-    """, (amount, method, phone, profile['id']))
+        INSERT INTO payments (amount, payment_type, status, sender_bank, guest_phone, profile_id, payment_channel, payment_date)
+        VALUES (%s, 'voucher', 'pending', %s, %s, %s, %s, NOW())
+    """, (amount, method, phone, profile['id'], actual_gateway))
     
     payment_id = execute_query("SELECT LAST_INSERT_ID() as id", fetch_one=True)['id']
     merchant_ref = f"INV-{payment_id}-{int(time.time())}"
