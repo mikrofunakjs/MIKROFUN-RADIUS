@@ -27,7 +27,7 @@ def login():
         if user:
             from werkzeug.security import check_password_hash
             is_valid = False
-            if ':' in user.get('password', ''):
+            if user.get('password', '').startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2')):
                 try:
                     is_valid = check_password_hash(user['password'], password)
                 except Exception:

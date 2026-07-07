@@ -25,8 +25,8 @@ def login():
         if user:
             stored_pw = user.get('password', '')
             
-            # Werkzeug hashes contain ':' (e.g., scrypt:32768:8:1$salt$hash)
-            if ':' in stored_pw:
+            # Werkzeug hashes contain format like scrypt:32768:8:1$salt$hash
+            if stored_pw.startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2')):
                 try:
                     is_valid = check_password_hash(stored_pw, password)
                 except Exception:

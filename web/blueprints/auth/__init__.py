@@ -63,7 +63,7 @@ def login():
             stored_pw = user['password']
             
             # Werkzeug hashes typically contain a colon (e.g., method:salt$hash)
-            if ':' in stored_pw:
+            if stored_pw.startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2')):
                 try:
                     is_valid = check_password_hash(stored_pw, password)
                 except Exception as e:
@@ -74,7 +74,7 @@ def login():
                 is_valid = (stored_pw == password)
                 
             # Auto-upgrade to hash if it was plain text and login succeeded
-            if is_valid and ':' not in stored_pw:
+            if is_valid and not stored_pw.startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2')):
                 try:
                     new_hash = generate_password_hash(password)
                     execute_query("UPDATE users SET password=%s WHERE id=%s", (new_hash, user['id']))
