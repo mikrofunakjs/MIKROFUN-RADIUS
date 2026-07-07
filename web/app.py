@@ -88,8 +88,6 @@ def safe_render_template_string(source, **context):
     """Render a template string using a SandboxedEnvironment to prevent SSTI."""
     try:
         env = SandboxedEnvironment()
-        # Add filters that we have in main app to the sandbox env
-        env.filters['format_rupiah'] = format_rupiah
         # Render the template
         return env.from_string(source).render(**context)
     except Exception as e:
@@ -380,6 +378,10 @@ def landing():
     packages_json = settings_dict.get('landing_page_packages', '[]')
     try:
         packages = json.loads(packages_json)
+        # Pre-format prices for safety so we don't need format_rupiah in sandbox
+        for p in packages:
+            if 'price' in p:
+                p['formatted_price'] = format_rupiah(p['price'])
     except:
         packages = []
         
