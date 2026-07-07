@@ -88,11 +88,25 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # --- SSTI SAFE RENDERING HELPER ---
 def safe_render_template_string(source, **context):
-    """Render a template string using a SandboxedEnvironment to prevent SSTI."""
+    """Render a template string securely, avoiding Jinja2 SSTI vulnerabilities by using string replacement."""
     try:
-        env = SandboxedEnvironment()
-        # Render the template
-        return env.from_string(source).render(**context)
+        result = source
+        company = context.get('company', {})
+        
+        # Replace company variables
+        for k, v in company.items():
+            result = result.replace(f'{{{{company.{k}}}}}', str(v))
+            
+        # Support common explicit placeholders
+        result = result.replace('{{company_name}}', str(company.get('name', '')))
+        result = result.replace('{{ company.name }}', str(company.get('name', '')))
+        
+        # Inject packages as a JSON string so frontend JS can render it if needed
+        import json
+        packages = context.get('packages', [])
+        result = result.replace('{{packages_json}}', json.dumps(packages))
+        
+        return result
     except Exception as e:
         return f"<div style='color:red; border:1px solid red; padding:10px;'><b>Template Error:</b> {str(e)}</div>"
 
