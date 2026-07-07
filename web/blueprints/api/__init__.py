@@ -102,17 +102,32 @@ def callback_moota():
             if amount <= 0:
                 continue
                 
-            # Find a pending payment with this exact amount
+            desc = str(mutation.get('description', '')).upper()
+            note = str(mutation.get('note', '')).upper()
+            mutation_text = f"{desc} {note}"
+                
+            # Find pending payments with this exact amount
             # Since amount includes a 3-digit unique code, it's highly likely to be unique
-            # If multiple exist, take the oldest pending one
-            pending_payment = execute_query(
-                "SELECT id, external_ref FROM payments WHERE amount=%s AND payment_channel='MOOTA' AND status='pending' ORDER BY created_at ASC LIMIT 1",
-                (amount,), fetch_one=True
+            # If multiple exist, try to match external_ref in mutation text, else fallback to oldest
+            pending_payments = execute_query(
+                "SELECT id, external_ref FROM payments WHERE amount=%s AND payment_channel='MOOTA' AND status='pending' ORDER BY created_at ASC",
+                (amount,), fetch=True
             )
             
-            if pending_payment:
+            if pending_payments:
+                matched_payment = None
+                # 1. Try to match external_ref inside the mutation text
+                for p in pending_payments:
+                    if p['external_ref'].upper() in mutation_text:
+                        matched_payment = p
+                        break
+                
+                # 2. Fallback: just take the oldest one
+                if not matched_payment:
+                    matched_payment = pending_payments[0]
+                    
                 # Mark as approved utilizing the same function used by Tripay/Midtrans
-                process_successful_payment(pending_payment['external_ref'], 'MOOTA')
+                process_successful_payment(matched_payment['external_ref'], 'MOOTA')
                 processed_count += 1
                 
         return jsonify({'success': True, 'processed': processed_count})
