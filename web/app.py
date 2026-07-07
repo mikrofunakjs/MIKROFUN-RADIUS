@@ -234,6 +234,39 @@ def add_security_headers(response):
     response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: http: https:;"
     return response
 
+# --- GLOBAL CSRF PROTECTION ---
+@app.before_request
+def csrf_protect():
+    if request.method in ["POST", "PUT", "DELETE"]:
+        # Exclude paths that receive legitimate cross-origin requests
+        exempt_prefixes = ('/api/', '/telegram/', '/portal/')
+        if request.path.startswith(exempt_prefixes):
+            return
+
+        origin = request.headers.get('Origin')
+        referer = request.headers.get('Referer')
+        host = request.headers.get('X-Forwarded-Host', request.headers.get('Host'))
+        
+        if not host:
+            return
+            
+        from urllib.parse import urlparse
+        
+        if origin:
+            parsed = urlparse(origin)
+            if parsed.netloc != host and parsed.netloc != host.split(':')[0]:
+                from flask import abort
+                abort(403, "CSRF Origin mismatch")
+        elif referer:
+            parsed = urlparse(referer)
+            if parsed.netloc != host and parsed.netloc != host.split(':')[0]:
+                from flask import abort
+                abort(403, "CSRF Referer mismatch")
+        else:
+            # Block if no origin/referer is present on a state-changing web request
+            from flask import abort
+            abort(403, "CSRF protection: Missing Origin and Referer headers")
+
 # Blueprints
 from web.blueprints.auth import auth_bp
 from web.blueprints.customers import customers_bp
