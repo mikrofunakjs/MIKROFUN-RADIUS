@@ -244,7 +244,7 @@ def topup():
             # Tripay requires customer details
             customer_name = session['username']
             customer_email = f"{customer_name}@reseller.local"
-            customer_phone = '08123456789'
+            customer_phone = ''
             
             # Get real data if possible
             res_info = execute_query("SELECT email, phone FROM users WHERE id=%s", (reseller_id,), fetch_one=True)
@@ -287,7 +287,7 @@ def topup():
                 'id': str(reseller_id),
                 'first_name': username,
                 'email': f"{username}@reseller.local",
-                'phone': '08123456789'
+                'phone': ''
             }
             
             res_info = execute_query("SELECT email, phone FROM users WHERE id=%s", (reseller_id,), fetch_one=True)
