@@ -103,7 +103,7 @@ def deactivate_license():
 def get_setting(key, default=None):
     """Helper to get setting from DB"""
     try:
-        from database import get_db
+        from web.database import get_db
         conn = get_db()
         if not conn: return default
         cur = conn.cursor(dictionary=True)
