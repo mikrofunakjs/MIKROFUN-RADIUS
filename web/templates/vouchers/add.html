@@ -25,8 +25,7 @@
                         <option value="{{ p.id }}">{{ p.name }} ({{ p.validity }} 
                             {% if p.validity_unit == 'days' %}Hari
                             {% elif p.validity_unit == 'months' %}Bulan
-                            {% else %}Jam{% endif %} - Rp {{
-                            {{ p.price|price_total(p.tax_percent) }})</option>
+                            {% else %}Jam{% endif %} - Rp {{ p.price|price_total(p.tax_percent) }})</option>
                         {% endfor %}
                     </select>
                     <label class="label">
