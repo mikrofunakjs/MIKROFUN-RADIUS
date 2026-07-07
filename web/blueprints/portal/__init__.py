@@ -319,10 +319,18 @@ def check_payment():
     # Check if transaction is PAID and optionally if voucher was generated
     payment = execute_query("SELECT status, voucher_code FROM payments WHERE external_ref=%s OR id=%s LIMIT 1", (ref, ref), fetch_one=True)
     
-    if payment and payment['status'] in ('paid', 'settlement', 'approved'):
-        return jsonify({
-            'paid': True,
-            'voucher_code': payment.get('voucher_code')
-        })
-        
+    if payment:
+        status = payment['status']
+        if status in ('paid', 'settlement', 'approved'):
+            return jsonify({
+                'paid': True,
+                'voucher_code': payment.get('voucher_code')
+            })
+        elif status == 'processing':
+            return jsonify({
+                'paid': False,
+                'processing': True,
+                'message': 'Pembayaran berhasil, sedang membuat akses...'
+            })
+            
     return jsonify({'paid': False})
