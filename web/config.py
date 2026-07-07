@@ -3,14 +3,14 @@ import sys
 
 # Database Configuration
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'radius',
-    'password': 'radiuspass123',
-    'database': 'radius_db'
+    'host': os.environ.get('DB_HOST', 'localhost'),
+    'user': os.environ.get('DB_USER', 'radius'),
+    'password': os.environ.get('DB_PASSWORD', 'radiuspass123'),
+    'database': os.environ.get('DB_NAME', 'radius_db')
 }
 
 # RADIUS Configuration
-RADIUS_SECRET = 'testing123'
+RADIUS_SECRET = os.environ.get('RADIUS_SECRET', 'testing123')
 AUTH_PORT = 1812
 ACCT_PORT = 1813
 
