@@ -135,8 +135,9 @@ def update_admin():
         if password != confirm_password:
             flash('Password konfirmasi tidak cocok.', 'error')
             return redirect(url_for('settings.index'))
+        from werkzeug.security import generate_password_hash
         updates.append("password=%s")
-        params.append(password)
+        params.append(generate_password_hash(password))
         
     # Update Admin (Assuming ID 1 or current logged in user if we tracked ID)
     # Since we only have one admin essentially in this simple version, let's update ID 1 or WHERE role='admin'
