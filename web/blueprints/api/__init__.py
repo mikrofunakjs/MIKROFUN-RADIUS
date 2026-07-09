@@ -614,6 +614,8 @@ def public_buy_voucher_midtrans():
         
     return {'error': error or 'Failed to generate token'}, 500
 
+_track_rate_limit = {}
+
 @api_bp.route('/public/track_voucher', methods=['GET'])
 def public_track_voucher():
     """Endpoint for landing page to check transaction status"""
@@ -621,11 +623,27 @@ def public_track_voucher():
     # Duitku appends merchantOrderId
     ref = request.args.get('ref') or request.args.get('merchant_ref') or request.args.get('reference') or request.args.get('merchantOrderId')
     
+    ip = request.remote_addr
+    import time
+    now = time.time()
+    
+    # Anti brute-force rate limit (max 10 requests per minute per IP)
+    if ip in _track_rate_limit:
+        attempts, first_time = _track_rate_limit[ip]
+        if now - first_time > 60:
+            _track_rate_limit[ip] = [1, now]
+        elif attempts >= 10:
+            return "Too many requests. Please wait a minute.", 429
+        else:
+            _track_rate_limit[ip][0] += 1
+    else:
+        _track_rate_limit[ip] = [1, now]
+        
     if not ref:
         return "Reference invalid (No ref/merchant_ref provided)", 400
         
-    # Attempt to find by external_ref (which we used for merchant_ref or gateway_ref)
-    payment = execute_query("SELECT * FROM payments WHERE external_ref=%s", (ref,), fetch_one=True)
+    # Attempt to find by external_ref, strictly limiting columns
+    payment = execute_query("SELECT external_ref, status, voucher_code FROM payments WHERE external_ref=%s", (ref,), fetch_one=True)
     
     if not payment:
         # Debugging: show what we searched for
