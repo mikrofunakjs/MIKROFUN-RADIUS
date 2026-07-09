@@ -83,7 +83,10 @@ def get_secure_secret_key():
 
 app.secret_key = get_secure_secret_key()
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True
+import os
+# Only set SECURE cookie if deployed on HTTPS, otherwise it breaks HTTP logins
+is_https = os.environ.get('USE_HTTPS', 'False').lower() in ('true', '1', 't')
+app.config['SESSION_COOKIE_SECURE'] = is_https
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # --- SSTI SAFE RENDERING HELPER ---
@@ -245,7 +248,7 @@ def add_security_headers(response):
     # Strict Transport Security (HSTS)
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     # Content Security Policy (CSP)
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: http: https:;"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; font-src 'self' fonts.gstatic.com cdn.jsdelivr.net; img-src 'self' data: http: https:;"
     return response
 
 # --- GLOBAL CSRF PROTECTION ---
