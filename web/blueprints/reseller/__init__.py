@@ -59,13 +59,9 @@ def login():
         )
         if user:
             from werkzeug.security import check_password_hash
-            is_valid = False
-            if user.get('password', '').startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2')):
-                try:
-                    is_valid = check_password_hash(user['password'], password)
-                except Exception:
-                    is_valid = (user['password'] == password)
-            else:
+            try:
+                is_valid = check_password_hash(user['password'], password)
+            except ValueError:
                 is_valid = (user['password'] == password)
             if is_valid:
                 if ip in _failed_reseller_logins:

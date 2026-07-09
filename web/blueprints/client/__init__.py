@@ -39,22 +39,19 @@ def login():
         if user:
             stored_pw = user.get('password', '')
             
-            # Werkzeug hashes contain format like scrypt:32768:8:1$salt$hash
-            if stored_pw.startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2')):
-                try:
-                    is_valid = check_password_hash(stored_pw, password)
-                except Exception:
-                    is_valid = (stored_pw == password)
-            else:
-                # Plaintext (legacy)
+            try:
+                is_valid = check_password_hash(stored_pw, password)
+            except ValueError:
+                # If it's not a valid hash format, fallback to plain text comparison
                 is_valid = (stored_pw == password)
-                # Auto-upgrade to hash
-                if is_valid:
-                    try:
-                        new_hash = generate_password_hash(password)
-                        execute_query("UPDATE customers SET password=%s WHERE username=%s", (new_hash, username))
-                    except Exception:
-                        pass
+                
+            # Auto-upgrade to hash if it was plain text and login succeeded
+            if is_valid and stored_pw == password:
+                try:
+                    new_hash = generate_password_hash(password)
+                    execute_query("UPDATE customers SET password=%s WHERE username=%s", (new_hash, username))
+                except Exception:
+                    pass
         
         if is_valid:
             if ip in _failed_client_logins:

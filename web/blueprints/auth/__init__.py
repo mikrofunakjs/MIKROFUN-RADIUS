@@ -77,19 +77,14 @@ def login():
         if user:
             stored_pw = user['password']
             
-            # Werkzeug hashes typically contain a colon (e.g., method:salt$hash)
-            if stored_pw.startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2')):
-                try:
-                    is_valid = check_password_hash(stored_pw, password)
-                except Exception as e:
-                    # If it's not a valid hash, fallback to plain text comparison
-                    is_valid = (stored_pw == password)
-            else:
-                # Definitely plain text (legacy)
+            try:
+                is_valid = check_password_hash(stored_pw, password)
+            except ValueError:
+                # If it's not a valid hash format, fallback to plain text comparison
                 is_valid = (stored_pw == password)
                 
             # Auto-upgrade to hash if it was plain text and login succeeded
-            if is_valid and not stored_pw.startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2')):
+            if is_valid and stored_pw == password:
                 try:
                     new_hash = generate_password_hash(password)
                     execute_query("UPDATE users SET password=%s WHERE id=%s", (new_hash, user['id']))
