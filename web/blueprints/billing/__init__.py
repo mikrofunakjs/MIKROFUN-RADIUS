@@ -136,10 +136,19 @@ def pos():
             'warning'
         )
 
+    # 0.5. Anti-Spam (Idempotency) Check
+    recent_payment = execute_query(
+        "SELECT id FROM payments WHERE customer_id=%s AND amount=%s AND status='approved' AND payment_channel='POS / Tunai' AND payment_date > DATE_SUB(NOW(), INTERVAL 30 SECOND)",
+        (cid, amount), fetch_one=True
+    )
+    if recent_payment:
+        flash('Sistem memblokir pembayaran ganda. Transaksi ini sudah berhasil diproses beberapa detik yang lalu!', 'warning')
+        return redirect(url_for('billing.index'))
+
     # 1. Insert Payment (Approved directly)
     result = execute_query(
-        "INSERT INTO payments (customer_id, amount, sender_bank, sender_name, payment_date, status) "
-        "VALUES (%s, %s, 'CASH', 'POS ADMIN', NOW(), 'approved')",
+        "INSERT INTO payments (customer_id, amount, sender_bank, sender_name, payment_date, payment_channel, status) "
+        "VALUES (%s, %s, 'CASH', 'POS ADMIN', NOW(), 'POS / Tunai', 'approved')",
         (cid, amount)
     )
     payment_id = result if isinstance(result, int) else None

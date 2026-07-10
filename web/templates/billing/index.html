@@ -22,7 +22,7 @@
             <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
                 <i class="bi bi-cash-stack text-success"></i> Input Pembayaran Manual (POS)
             </h3>
-            <form action="{{ url_for('billing.pos') }}" method="POST">
+            <form action="{{ url_for('billing.pos') }}" method="POST" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerHTML = '<span class=\'loading loading-spinner loading-sm\'></span> Memproses...';">
 
                 <div class="form-control w-full mb-3">
                     <label class="label"><span class="label-text font-bold">Pilih Pelanggan</span></label>
