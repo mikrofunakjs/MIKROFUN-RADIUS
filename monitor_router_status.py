@@ -49,11 +49,22 @@ def get_wg_peers():
 
 import time
 
+def check_port(ip, port):
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(2)
+        s.connect((ip, int(port)))
+        s.close()
+        return True
+    except:
+        return False
+
 def update():
     peers = get_wg_peers()
     # Use existing DB connection logic if possible, or new one
     routers = execute_query(
-        "SELECT id, name, vpn_ip, vpn_public_key, status FROM routers", fetch=True
+        "SELECT id, name, vpn_ip, vpn_public_key, vpn_type, api_port, status FROM routers", fetch=True
     )
     if not routers:
         # print("No routers found")
@@ -62,11 +73,17 @@ def update():
     for r in routers:
         pub_key = r.get('vpn_public_key', '')
         vpn_ip = r.get('vpn_ip', '')
+        vpn_type = r.get('vpn_type', 'wireguard')
+        api_port = r.get('api_port', 8728)
         old = r.get('status', 'offline')
         new = 'offline'
 
-        if pub_key and pub_key in peers and peers[pub_key] == 'online':
-            if vpn_ip and ping_ip(vpn_ip):
+        if vpn_type == 'wireguard':
+            if pub_key and pub_key in peers and peers[pub_key] == 'online':
+                if vpn_ip and (ping_ip(vpn_ip) or check_port(vpn_ip, api_port)):
+                    new = 'online'
+        else:
+            if vpn_ip and (ping_ip(vpn_ip) or check_port(vpn_ip, api_port)):
                 new = 'online'
 
         if new != old:
