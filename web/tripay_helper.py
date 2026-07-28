@@ -102,9 +102,12 @@ class TripayHelper:
         # Assuming json_data is the raw string
         if not self.private_key:
             return False
-        return hmac.new(
-            self.private_key.encode('utf-8'),
-            json_data.encode('utf-8'),
-            hashlib.sha256
-        ).hexdigest() == signature_header
+        return hmac.compare_digest(
+            hmac.new(
+                self.private_key.encode('utf-8'),
+                json_data.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest(),
+            signature_header
+        )
 

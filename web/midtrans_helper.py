@@ -2,6 +2,7 @@ import requests
 import base64
 import json
 import hashlib
+import hmac
 from web.database import execute_query
 
 MIDTRANS_SNAP_SANDBOX = "https://app.sandbox.midtrans.com/snap/v1/transactions"
@@ -156,4 +157,4 @@ class MidtransHelper:
         if not self.server_key: return False
         
         calc_signature = hashlib.sha512(f"{order_id}{status_code}{gross_amount}{self.server_key}".encode('utf-8')).hexdigest()
-        return calc_signature == signature_key
+        return hmac.compare_digest(calc_signature, signature_key)

@@ -371,11 +371,15 @@ def activate_reseller_topup(reseller_id, amount, reference):
     """Update reseller balance and record transaction"""
     reseller = execute_query("SELECT balance FROM users WHERE id=%s AND role='reseller'", (reseller_id,), fetch_one=True)
     if not reseller: return
-    
+
     balance_before = float(reseller['balance'])
-    balance_after = balance_before + float(amount)
-    
-    execute_query("UPDATE users SET balance = %s WHERE id = %s", (balance_after, reseller_id))
+
+    # Update saldo secara atomik
+    execute_query("UPDATE users SET balance = balance + %s WHERE id = %s", (amount, reseller_id))
+
+    # Baca balance terbaru setelah update
+    updated = execute_query("SELECT balance FROM users WHERE id=%s", (reseller_id,), fetch_one=True)
+    balance_after = float(updated['balance']) if updated else balance_before + amount
     execute_query(
         "INSERT INTO reseller_transactions (reseller_id, type, amount, description, balance_before, balance_after) VALUES (%s, 'topup', %s, %s, %s, %s)",
         (reseller_id, amount, f"Top-Up via Payment Gateway (Ref: {reference})", balance_before, balance_after)

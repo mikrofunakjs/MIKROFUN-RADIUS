@@ -5,6 +5,7 @@ Documentation: https://developers.xendit.co/api-reference/
 import requests
 import json
 import base64
+import hmac
 from web.database import execute_query
 
 # Xendit API base URLs
@@ -100,4 +101,4 @@ class XenditHelper:
 
     def verify_callback(self, callback_token):
         """Verify webhook callback token from Xendit"""
-        return self.webhook_token and callback_token == self.webhook_token
+        return self.webhook_token and hmac.compare_digest(callback_token, self.webhook_token)

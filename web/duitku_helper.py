@@ -2,6 +2,7 @@ import hashlib
 import json
 import requests
 import datetime
+import hmac
 from web.database import execute_query
 
 class DuitkuHelper:
@@ -170,5 +171,5 @@ class DuitkuHelper:
         
         signature_string = f"{self.merchant_code}{amount}{merchant_order_id}{self.api_key}"
         signature_expected = hashlib.md5(signature_string.encode('utf-8')).hexdigest()
-        
-        return signature_received == signature_expected
+
+        return hmac.compare_digest(signature_received, signature_expected)

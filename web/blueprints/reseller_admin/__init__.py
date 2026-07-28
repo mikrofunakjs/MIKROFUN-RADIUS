@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
 from web.decorators import admin_required
+from werkzeug.security import generate_password_hash
 
 reseller_admin_bp = Blueprint('reseller_admin', __name__)
 
@@ -31,11 +32,12 @@ def add():
         username = request.form.get('username')
         password = request.form.get('password')
         discount = request.form.get('discount_percent', 0)
-        
+
         try:
+            hashed_password = generate_password_hash(password)
             execute_query(
                 "INSERT INTO users (username, password, role, discount_percent, balance) VALUES (%s, %s, 'reseller', %s, 0)",
-                (username, password, discount)
+                (username, hashed_password, discount)
             )
             flash('Mitra / Reseller berhasil ditambahkan!', 'success')
             return redirect(url_for('reseller_admin.index'))
@@ -57,14 +59,15 @@ def edit(id):
         username = request.form.get('username')
         password = request.form.get('password')
         discount = request.form.get('discount_percent', 0)
-        
+
         if password:
+            hashed_password = generate_password_hash(password)
             execute_query(
                 "UPDATE users SET username=%s, password=%s, discount_percent=%s WHERE id=%s",
-                (username, password, discount, id)
+                (username, hashed_password, discount, id)
             )
         else:
-             execute_query(
+            execute_query(
                 "UPDATE users SET username=%s, discount_percent=%s WHERE id=%s",
                 (username, discount, id)
             )
@@ -95,10 +98,14 @@ def topup(id):
         return redirect(url_for('reseller_admin.index'))
         
     balance_before = float(reseller['balance'] or 0)
-    balance_after = balance_before + amount
-    
+
     try:
-        execute_query("UPDATE users SET balance = %s WHERE id = %s", (balance_after, id))
+        # Update saldo secara atomik
+        execute_query("UPDATE users SET balance = balance + %s WHERE id = %s", (amount, id))
+
+        # Baca balance terbaru setelah update
+        updated = execute_query("SELECT balance FROM users WHERE id=%s", (id,), fetch_one=True)
+        balance_after = float(updated['balance']) if updated else balance_before + amount
         execute_query(
             "INSERT INTO reseller_transactions (reseller_id, type, amount, description, balance_before, balance_after) VALUES (%s, 'topup', %s, %s, %s, %s)",
             (id, amount, desc, balance_before, balance_after)

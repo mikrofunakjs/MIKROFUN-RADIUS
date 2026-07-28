@@ -777,7 +777,7 @@ class RadiusServer:
                         (acct_session_id, acct_session_id, username, addr[0], calling_station, framed_ip)
                     )
                     # Also update active_sessions
-                    self._update_active_session(1, username, addr[0], acct_session_id, calling_station)
+                    self._update_active_session(1, username, addr[0], acct_session_id, calling_station, input_octets, output_octets)
 
                 # STOP
                 elif status == 2:
@@ -791,19 +791,37 @@ class RadiusServer:
                         "WHERE acctsessionid=%s AND username=%s",
                         (session_time, input_octets, output_octets, term_cause, acct_session_id, username)
                     )
+                    # [AI NOC] Simpan snapshot akhir sesi
+                    cur.execute(
+                        "INSERT INTO radacct_snapshots (acctsessionid, username, snapshot_time, "
+                        "acctinputoctets, acctoutputoctets, acctsessiontime, framedipaddress, "
+                        "callingstationid, nasipaddress) "
+                        "VALUES (%s, %s, NOW(), %s, %s, %s, %s, %s, %s)",
+                        (acct_session_id, username, input_octets, output_octets, session_time,
+                         framed_ip, calling_station, addr[0])
+                    )
                     # Also update active_sessions
-                    self._update_active_session(2, username, addr[0], acct_session_id, calling_station)
+                    self._update_active_session(2, username, addr[0], acct_session_id, calling_station, input_octets, output_octets)
 
                 # INTERIM-UPDATE (Alive)
                 elif status == 3:
-                     cur.execute(
+                    cur.execute(
                         "UPDATE radacct SET acctupdatetime=NOW(), acctsessiontime=%s, "
                         "acctinputoctets=%s, acctoutputoctets=%s, framedipaddress=%s "
                         "WHERE acctsessionid=%s AND username=%s",
                         (session_time, input_octets, output_octets, framed_ip, acct_session_id, username)
                     )
-                     # Also update active_sessions
-                     self._update_active_session(3, username, addr[0], acct_session_id, calling_station)
+                    # [AI NOC] Simpan snapshot time-series untuk analisa real-time
+                    cur.execute(
+                        "INSERT INTO radacct_snapshots (acctsessionid, username, snapshot_time, "
+                        "acctinputoctets, acctoutputoctets, acctsessiontime, framedipaddress, "
+                        "callingstationid, nasipaddress) "
+                        "VALUES (%s, %s, NOW(), %s, %s, %s, %s, %s, %s)",
+                        (acct_session_id, username, input_octets, output_octets, session_time,
+                         framed_ip, calling_station, addr[0])
+                    )
+                    # Also update active_sessions
+                    self._update_active_session(3, username, addr[0], acct_session_id, calling_station, input_octets, output_octets)
                 
                 # ACCT-ON / ACCT-OFF (Router Reboot)
                 elif status in (7, 8):
@@ -824,7 +842,7 @@ class RadiusServer:
             addr
         )
 
-    def _update_active_session(self, status, username, nas_ip, session_id, mac_address=None):
+    def _update_active_session(self, status, username, nas_ip, session_id, mac_address=None, input_octets=0, output_octets=0):
         """Update active_sessions table based on Acct-Status-Type"""
         username = username.strip().lower() if username else ""
         try:

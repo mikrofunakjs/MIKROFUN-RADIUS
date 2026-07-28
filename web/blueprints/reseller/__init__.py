@@ -146,21 +146,15 @@ def buy():
         normal_price = float(profile['price'])
         buy_price = round(normal_price - (normal_price * discount_percent / 100), 2)
         
-        # Cek saldo cukup
-        if buy_price > balance:
-            flash(f'Saldo tidak cukup (Sisa: Rp {balance:,.0f}). Butuh Rp {buy_price:,.0f}', 'error')
-            return redirect(url_for('reseller.buy'))
-        
         # Generate kode voucher unik
         code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         # Pastikan kode belum ada
         while execute_query("SELECT id FROM vouchers WHERE code=%s", (code,), fetch_one=True):
             code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        
+
         try:
-            new_balance = balance - buy_price
             duration_hours = profile.get('validity') or 24
-            
+
             # Simpan voucher ke database (RADIUS system — tidak perlu Mikrotik API)
             execute_query(
                 "INSERT INTO vouchers (code, profile_id, duration_hours, price, status, created_by, reseller_id, buy_price) "
@@ -168,10 +162,24 @@ def buy():
                 (code, profile['id'], duration_hours, profile['price'],
                  session.get('username'), session['user_id'], buy_price)
             )
-            
-            # Potong saldo mitra
-            execute_query("UPDATE users SET balance=%s WHERE id=%s", (new_balance, session['user_id']))
-            
+
+            # Potong saldo mitra (atomik dengan guard)
+            result = execute_query(
+                "UPDATE users SET balance = balance - %s WHERE id = %s AND balance >= %s",
+                (buy_price, session['user_id'], buy_price)
+            )
+
+            # Jika update gagal (rowcount == 0), berarti saldo tidak cukup
+            if result == 0:
+                flash(f'Saldo tidak cukup. Butuh Rp {buy_price:,.0f}', 'error')
+                # Hapus voucher yang baru dibuat
+                execute_query("DELETE FROM vouchers WHERE code=%s", (code,))
+                return redirect(url_for('reseller.buy'))
+
+            # Baca balance terbaru setelah update
+            user_data = execute_query("SELECT balance FROM users WHERE id=%s", (session['user_id'],), fetch_one=True)
+            new_balance = float(user_data['balance']) if user_data else balance - buy_price
+
             # Catat transaksi
             execute_query(
                 "INSERT INTO reseller_transactions "
@@ -393,18 +401,14 @@ def bulk_buy():
         unit_price = float(profile['price'])
         unit_buy_price = round(unit_price - (unit_price * discount_percent / 100), 2)
         total_cost = unit_buy_price * qty
-        
-        if total_cost > balance:
-            flash(f'Saldo tidak cukup. Butuh Rp {total_cost:,.0f}', 'error')
-            return redirect(url_for('reseller.bulk_buy'))
-        
+
         try:
             codes = []
             for _ in range(qty):
                 code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
                 while execute_query("SELECT id FROM vouchers WHERE code=%s", (code,), fetch_one=True):
                     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-                
+
                 duration_hours = profile.get('validity') or 24
                 execute_query(
                     "INSERT INTO vouchers (code, profile_id, duration_hours, price, status, created_by, reseller_id, buy_price) "
@@ -413,9 +417,22 @@ def bulk_buy():
                      session.get('username'), session['user_id'], unit_buy_price)
                 )
                 codes.append(code)
-            
-            new_balance = balance - total_cost
-            execute_query("UPDATE users SET balance=%s WHERE id=%s", (new_balance, session['user_id']))
+
+            # Potong saldo mitra (atomik dengan guard)
+            result = execute_query("UPDATE users SET balance = balance - %s WHERE id = %s AND balance >= %s",
+                                  (total_cost, session['user_id'], total_cost))
+
+            # Jika update gagal (rowcount == 0), berarti saldo tidak cukup
+            if result == 0:
+                flash(f'Saldo tidak cukup. Butuh Rp {total_cost:,.0f}', 'error')
+                # Hapus semua voucher yang baru dibuat
+                for code in codes:
+                    execute_query("DELETE FROM vouchers WHERE code=%s", (code,))
+                return redirect(url_for('reseller.bulk_buy'))
+
+            # Baca balance terbaru setelah update
+            user_data = execute_query("SELECT balance FROM users WHERE id=%s", (session['user_id'],), fetch_one=True)
+            new_balance = float(user_data['balance']) if user_data else balance - total_cost
             
             execute_query(
                 "INSERT INTO reseller_transactions "

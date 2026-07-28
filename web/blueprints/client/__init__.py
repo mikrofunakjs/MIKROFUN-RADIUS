@@ -56,7 +56,7 @@ def login():
         if is_valid:
             if ip in _failed_client_logins:
                 del _failed_client_logins[ip]
-            session['client_user'] = user
+            session['client_user'] = {'id': user['id'], 'username': user['username']}
             return redirect(url_for('client.dashboard'))
         else:
             if ip not in _failed_client_logins:
