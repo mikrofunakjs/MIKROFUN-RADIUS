@@ -119,7 +119,11 @@ def ensure_schema_updates():
             WHERE table_schema = DATABASE() AND table_name = 'assets' AND index_name = 'uk_serial'
         """)
         cur.execute("SELECT @sn_exists")
-        if cur.fetchone()['@sn_exists'] == 0:
+        # This is a plain (tuple) cursor — subscripting the row by name raised
+        # TypeError, and the broad except below swallowed it, silently skipping
+        # every migration defined after this point.
+        _sn_row = cur.fetchone()
+        if _sn_row and _sn_row[0] == 0:
             try:
                 cur.execute("ALTER TABLE assets ADD UNIQUE KEY uk_serial (serial_number)")
             except Exception:

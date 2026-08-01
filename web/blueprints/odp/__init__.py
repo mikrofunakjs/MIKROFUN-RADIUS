@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
-from web.decorators import admin_required
+from web.decorators import admin_required, staff_required
 
 odp_bp = Blueprint('odp', __name__)
 
 @odp_bp.route('/')
+@staff_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -22,6 +23,7 @@ def index():
     return render_template('odp/index.html', odps=odps)
 
 @odp_bp.route('/map')
+@staff_required
 def map_view():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -83,6 +85,7 @@ def map_view():
     return render_template('odp/map.html', odps=odps, customers=customers)
 
 @odp_bp.route('/topology')
+@staff_required
 def topology():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

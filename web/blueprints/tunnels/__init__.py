@@ -173,6 +173,7 @@ def script(id):
 
 
 @tunnels_bp.route('/status')
+@admin_required
 def status():
     """AJAX endpoint: check connectivity of all active tunnels."""
     if not session.get('logged_in'):

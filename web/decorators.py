@@ -29,6 +29,23 @@ def cs_or_admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def staff_required(f):
+    """Internal staff only — admin, CS and technicians, never resellers.
+
+    Resellers are external partners with their own portal; they must not reach
+    back-office read views (network maps, customer lists, device inventory)
+    just because those pages happen to be read-only.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in') or session.get('role') not in ['admin', 'cs', 'technician']:
+            flash('Akses ditolak. Halaman ini hanya untuk staf internal.', 'error')
+            if session.get('role') == 'reseller':
+                return redirect(url_for('reseller.dashboard'))
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def tech_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

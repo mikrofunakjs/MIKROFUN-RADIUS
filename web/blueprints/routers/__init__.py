@@ -1,7 +1,7 @@
 """Routers Blueprint - WireGuard VPN Management"""
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from web.database import execute_query
-from web.decorators import admin_required
+from web.decorators import admin_required, staff_required
 from web.vpn_helper import (generate_wireguard_keys, get_next_vpn_ip, add_wireguard_peer, 
                            remove_wireguard_peer, generate_mikrotik_script, generate_vpn_password,
                            add_ppp_secret, remove_ppp_secret, add_ipsec_secret, remove_ipsec_secret)
@@ -10,10 +10,17 @@ import requests
 routers_bp = Blueprint('routers', __name__)
 
 @routers_bp.route('/')
+@staff_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
-    routers = execute_query("SELECT * FROM routers ORDER BY created_at DESC", fetch=True) or []
+    # Explicit columns: SELECT * pulled api_password / vpn_password into the
+    # template context, one careless template edit away from being rendered.
+    routers = execute_query(
+        "SELECT id, name, ip_address, vpn_ip, vpn_type, api_user, api_port, status, "
+        "last_seen, created_at FROM routers ORDER BY created_at DESC",
+        fetch=True
+    ) or []
     return render_template('routers/list.html', routers=routers)
 
 @routers_bp.route('/refresh_status', methods=['POST'])

@@ -46,8 +46,7 @@
                                     Paket</span></label>
                             <select name="profile_id" id="profileSelect" class="select select-bordered w-full" required>
                                 <option value="">-- Pilih Router dulu --</option>
-                                <option value="{{ p.id }}">{{ p.name }} ({{ p.rate_limit or 'Unlimited' }}) - Rp {{ p.price|price_total(p.tax_percent) }}</option>
-                                {% endfor %}
+                                {# Options are filled by loadProfiles() from /profiles/api/by_router #}
                             </select>
                             <label class="label"><span class="label-text-alt opacity-60">Difilter otomatis saat router
                                     dipilih</span></label>

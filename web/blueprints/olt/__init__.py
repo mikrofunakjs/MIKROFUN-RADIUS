@@ -1,13 +1,19 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
-from web.decorators import admin_required
+from web.decorators import admin_required, staff_required
 
 olt_bp = Blueprint('olt', __name__)
 
 @olt_bp.route('/')
+@staff_required
 def index():
     if not session.get('logged_in'): return redirect(url_for('auth.login'))
-    olts = execute_query("SELECT * FROM olts ORDER BY name ASC", fetch=True) or []
+    # Never pull the OLT password into the listing context.
+    olts = execute_query(
+        "SELECT id, name, brand, model, ip_address, api_port, username, total_ports, "
+        "description, created_at FROM olts ORDER BY name ASC",
+        fetch=True
+    ) or []
     return render_template('olt/list.html', olts=olts)
 
 @olt_bp.route('/add', methods=['GET', 'POST'])

@@ -1,7 +1,7 @@
 """Profiles Blueprint"""
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
-from web.decorators import admin_required, cs_or_admin_required
+from web.decorators import admin_required, cs_or_admin_required, staff_required
 
 profiles_bp = Blueprint('profiles', __name__)
 
@@ -32,6 +32,7 @@ def sync_profile_to_routers(profile):
             print(f"[Profile Sync] {router.get('name')} error: {e}")
 
 @profiles_bp.route('/')
+@staff_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

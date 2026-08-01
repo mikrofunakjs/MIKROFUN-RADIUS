@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify, request, session, redirect, url_for
 from web.database import execute_query
+from web.decorators import staff_required
 
 notifications_bp = Blueprint('notifications', __name__)
 
 @notifications_bp.route('/api/unread')
+@staff_required
 def get_unread():
     """Get unread notifications count and latest items"""
     if not session.get('logged_in'):
@@ -29,6 +31,7 @@ def get_unread():
     })
 
 @notifications_bp.route('/api/mark_read', methods=['POST'])
+@staff_required
 def mark_read():
     """Mark all or specific notification as read"""
     if not session.get('logged_in'):
