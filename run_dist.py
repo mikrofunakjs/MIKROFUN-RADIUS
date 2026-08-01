@@ -118,13 +118,23 @@ def start_wa_service():
         return
     try:
         import subprocess
+        # Log instead of DEVNULL: a crash here used to be completely invisible.
+        log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        wa_log = open(os.path.join(log_dir, 'wa-service.log'), 'a')
+
+        # Drop PORT from the child's environment — that is the web panel's port.
+        child_env = {k: v for k, v in os.environ.items() if k != 'PORT'}
+        wa_port = child_env.setdefault('WA_PORT', '3000')
+
         subprocess.Popen(
             ['node', 'server.js'],
             cwd=wa_dir,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            env=child_env,
+            stdout=wa_log,
+            stderr=subprocess.STDOUT
         )
-        print("[WA Service] Node.js Baileys started on port 3000")
+        print(f"[WA Service] Node.js Baileys started on port {wa_port} (log: logs/wa-service.log)")
     except Exception as e:
         print(f"[WA Service] Failed to start: {e}")
 

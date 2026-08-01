@@ -8,7 +8,10 @@ const fs = require('fs');
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+// WA_PORT, not PORT: run_dist.py sets PORT for the web panel (80) and spawns
+// this service with its environment inherited, so honouring PORT made the
+// gateway try to bind the panel's port and die with EADDRINUSE.
+const PORT = process.env.WA_PORT || 3000;
 const crypto = require('crypto');
 
 if (!process.env.WA_API_KEY) {
