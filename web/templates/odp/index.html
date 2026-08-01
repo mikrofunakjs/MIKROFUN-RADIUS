@@ -74,8 +74,8 @@
                     <a href="{{ url_for('odp.edit', id=o.id) }}" class="btn btn-ghost btn-sm btn-square" title="Edit">
                         <i class="bi bi-pencil-square"></i>
                     </a>
-                    <a href="{{ url_for('odp.delete', id=o.id) }}" class="btn btn-ghost btn-sm btn-square text-error"
-                        onclick="return confirm('Hapus ODP ini?')" title="Hapus">
+                    <a href="#" class="btn btn-ghost btn-sm btn-square text-error"
+                        onclick="return mfAction('{{ url_for('odp.delete', id=o.id) }}', 'Hapus ODP ini?')" title="Hapus">
                         <i class="bi bi-trash-fill"></i>
                     </a>
                 </div>

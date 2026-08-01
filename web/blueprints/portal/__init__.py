@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, send_file, flash, render_template_string, jsonify
 from web.database import execute_query
+from web.decorators import admin_required
 import io
 import zipfile
 import time
@@ -93,6 +94,7 @@ def hotspot_status():
     return render_template('portal/status.html', hotspot_name=hotspot_name)
 
 @portal_bp.route('/admin')
+@admin_required
 def admin_portal():
     """
     Admin page explaining the Centralized Portal and allowing the download
@@ -122,6 +124,7 @@ def admin_portal():
     return render_template('portal/index.html', settings=settings, current_ip=current_ip, current_port=current_port)
 
 @portal_bp.route('/download_redirect')
+@admin_required
 def download_redirect():
     """
     Generates a zip file containing a 'login.html' that redirects

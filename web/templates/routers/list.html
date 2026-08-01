@@ -84,8 +84,8 @@
                         <li><a href="#" onclick="viewScript({{ r.id }})"><i class="bi bi-terminal"></i> Lihat Script
                                 Mikrotik</a></li>
                         <div class="divider my-1"></div>
-                        <li><a href="{{ url_for('routers.delete', id=r.id) }}" class="text-error"
-                                onclick="return confirm('Hapus router ini?')"><i class="bi bi-trash"></i> Hapus
+                        <li><a href="#" class="text-error"
+                                onclick="return mfAction('{{ url_for('routers.delete', id=r.id) }}', 'Hapus router ini?')"><i class="bi bi-trash"></i> Hapus
                                 Router</a></li>
                     </ul>
                 </div>

@@ -6,6 +6,7 @@ payment_settings_bp = Blueprint('payment_settings', __name__)
 from web.decorators import admin_required
 
 @payment_settings_bp.route('/', methods=['GET', 'POST'])
+@admin_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

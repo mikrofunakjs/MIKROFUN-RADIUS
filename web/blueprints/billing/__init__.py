@@ -363,7 +363,7 @@ def bulk_action():
         flash(f'Berhasil memproses {success} transaksi.', 'success')
     return redirect(url_for('billing.index'))
 
-@billing_bp.route('/approve/<int:id>')
+@billing_bp.route('/approve/<int:id>', methods=['POST'])
 @cs_or_admin_required
 def approve(id):
     if _approve_logic(id):
@@ -372,7 +372,7 @@ def approve(id):
         flash('Pembayaran gagal disetujui. Cek log server atau periksa status transaksi.', 'error')
     return redirect(url_for('billing.index'))
 
-@billing_bp.route('/reject/<int:id>')
+@billing_bp.route('/reject/<int:id>', methods=['POST'])
 @cs_or_admin_required
 def reject(id):
     if _reject_logic(id):

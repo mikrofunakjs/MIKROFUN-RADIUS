@@ -106,7 +106,7 @@ def activate_license():
         
     return redirect(url_for('settings.index'))
 
-@settings_bp.route('/deactivate-license')
+@settings_bp.route('/deactivate-license', methods=['POST'])
 @admin_required
 def deactivate_license():
     from web.license_service import remove_license_from_db

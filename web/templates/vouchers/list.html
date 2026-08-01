@@ -181,9 +181,9 @@
                                 {{ v.created_at.strftime('%d/%m/%y') if v.created_at else '-' }}
                             </td>
                             <td class="text-end">
-                                <a href="{{ url_for('vouchers.delete', id=v.id) }}"
+                                <a href="#"
                                     class="btn btn-ghost btn-xs text-error"
-                                    onclick="return confirm('Hapus voucher ini?')">
+                                    onclick="return mfAction('{{ url_for('vouchers.delete', id=v.id) }}', 'Hapus voucher ini?')">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </td>

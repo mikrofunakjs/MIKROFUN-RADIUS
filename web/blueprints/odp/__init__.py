@@ -96,6 +96,7 @@ def topology():
 
 
 @odp_bp.route('/add', methods=['GET', 'POST'])
+@admin_required
 def add():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -121,6 +122,7 @@ def add():
     return render_template('odp/form.html', odcs=odcs)
 
 @odp_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
 def edit(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -146,7 +148,8 @@ def edit(id):
     odcs = execute_query("SELECT id, name FROM odcs ORDER BY name", fetch=True) or []
     return render_template('odp/form.html', odp=odp, odcs=odcs)
 
-@odp_bp.route('/delete/<int:id>')
+@odp_bp.route('/delete/<int:id>', methods=['POST'])
+@admin_required
 def delete(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -161,6 +164,7 @@ def delete(id):
         
     return redirect(url_for('odp.index'))
 @odp_bp.route('/update_customer_coords', methods=['POST'])
+@admin_required
 def update_customer_coords():
     if not session.get('logged_in'):
         return {"success": False, "message": "Unauthorized"}, 401
@@ -179,6 +183,7 @@ def update_customer_coords():
     return {"success": False, "message": "Data tidak lengkap."}, 400
 
 @odp_bp.route('/update_odp_coords', methods=['POST'])
+@admin_required
 def update_odp_coords():
     if not session.get('logged_in'):
         return {"success": False, "message": "Unauthorized"}, 401
@@ -197,6 +202,7 @@ def update_odp_coords():
     return {"success": False, "message": "Data tidak lengkap."}, 400
 
 @odp_bp.route('/import', methods=['GET', 'POST'])
+@admin_required
 def import_excel():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

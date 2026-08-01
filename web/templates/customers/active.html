@@ -107,7 +107,7 @@ function kickUser(id, username) {
 
 function confirmIsolir(id, name) {
     if(confirm(`Yakin ingin mengisolir ${name}? User akan otomatis terputus dari internet.`)) {
-        location.href = `{{ url_for('customers.isolir', id=0) }}`.replace('0', id);
+        mfAction(`{{ url_for('customers.isolir', id=0) }}`.replace('0', id));
     }
 }
 

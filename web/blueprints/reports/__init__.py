@@ -8,6 +8,7 @@ reports_bp = Blueprint('reports', __name__)
 
 
 @reports_bp.route('/')
+@admin_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -163,6 +164,7 @@ def index():
 
 
 @reports_bp.route('/expense/add', methods=['POST'])
+@admin_required
 def expense_add():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -185,6 +187,7 @@ def expense_add():
 
 
 @reports_bp.route('/expense/delete/<int:id>', methods=['POST'])
+@admin_required
 def expense_delete(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -194,6 +197,7 @@ def expense_delete(id):
 
 
 @reports_bp.route('/export')
+@admin_required
 def export():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

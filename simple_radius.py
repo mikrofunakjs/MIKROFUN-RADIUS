@@ -15,7 +15,7 @@ import hashlib
 import threading
 import mysql.connector
 import datetime
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import generate_password_hash
 
 import sys
 import os
@@ -27,6 +27,7 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 try:
+    from web.security import verify_password
     from web.config import DB_CONFIG, RADIUS_SECRET as DEFAULT_SECRET, RADIUS_LOG_PATH
     DB_HOST = DB_CONFIG['host']
     DB_USER = DB_CONFIG['user']
@@ -411,30 +412,23 @@ class RadiusServer:
         # 1. Try customer lookup (PPPoE/Member)
         user = find_customer(username)
         if user:
-            # Check password (hashed with werkzeug, fallback to plaintext)
+            # Check password (hashed, one-shot upgrade for legacy plaintext rows)
             stored_pw = user.get('password', '')
-            is_valid = False
-            if ':' in stored_pw:
+            is_valid, needs_rehash = verify_password(stored_pw, password)
+
+            if is_valid and needs_rehash:
                 try:
-                    is_valid = check_password_hash(stored_pw, password.strip())
-                except Exception:
-                    is_valid = (stored_pw.strip() == password.strip())
-            else:
-                is_valid = (stored_pw.strip() == password.strip())
-                # Auto-upgrade plaintext password to hash
-                if is_valid:
-                    try:
-                        new_hash = generate_password_hash(password.strip())
-                        conn = get_db()
-                        if conn:
-                            cur = conn.cursor()
-                            cur.execute("UPDATE customers SET password=%s WHERE username=%s", (new_hash, username))
-                            conn.commit()
-                            cur.close()
-                            conn.close()
-                            log.info(f"  🔒 Password for {username} auto-upgraded to hash")
-                    except Exception as e:
-                        log.warning(f"  ⚠️ Auto-upgrade failed for {username}: {e}")
+                    new_hash = generate_password_hash(password.strip())
+                    conn = get_db()
+                    if conn:
+                        cur = conn.cursor()
+                        cur.execute("UPDATE customers SET password=%s WHERE username=%s", (new_hash, username))
+                        conn.commit()
+                        cur.close()
+                        conn.close()
+                        log.info(f"  🔒 Password for {username} auto-upgraded to hash")
+                except Exception as e:
+                    log.warning(f"  ⚠️ Auto-upgrade failed for {username}: {e}")
 
             if is_valid:
                 # Check Limit Login

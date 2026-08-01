@@ -162,9 +162,9 @@
                             class="btn btn-square btn-sm btn-ghost text-success"><i class="bi bi-whatsapp"></i></button>
                         <a href="{{ url_for('mac_customers.edit', id=c.id) }}"
                             class="btn btn-square btn-sm btn-ghost text-primary"><i class="bi bi-pencil-square"></i></a>
-                        <a href="{{ url_for('mac_customers.delete', id=c.id) }}"
+                        <a href="#"
                             class="btn btn-square btn-sm btn-ghost text-error"
-                            onclick="return confirm('Hapus pelanggan?')"><i class="bi bi-trash"></i></a>
+                            onclick="return mfAction('{{ url_for('mac_customers.delete', id=c.id) }}', 'Hapus pelanggan?')"><i class="bi bi-trash"></i></a>
                     </div>
                 </div>
             </div>
@@ -273,17 +273,17 @@
                                     class="btn btn-ghost btn-xs text-info join-item tooltip"
                                     data-tip="Refresh Status"><i class="bi bi-arrow-repeat"></i></a>
                                 {% if c.status == 'active' %}
-                                <a href="{{ url_for('mac_customers.isolir', id=c.id) }}"
+                                <a href="#" onclick="return mfAction('{{ url_for('mac_customers.isolir', id=c.id) }}', 'Isolir pelanggan ini?')"
                                     class="btn btn-ghost btn-xs text-warning join-item tooltip" data-tip="Isolir"><i
                                         class="bi bi-pause-circle"></i></a>
                                 {% else %}
-                                <a href="{{ url_for('mac_customers.activate', id=c.id) }}"
+                                <a href="#" onclick="return mfAction('{{ url_for('mac_customers.activate', id=c.id) }}', 'Aktifkan pelanggan ini?')"
                                     class="btn btn-ghost btn-xs text-success join-item tooltip" data-tip="Aktifkan"><i
                                         class="bi bi-play-circle"></i></a>
                                 {% endif %}
-                                <a href="{{ url_for('mac_customers.delete', id=c.id) }}"
+                                <a href="#"
                                     class="btn btn-ghost btn-xs text-error join-item tooltip" data-tip="Hapus"
-                                    onclick="return confirm('Hapus data?')"><i class="bi bi-trash"></i></a>
+                                    onclick="return mfAction('{{ url_for('mac_customers.delete', id=c.id) }}', 'Hapus data?')"><i class="bi bi-trash"></i></a>
                             </div>
                         </td>
                     </tr>

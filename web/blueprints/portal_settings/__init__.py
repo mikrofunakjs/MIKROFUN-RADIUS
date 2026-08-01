@@ -1,10 +1,12 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from web.database import execute_query
+from web.decorators import admin_required
 import json
 
 portal_settings_bp = Blueprint('portal_settings', __name__, template_folder='../../templates/portal_settings')
 
 @portal_settings_bp.route('/', methods=['GET', 'POST'])
+@admin_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

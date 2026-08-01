@@ -1,6 +1,7 @@
 """Profiles Blueprint"""
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
+from web.decorators import admin_required, cs_or_admin_required
 
 profiles_bp = Blueprint('profiles', __name__)
 
@@ -55,6 +56,7 @@ def index():
 
 
 @profiles_bp.route('/add', methods=['GET', 'POST'])
+@admin_required
 def add():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -113,6 +115,7 @@ def add():
 
 
 @profiles_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
 def edit(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -171,7 +174,8 @@ def edit(id):
     return render_template('profiles/edit.html', profile=profile, routers=routers)
 
 
-@profiles_bp.route('/delete/<int:id>')
+@profiles_bp.route('/delete/<int:id>', methods=['POST'])
+@admin_required
 def delete(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -193,6 +197,7 @@ def delete(id):
 
 
 @profiles_bp.route('/api/by_router')
+@cs_or_admin_required
 def api_by_router():
     """JSON: return profiles filtered by router_id for dynamic customer form."""
     router_id = request.args.get('router_id', '')
@@ -213,6 +218,7 @@ def api_by_router():
     return jsonify([dict(p) for p in profiles])
 
 @profiles_bp.route('/import', methods=['GET', 'POST'])
+@admin_required
 def import_excel():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

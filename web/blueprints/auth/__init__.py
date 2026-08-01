@@ -1,7 +1,8 @@
 """Auth Blueprint"""
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash
+from web.security import verify_password
 import time
 
 auth_bp = Blueprint('auth', __name__)
@@ -72,24 +73,19 @@ def login():
             (username,), fetch_one=True
         )
         
-        # Check password with fallback for plain text (migration)
+        # Check password (hashed, with a one-shot upgrade for legacy plaintext rows)
         is_valid = False
         if user:
-            stored_pw = user['password']
-            
-            try:
-                is_valid = check_password_hash(stored_pw, password)
-            except ValueError:
-                # If it's not a valid hash format, fallback to plain text comparison
-                is_valid = (stored_pw == password)
-                
-            # Auto-upgrade to hash if it was plain text and login succeeded
-            if is_valid and stored_pw == password:
+            is_valid, needs_rehash = verify_password(user['password'], password)
+
+            if is_valid and needs_rehash:
                 try:
-                    new_hash = generate_password_hash(password)
-                    execute_query("UPDATE users SET password=%s WHERE id=%s", (new_hash, user['id']))
-                    print(f"DEBUG: Password for {username} auto-upgraded to hash.")
-                except:
+                    execute_query(
+                        "UPDATE users SET password=%s WHERE id=%s",
+                        (generate_password_hash(password), user['id'])
+                    )
+                    print(f"Password for {username} auto-upgraded to hash.")
+                except Exception:
                     pass
 
         if is_valid:

@@ -394,6 +394,13 @@ def internal_error(error):
 
 @app.errorhandler(Exception)
 def unhandled_exception(e):
+    # HTTPExceptions (403 CSRF block, 405 wrong method, 401, ...) carry their own
+    # status and must pass through — swallowing them into a 500 hides the real
+    # reason and logs deliberate rejections as crashes.
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return e
+
     try:
         from web.app_logger import log_error
         log_error(f'Unhandled Exception: {type(e).__name__}: {str(e)}', exc=e)

@@ -306,6 +306,7 @@ def _build_task_response(task: dict, cwid: str) -> str:
 # ADMIN API: CREATE TASK
 # ===========================================================================
 @acs_bp.route('/api/task', methods=['POST'])
+@admin_required
 def api_create_task():
     if not session.get('logged_in'):
         return jsonify({'error': 'unauthorized'}), 401
@@ -333,6 +334,7 @@ def api_create_task():
 # ADMIN VIEWS
 # ===========================================================================
 @acs_bp.route('/')
+@admin_required
 def index():
     """ACS Device list — all CPEs that have checked in."""
     if not session.get('logged_in'):
@@ -346,6 +348,7 @@ def index():
 
 
 @acs_bp.route('/device/<serial>')
+@admin_required
 def device_detail(serial):
     """Per-device detail and task management."""
     if not session.get('logged_in'):
@@ -363,6 +366,7 @@ def device_detail(serial):
 
 
 @acs_bp.route('/device/<serial>/link', methods=['POST'])
+@admin_required
 def link_customer(serial):
     """Link a CPE device to a customer."""
     if not session.get('logged_in'):
@@ -374,6 +378,7 @@ def link_customer(serial):
 
 
 @acs_bp.route('/settings')
+@admin_required
 def settings():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

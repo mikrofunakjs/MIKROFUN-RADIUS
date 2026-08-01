@@ -241,6 +241,14 @@
                                 Dashboard
                             </a>
                         </li>
+                        <li>
+                            <a href="/ai-chat"
+                                class="{% if '/ai-chat' in request.path %}active px-4 bg-primary/10 text-primary font-bold{% else %}px-4 opacity-70 hover:opacity-100{% endif %} rounded-xl transition-all">
+                                <i class="bi bi-robot text-lg text-purple-500"></i>
+                                AI NOC Chat
+                                <span class="badge badge-primary badge-xs ml-1 font-bold">AI</span>
+                            </a>
+                        </li>
 
                         <!-- SECTION: LAYANAN -->
                         <li class="menu-title mt-6 px-4 text-[11px] opacity-40 uppercase font-black tracking-[0.2em]">
@@ -554,6 +562,22 @@
     </div>
 
     <!-- Scripts -->
+    <script>
+        /**
+         * Submit a state-changing action as a same-origin POST.
+         * Destructive actions must never be plain <a href> links: a GET can be
+         * triggered cross-site (CSRF) or prefetched by a browser/crawler.
+         */
+        function mfAction(url, confirmMsg) {
+            if (confirmMsg && !window.confirm(confirmMsg)) return false;
+            const f = document.createElement('form');
+            f.method = 'POST';
+            f.action = url;
+            document.body.appendChild(f);
+            f.submit();
+            return false;
+        }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 

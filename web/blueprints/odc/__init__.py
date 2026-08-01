@@ -67,7 +67,7 @@ def edit(id):
             
     return render_template('odc/edit.html', odc=odc)
 
-@odc_bp.route('/delete/<int:id>')
+@odc_bp.route('/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete(id):
     execute_query("UPDATE odps SET odc_id = NULL WHERE odc_id = %s", (id,))

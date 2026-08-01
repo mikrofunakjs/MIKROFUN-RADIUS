@@ -56,6 +56,13 @@
                         </a>
                     </li>
 
+                    <li class="menu-title mt-2">AI / Otomatisasi</li>
+                    <li>
+                        <a onclick="showSection('deepseek')" id="nav-deepseek">
+                            <i class="bi bi-robot"></i> DeepSeek AI
+                        </a>
+                    </li>
+
                     <li class="menu-title mt-2">Akun</li>
                     <li>
                         <a onclick="showSection('license')" id="nav-license"
@@ -224,8 +231,8 @@
                         </div>
 
                         <div class="text-center">
-                            <a href="{{ url_for('settings.deactivate_license') }}"
-                                onclick="return confirm('PERINGATAN: Menonaktifkan lisensi akan mengunci fitur Premium (ODP, Maps, Laporan). Lanjutkan?')"
+                            <a href="#"
+                                onclick="return mfAction('{{ url_for('settings.deactivate_license') }}', 'PERINGATAN: Menonaktifkan lisensi akan mengunci fitur Premium (ODP, Maps, Laporan). Lanjutkan?')"
                                 class="btn btn-outline btn-error btn-sm">
                                 <i class="bi bi-power"></i> Nonaktifkan Lisensi
                             </a>
@@ -385,6 +392,34 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: DEEPSEEK AI -->
+            <div id="section-deepseek" class="settings-section hidden">
+                <div class="card bg-base-100 shadow-sm border border-base-200">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg border-b pb-2 mb-4">
+                            <i class="bi bi-robot text-primary"></i> DeepSeek AI Configuration
+                        </h3>
+                        <p class="text-sm opacity-60 mb-6">API key untuk AI NOC diagnosis, chat, dan laporan otomatis. Dapatkan di <a href="https://platform.deepseek.com/api_keys" target="_blank" class="link link-primary">platform.deepseek.com</a>.</p>
+                        <form method="POST" class="space-y-4">
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-bold">DeepSeek API Key</span></label>
+                                <input type="password" name="deepseek_api_key"
+                                    class="input input-bordered w-full max-w-lg font-mono"
+                                    value="{{ settings.get('deepseek_api_key', '') }}"
+                                    placeholder="sk-...">
+                            </div>
+                            <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg text-xs text-blue-800">
+                                <i class="bi bi-info-circle-fill"></i>
+                                API key disimpan di database settings. AI NOC membaca dari sini atau environment variable <code class="bg-blue-100 px-1 rounded">DEEPSEEK_API_KEY</code>.
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Simpan API Key
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

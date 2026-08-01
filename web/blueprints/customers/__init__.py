@@ -135,6 +135,7 @@ def send_bill(id):
         return jsonify({'success': False, 'message': 'Gagal mengirim tagihan. Silakan coba lagi.'}), 500
 
 @customers_bp.route('/bulk_action', methods=['POST'])
+@cs_or_admin_required
 def bulk_action():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -305,6 +306,7 @@ def add():
     return render_template('customers/add.html', routers=routers, profiles=profiles, odps=odps)
 
 @customers_bp.route('/check_status/<int:id>')
+@cs_or_admin_required
 def check_status(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -472,7 +474,8 @@ def try_api_disconnect(router_data, username):
     except Exception as e:
         return False, str(e)
 
-@customers_bp.route('/delete/<int:id>')
+@customers_bp.route('/delete/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def delete(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -505,7 +508,8 @@ def delete(id):
     flash(msg, 'success')
     return redirect(url_for('customers.index'))
 
-@customers_bp.route('/isolir/<int:id>')
+@customers_bp.route('/isolir/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def isolir(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -540,7 +544,8 @@ def isolir(id):
     flash(msg, 'success')
     return redirect(url_for('customers.index'))
 
-@customers_bp.route('/activate/<int:id>')
+@customers_bp.route('/activate/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def activate(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -888,7 +893,7 @@ def isolir_list():
         "LEFT JOIN profiles p ON c.profile_id = p.id "
         "LEFT JOIN routers r ON c.router_id = r.id "
         "WHERE c.status = 'isolir' AND (c.mac_address IS NULL OR c.mac_address = '') "
-        "ORDER BY c.updated_at DESC"
+        "ORDER BY c.created_at DESC"
     )
     
     customers = execute_query(query, fetch=True) or []

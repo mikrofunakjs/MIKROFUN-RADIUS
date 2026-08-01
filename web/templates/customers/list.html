@@ -225,15 +225,15 @@
                             <li><a href="{{ url_for('customers.check_status', id=c.id) }}"><i
                                         class="bi bi-arrow-repeat"></i> Sync Status</a></li>
                             {% if c.status == 'active' %}
-                            <li><a href="{{ url_for('customers.isolir', id=c.id) }}" class="text-warning"><i
+                            <li><a href="#" onclick="return mfAction('{{ url_for('customers.isolir', id=c.id) }}', 'Isolir pelanggan ini sekarang?')" class="text-warning"><i
                                         class="bi bi-pause-circle"></i> Isolir Sekarang</a></li>
                             {% else %}
-                            <li><a href="{{ url_for('customers.activate', id=c.id) }}" class="text-success"><i
+                            <li><a href="#" onclick="return mfAction('{{ url_for('customers.activate', id=c.id) }}', 'Buka isolir pelanggan ini?')" class="text-success"><i
                                         class="bi bi-play-circle"></i> Buka Isolir</a></li>
                             {% endif %}
                             <div class="divider my-1"></div>
-                            <li><a href="{{ url_for('customers.delete', id=c.id) }}" class="text-error"
-                                    onclick="return confirm('Hapus permanently?')"><i class="bi bi-trash"></i> Hapus
+                            <li><a href="#" class="text-error"
+                                    onclick="return mfAction('{{ url_for('customers.delete', id=c.id) }}', 'Hapus permanently?')"><i class="bi bi-trash"></i> Hapus
                                     User</a></li>
                         </ul>
                     </div>
@@ -375,19 +375,19 @@
                                     <i class="bi bi-arrow-repeat"></i>
                                 </a>
                                 {% if c.status == 'active' %}
-                                <a href="{{ url_for('customers.isolir', id=c.id) }}"
+                                <a href="#" onclick="return mfAction('{{ url_for('customers.isolir', id=c.id) }}', 'Isolir pelanggan ini sekarang?')"
                                     class="btn btn-xs btn-ghost join-item text-warning" title="Isolir Paksa">
                                     <i class="bi bi-pause-circle"></i>
                                 </a>
                                 {% else %}
-                                <a href="{{ url_for('customers.activate', id=c.id) }}"
+                                <a href="#" onclick="return mfAction('{{ url_for('customers.activate', id=c.id) }}', 'Buka isolir pelanggan ini?')"
                                     class="btn btn-xs btn-ghost join-item text-success" title="Buka Blokir">
                                     <i class="bi bi-play-circle"></i>
                                 </a>
                                 {% endif %}
-                                <a href="{{ url_for('customers.delete', id=c.id) }}"
+                                <a href="#"
                                     class="btn btn-xs btn-ghost join-item text-error hover:bg-error/10"
-                                    title="Hapus User" onclick="return confirm('Hapus customer ini?')">
+                                    title="Hapus User" onclick="return mfAction('{{ url_for('customers.delete', id=c.id) }}', 'Hapus customer ini?')">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </div>

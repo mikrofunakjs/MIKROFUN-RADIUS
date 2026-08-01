@@ -1,6 +1,7 @@
 """Routers Blueprint - WireGuard VPN Management"""
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from web.database import execute_query
+from web.decorators import admin_required
 from web.vpn_helper import (generate_wireguard_keys, get_next_vpn_ip, add_wireguard_peer, 
                            remove_wireguard_peer, generate_mikrotik_script, generate_vpn_password,
                            add_ppp_secret, remove_ppp_secret, add_ipsec_secret, remove_ipsec_secret)
@@ -16,6 +17,7 @@ def index():
     return render_template('routers/list.html', routers=routers)
 
 @routers_bp.route('/refresh_status', methods=['POST'])
+@admin_required
 def refresh_status():
     """Check router connectivity via Mikrotik API"""
     if not session.get('logged_in'):
@@ -64,6 +66,7 @@ def refresh_status():
         return jsonify({'error': str(e)}), 500
 
 @routers_bp.route('/add', methods=['GET', 'POST'])
+@admin_required
 def add():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -149,6 +152,7 @@ def add():
     return render_template('routers/add.html')
 
 @routers_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
 def edit(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -187,6 +191,7 @@ def edit(id):
     return render_template('routers/edit.html', router=router)
 
 @routers_bp.route('/show_script')
+@admin_required
 def show_script():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -197,6 +202,7 @@ def show_script():
     return render_template('routers/script.html', script=script, router_name=router_name)
 
 @routers_bp.route('/api/get_script/<int:id>')
+@admin_required
 def get_script(id):
     if not session.get('logged_in'):
         return jsonify({'error': 'Unauthorized'}), 401
@@ -243,7 +249,8 @@ def get_script(id):
     
     return jsonify({'success': True, 'script': script, 'router_name': router['name']})
 
-@routers_bp.route('/delete/<int:id>')
+@routers_bp.route('/delete/<int:id>', methods=['POST'])
+@admin_required
 def delete(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -262,6 +269,7 @@ def delete(id):
     return redirect(url_for('routers.index'))
 
 @routers_bp.route('/api/pools/<int:router_id>')
+@admin_required
 def api_get_pools(router_id):
     """Fetch IP Pools from MikroTik router via API"""
     if not session.get('logged_in'):

@@ -112,6 +112,7 @@ def send_bill(id):
         return jsonify({'success': False, 'message': f"Error Sistem: {str(e)}"}), 500
 
 @mac_customers_bp.route('/bulk_action', methods=['POST'])
+@cs_or_admin_required
 def bulk_action():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -286,6 +287,7 @@ def add():
     return render_template('mac_customers/add.html', routers=routers, profiles=profiles, odps=odps)
 
 @mac_customers_bp.route('/check_status/<int:id>')
+@cs_or_admin_required
 def check_status(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -397,7 +399,8 @@ def try_api_disconnect(router_data, username):
     except Exception as e:
         return False, str(e)
 
-@mac_customers_bp.route('/delete/<int:id>')
+@mac_customers_bp.route('/delete/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def delete(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -430,7 +433,8 @@ def delete(id):
     flash(msg, 'success')
     return redirect(url_for('mac_customers.index'))
 
-@mac_customers_bp.route('/isolir/<int:id>')
+@mac_customers_bp.route('/isolir/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def isolir(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -465,7 +469,8 @@ def isolir(id):
     flash(msg, 'success')
     return redirect(url_for('mac_customers.index'))
 
-@mac_customers_bp.route('/activate/<int:id>')
+@mac_customers_bp.route('/activate/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def activate(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

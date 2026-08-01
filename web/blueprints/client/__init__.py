@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import generate_password_hash
+from web.security import verify_password
 import os
 import datetime
 import time
@@ -37,19 +38,15 @@ def login():
         
         is_valid = False
         if user:
-            stored_pw = user.get('password', '')
-            
-            try:
-                is_valid = check_password_hash(stored_pw, password)
-            except ValueError:
-                # If it's not a valid hash format, fallback to plain text comparison
-                is_valid = (stored_pw == password)
-                
-            # Auto-upgrade to hash if it was plain text and login succeeded
-            if is_valid and stored_pw == password:
+            is_valid, needs_rehash = verify_password(user.get('password'), password)
+
+            # Auto-upgrade legacy plaintext rows once, on a successful login
+            if is_valid and needs_rehash:
                 try:
-                    new_hash = generate_password_hash(password)
-                    execute_query("UPDATE customers SET password=%s WHERE username=%s", (new_hash, username))
+                    execute_query(
+                        "UPDATE customers SET password=%s WHERE username=%s",
+                        (generate_password_hash(password), username)
+                    )
                 except Exception:
                     pass
         

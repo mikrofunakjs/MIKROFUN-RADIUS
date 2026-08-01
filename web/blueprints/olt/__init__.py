@@ -11,6 +11,7 @@ def index():
     return render_template('olt/list.html', olts=olts)
 
 @olt_bp.route('/add', methods=['GET', 'POST'])
+@admin_required
 def add():
     if not session.get('logged_in'): return redirect(url_for('auth.login'))
     if request.method == 'POST':
@@ -31,6 +32,7 @@ def add():
     return render_template('olt/form.html')
 
 @olt_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
 def edit(id):
     if not session.get('logged_in'): return redirect(url_for('auth.login'))
     olt = execute_query("SELECT * FROM olts WHERE id=%s", (id,), fetch_one=True)

@@ -62,7 +62,7 @@
 <script>
 function confirmActivate(id, name) {
     if(confirm(`Aktifkan kembali layanan untuk ${name}?`)) {
-        location.href = `{{ url_for('customers.activate', id=0) }}`.replace('0', id);
+        mfAction(`{{ url_for('customers.activate', id=0) }}`.replace('0', id));
     }
 }
 </script>

@@ -151,19 +151,19 @@
                                         <i class="bi bi-arrow-repeat"></i>
                                     </a>
                                     {% if c.status == 'active' %}
-                                    <a href="{{ url_for('customers.isolir', id=c.id) }}"
+                                    <a href="#" onclick="return mfAction('{{ url_for('customers.isolir', id=c.id) }}', 'Isolir pelanggan ini?')"
                                         class="btn btn-sm btn-ghost text-warning join-item" title="Isolir">
                                         <i class="bi bi-pause-circle"></i>
                                     </a>
                                     {% else %}
-                                    <a href="{{ url_for('customers.activate', id=c.id) }}"
+                                    <a href="#" onclick="return mfAction('{{ url_for('customers.activate', id=c.id) }}', 'Aktifkan pelanggan ini?')"
                                         class="btn btn-sm btn-ghost text-success join-item" title="Aktifkan">
                                         <i class="bi bi-play-circle"></i>
                                     </a>
                                     {% endif %}
-                                    <a href="{{ url_for('customers.delete', id=c.id) }}"
+                                    <a href="#"
                                         class="btn btn-sm btn-ghost text-error join-item"
-                                        onclick="return confirm('Hapus customer ini?')">
+                                        onclick="return mfAction('{{ url_for('customers.delete', id=c.id) }}', 'Hapus customer ini?')">
                                         <i class="bi bi-trash"></i>
                                     </a>
                                 </div>

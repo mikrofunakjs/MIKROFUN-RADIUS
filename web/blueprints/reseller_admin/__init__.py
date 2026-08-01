@@ -124,7 +124,7 @@ def topup(id):
         
     return redirect(url_for('reseller_admin.index'))
 
-@reseller_admin_bp.route('/delete/<int:id>')
+@reseller_admin_bp.route('/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete(id):
     if not session.get('logged_in'): return redirect(url_for('auth.login'))

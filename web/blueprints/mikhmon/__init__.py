@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, Response
 import requests
 from web.database import execute_query
+from web.decorators import admin_required
 import os
 
 mikhmon_bp = Blueprint('mikhmon', __name__)
@@ -9,6 +10,7 @@ mikhmon_bp = Blueprint('mikhmon', __name__)
 MIKHMON_LOCAL_URL = "http://127.0.0.1:8080"
 
 @mikhmon_bp.route('/', methods=['GET', 'POST'])
+@admin_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -20,7 +22,9 @@ def index():
 @mikhmon_bp.route('/ui/', defaults={'path': ''}, methods=['GET', 'POST'])
 @mikhmon_bp.route('/ui/<path:path>', methods=['GET', 'POST'])
 def proxy(path):
-    if not session.get('logged_in'):
+    # This forwards to the full Mikhmon admin UI, so it needs the same
+    # privilege as the page that embeds it.
+    if not session.get('logged_in') or session.get('role') != 'admin':
         return "Unauthorized", 403
 
     url = f"{MIKHMON_LOCAL_URL}/{path}"

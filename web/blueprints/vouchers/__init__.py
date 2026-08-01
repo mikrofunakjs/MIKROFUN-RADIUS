@@ -82,6 +82,7 @@ def _send_coa_disconnect(nas_ip: str, nas_secret: str, session_id: str,
 
 # ── INDEX: list with filter/search/pagination ────────────────────────────────
 @vouchers_bp.route('/')
+@cs_or_admin_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -161,6 +162,7 @@ def index():
 
 # ── STATS DASHBOARD ──────────────────────────────────────────────────────────
 @vouchers_bp.route('/stats')
+@cs_or_admin_required
 def stats():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -273,7 +275,8 @@ def add():
 
 
 # ── DELETE SINGLE ────────────────────────────────────────────────────────────
-@vouchers_bp.route('/delete/<int:id>')
+@vouchers_bp.route('/delete/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def delete(id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -284,6 +287,7 @@ def delete(id):
 
 # ── BULK DELETE ───────────────────────────────────────────────────────────────
 @vouchers_bp.route('/bulk_delete', methods=['POST'])
+@cs_or_admin_required
 def bulk_delete():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -314,6 +318,7 @@ def bulk_delete():
 
 # ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
 @vouchers_bp.route('/export')
+@cs_or_admin_required
 def export():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -368,6 +373,7 @@ def export():
 
 # ── PRINT BATCH : selective via checkboxes ───────────────────────────────────
 @vouchers_bp.route('/print_batch', methods=['GET'])
+@cs_or_admin_required
 def print_batch():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -423,6 +429,7 @@ def print_batch():
 
 # ── PRINT BY IDs (for checkbox-selected print) ───────────────────────────────
 @vouchers_bp.route('/print_batch_ids')
+@cs_or_admin_required
 def print_batch_ids():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -456,6 +463,7 @@ def print_batch_ids():
 
 # ── HISTORY ───────────────────────────────────────────────────────────────────
 @vouchers_bp.route('/history')
+@cs_or_admin_required
 def history():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -470,6 +478,7 @@ def history():
 
 
 @vouchers_bp.route('/history/approve/<int:payment_id>', methods=['POST'])
+@cs_or_admin_required
 def history_approve(payment_id):
     if not session.get('logged_in'): return redirect(url_for('auth.login'))
     payment = execute_query(
@@ -491,6 +500,7 @@ def history_approve(payment_id):
 
 # ── ACTIVE VOUCHER MONITOR ────────────────────────────────────────────────────
 @vouchers_bp.route('/active')
+@cs_or_admin_required
 def active():
     """Show all currently active (in-use) vouchers with remaining time."""
     if not session.get('logged_in'):
@@ -546,6 +556,7 @@ def active():
 
 # ── API: Active vouchers JSON refresh ─────────────────────────────────────────
 @vouchers_bp.route('/active/api')
+@cs_or_admin_required
 def active_api():
     """JSON endpoint for auto-refresh of active vouchers."""
     if not session.get('logged_in'):
@@ -577,6 +588,7 @@ def active_api():
 
 # ── API: Sync active users from MikroTik ────────────────────────────────────────
 @vouchers_bp.route('/active/mikrotik')
+@cs_or_admin_required
 def active_mikrotik():
     """Pull real-time active hotspot users from ALL online MikroTik routers"""
     if not session.get('logged_in'):
@@ -604,6 +616,7 @@ def active_mikrotik():
 
 # ── SOFT DISCONNECT (expire) ──────────────────────────────────────────────────
 @vouchers_bp.route('/disconnect/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def disconnect(id):
     """Soft disconnect: mark voucher as expired (RADIUS will reject next auth)."""
     if not session.get('logged_in'):
@@ -619,6 +632,7 @@ def disconnect(id):
 
 # ── HARD DISCONNECT (CoA Disconnect-Request) ──────────────────────────────────
 @vouchers_bp.route('/coa_disconnect/<int:id>', methods=['POST'])
+@cs_or_admin_required
 def coa_disconnect(id):
     """Hard disconnect: send RADIUS CoA Disconnect-Request to router NAS."""
     if not session.get('logged_in'):
@@ -718,6 +732,7 @@ def coa_disconnect(id):
     return redirect(url_for('vouchers.active'))
 
 @vouchers_bp.route('/import', methods=['GET', 'POST'])
+@cs_or_admin_required
 def import_excel():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

@@ -136,7 +136,7 @@
                     <i class="bi bi-pencil-fill"></i> Edit
                 </a>
                 <button
-                    onclick="if(confirm('Hapus mitra ini?')) window.location.href='{{ url_for('reseller_admin.delete', id=r.id) }}'"
+                    onclick="return mfAction('{{ url_for('reseller_admin.delete', id=r.id) }}', 'Hapus mitra ini?')"
                     class="btn btn-xs btn-outline btn-error gap-1">
                     <i class="bi bi-trash-fill"></i>
                 </button>
@@ -230,7 +230,7 @@
                                     <i class="bi bi-pencil-fill"></i>
                                 </a>
                                 <button
-                                    onclick="if(confirm('Hapus mitra ini beserta riwayat saldonya?')) window.location.href='{{ url_for('reseller_admin.delete', id=r.id) }}'"
+                                    onclick="return mfAction('{{ url_for('reseller_admin.delete', id=r.id) }}', 'Hapus mitra ini beserta riwayat saldonya?')"
                                     class="btn btn-sm btn-outline btn-error">
                                     <i class="bi bi-trash-fill"></i>
                                 </button>

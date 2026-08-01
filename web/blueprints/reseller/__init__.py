@@ -58,11 +58,17 @@ def login():
             (username,), fetch_one=True
         )
         if user:
-            from werkzeug.security import check_password_hash
-            try:
-                is_valid = check_password_hash(user['password'], password)
-            except ValueError:
-                is_valid = (user['password'] == password)
+            from werkzeug.security import generate_password_hash
+            from web.security import verify_password
+            is_valid, needs_rehash = verify_password(user['password'], password)
+            if is_valid and needs_rehash:
+                try:
+                    execute_query(
+                        "UPDATE users SET password=%s WHERE id=%s",
+                        (generate_password_hash(password), user['id'])
+                    )
+                except Exception:
+                    pass
             if is_valid:
                 if ip in _failed_reseller_logins:
                     del _failed_reseller_logins[ip]

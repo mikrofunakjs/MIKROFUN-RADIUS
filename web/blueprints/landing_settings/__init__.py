@@ -1,11 +1,13 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from web.database import execute_query
+from web.decorators import admin_required
 import json
 import uuid
 
 landing_settings_bp = Blueprint('landing_settings', __name__)
 
 @landing_settings_bp.route('/', methods=['GET', 'POST'])
+@admin_required
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -47,6 +49,7 @@ def index():
     return render_template('landing_settings/index.html', current_template=current_template, custom_html=custom_html, packages=packages)
 
 @landing_settings_bp.route('/add-package', methods=['POST'])
+@admin_required
 def add_package():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -92,6 +95,7 @@ def add_package():
     return redirect(url_for('landing_settings.index'))
 
 @landing_settings_bp.route('/delete-package/<pkg_id>', methods=['POST'])
+@admin_required
 def delete_package(pkg_id):
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))

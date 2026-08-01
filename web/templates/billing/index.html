@@ -139,14 +139,14 @@
                                 {% endif %}
                                 
                                 <div class="join flex-1">
-                                    <a href="{{ url_for('billing.approve', id=p.id) }}" 
+                                    <a href="#"
                                        class="btn btn-sm btn-success text-white join-item tooltip" data-tip="Terima"
-                                       onclick="return confirm('Sudah cek mutasi? Terima pembayaran ini?')">
+                                       onclick="return mfAction('{{ url_for('billing.approve', id=p.id) }}', 'Sudah cek mutasi? Terima pembayaran ini?')">
                                         <i class="bi bi-check-lg"></i>
                                     </a>
-                                    <a href="{{ url_for('billing.reject', id=p.id) }}" 
+                                    <a href="#"
                                        class="btn btn-sm btn-error text-white join-item tooltip" data-tip="Tolak"
-                                       onclick="return confirm('Yakin ingin MENOLAK pembayaran ini?')">
+                                       onclick="return mfAction('{{ url_for('billing.reject', id=p.id) }}', 'Yakin ingin MENOLAK pembayaran ini?')">
                                         <i class="bi bi-x-lg"></i>
                                     </a>
                                 </div>
@@ -210,9 +210,9 @@
                                     <td class="font-mono">{{ bank.account_number }}</td>
                                     <td>{{ bank.account_holder }}</td>
                                     <td>
-                                        <a href="{{ url_for('billing.delete_bank', id=bank.id) }}"
+                                        <a href="#"
                                             class="btn btn-xs btn-error btn-outline"
-                                            onclick="return confirm('Hapus rekening ini?')">
+                                            onclick="return mfAction('{{ url_for('billing.delete_bank', id=bank.id) }}', 'Hapus rekening ini?')">
                                             <i class="bi bi-trash"></i>
                                         </a>
                                     </td>
@@ -370,9 +370,9 @@
                             </td>
                             <td>
                                 {% if t.status == 'pending' or t.status == 'challenge' %}
-                                <a href="{{ url_for('billing.approve', id=t.id) }}"
+                                <a href="#"
                                     class="btn btn-xs btn-success btn-outline"
-                                    onclick="return confirm('Paksa APPROVE Manual? Pastikan uang sudah masuk di Dashboard Payment Gateway!')">
+                                    onclick="return mfAction('{{ url_for('billing.approve', id=t.id) }}', 'Paksa APPROVE Manual? Pastikan uang sudah masuk di Dashboard Payment Gateway!')">
                                     Approved Manual
                                 </a>
                                 {% endif %}

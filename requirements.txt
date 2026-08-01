@@ -1,8 +1,13 @@
-Flask==2.3.3
-mysql-connector-python==8.0.33
-gunicorn==20.1.0
+# Pinned versions are the patched releases; see notes for the CVE each bump closes.
+Flask==3.1.2
+# Explicit pins: both are transitive Flask deps that carry their own advisories.
+Werkzeug==3.1.3            # CVE-2024-34069 (debugger RCE), CVE-2024-49767 (multipart DoS)
+Jinja2==3.1.6              # CVE-2024-56326 / CVE-2025-27516 sandbox escapes — the hotspot
+                           # portal renders operator-supplied HTML in a SandboxedEnvironment
+mysql-connector-python==8.4.0
+gunicorn==23.0.0           # CVE-2024-1135 (HTTP request smuggling)
 pyrad==2.4
-requests==2.31.0
-pycryptodome==3.19.0
-openpyxl==3.1.2
-python-dateutil==2.8.2
+requests==2.32.5           # CVE-2024-35195 (verify=False persists), CVE-2024-47081 (.netrc leak)
+pycryptodome==3.21.0       # CVE-2023-52323 (OAEP side channel)
+openpyxl==3.1.5
+python-dateutil==2.9.0.post0

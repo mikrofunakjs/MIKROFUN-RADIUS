@@ -7,6 +7,7 @@ import socket
 tools_bp = Blueprint('tools', __name__)
 
 @tools_bp.route('/resolver', methods=['GET', 'POST'])
+@admin_required
 def resolver():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
@@ -47,6 +48,7 @@ def resolver():
     return render_template('tools/resolver.html', domain=domain, ips=ips, error=error, routers=routers)
 
 @tools_bp.route('/push_address_list', methods=['POST'])
+@admin_required
 def push_address_list():
     if not session.get('logged_in'):
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
