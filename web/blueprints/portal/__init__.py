@@ -85,6 +85,11 @@ def hotspot_login():
         profiles=profiles
     )
 
+@portal_bp.route('/')
+def portal_root():
+    """Bare /portal used to 404. Send people to the actual login page."""
+    return redirect(url_for('portal.hotspot_login', **request.args.to_dict()))
+
 @portal_bp.route('/status')
 def hotspot_status():
     """Success page after login"""

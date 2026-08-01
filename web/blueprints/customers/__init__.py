@@ -61,16 +61,21 @@ def index():
     profiles = execute_query("SELECT id, name FROM profiles WHERE type='pppoe' ORDER BY name", fetch=True)
     
     # ADVANCED STATS CALCULATION (Keep this efficient)
+    # "Online" = the customer currently holds a session. The previous version
+    # joined `(SELECT ... FROM radacct ORDER BY radacctid DESC LIMIT 1)`, which
+    # takes ONE row for the whole table and joins it to every customer, so all
+    # but (at most) one always counted as offline. active_sessions is the live
+    # session table and needs no per-row subquery.
     stats_query = (
         "SELECT "
         "  COUNT(*) as total, "
-        "  SUM(CASE WHEN ra.acctstoptime IS NULL AND ra.username IS NOT NULL THEN 1 ELSE 0 END) as online, "
-        "  SUM(CASE WHEN ra.acctstoptime IS NOT NULL OR ra.username IS NULL THEN 1 ELSE 0 END) as offline, "
+        "  SUM(CASE WHEN s.username IS NOT NULL THEN 1 ELSE 0 END) as online, "
+        "  SUM(CASE WHEN s.username IS NULL THEN 1 ELSE 0 END) as offline, "
         "  SUM(CASE WHEN c.status = 'isolir' THEN 1 ELSE 0 END) as isolir, "
         "  SUM(CASE WHEN c.status = 'active' THEN COALESCE(p.price, 0) ELSE 0 END) as omzet "
         "FROM customers c "
         "LEFT JOIN profiles p ON c.profile_id = p.id "
-        "LEFT JOIN (SELECT username, acctstoptime FROM radacct ORDER BY radacctid DESC LIMIT 1) ra ON c.username = ra.username "
+        "LEFT JOIN (SELECT DISTINCT username FROM active_sessions) s ON LOWER(c.username) = s.username "
         "WHERE (c.mac_address IS NULL OR c.mac_address = '') "
     )
     stats = execute_query(stats_query, fetch_one=True)

@@ -9,7 +9,7 @@ from web.database import execute_query
 def _user_context(username):
     """Gather all DB context for a given user. Returns dict or None."""
     user = execute_query(
-        """SELECT c.username, c.full_name, c.phone, c.status, c.due_date,
+        """SELECT c.username, c.name AS full_name, c.phone, c.status, c.due_date,
                   p.name AS profile, p.rate_limit,
                   r.name AS router, r.status AS router_status
            FROM customers c

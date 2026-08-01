@@ -707,7 +707,7 @@ def api_ai_wa_reply():
 
         # Find customer by phone
         customer = execute_query(
-            """SELECT c.username, c.full_name, c.status, c.due_date,
+            """SELECT c.username, c.name AS full_name, c.status, c.due_date,
                       p.name AS profile, p.rate_limit
                FROM customers c LEFT JOIN profiles p ON c.profile_id = p.id
                WHERE REPLACE(REPLACE(c.phone, '+', ''), ' ', '') LIKE %s
@@ -783,7 +783,7 @@ def api_ai_ask():
         routers   = execute_query("SELECT id, name, status, vpn_ip, ip_address, api_user, api_password FROM routers ORDER BY name", fetch=True) or []
 
         cust_active = execute_query("SELECT COUNT(*) as c FROM customers WHERE status='active'", fetch_one=True)
-        cust_isolir = execute_query("SELECT COUNT(*) as c FROM customers WHERE status='isolated'", fetch_one=True)
+        cust_isolir = execute_query("SELECT COUNT(*) as c FROM customers WHERE status='isolir'", fetch_one=True)
         users_online = execute_query("SELECT COUNT(*) as c FROM active_sessions", fetch_one=True)
         routers_off = sum(1 for r in routers if r['status'] == 'offline')
 
@@ -799,7 +799,7 @@ def api_ai_ask():
 
         # Vouchers
         vouch_active = execute_query("SELECT COUNT(*) as c FROM vouchers WHERE status='active'", fetch_one=True)
-        vouch_used = execute_query("SELECT COUNT(*) as c FROM vouchers WHERE status='used'", fetch_one=True)
+        vouch_used = execute_query("SELECT COUNT(*) as c FROM vouchers WHERE status IN ('active','expired')", fetch_one=True)
 
         # Per-user data (top traffic, online, due dates)
         top_traffic = execute_query(
@@ -808,9 +808,13 @@ def api_ai_ask():
             "GROUP BY username ORDER BY mb DESC LIMIT 5", fetch=True) or []
 
         online_users = execute_query(
-            "SELECT a.username, a.framedipaddress, a.nas_ip, "
+            # active_sessions has no framedipaddress column — the IP lives in
+            # radacct, keyed by session id.
+            "SELECT a.username, r.framedipaddress, a.nas_ip, "
             "TIMESTAMPDIFF(MINUTE, a.updated_at, NOW()) AS idle_min "
-            "FROM active_sessions a ORDER BY a.updated_at DESC LIMIT 10", fetch=True) or []
+            "FROM active_sessions a "
+            "LEFT JOIN radacct r ON r.acctsessionid = a.acct_session_id "
+            "ORDER BY a.updated_at DESC LIMIT 10", fetch=True) or []
 
         due_soon = execute_query(
             "SELECT name, username, due_date, DATEDIFF(due_date, CURDATE()) AS days_left "
@@ -995,7 +999,7 @@ def api_ai_execute():
                 return {"error": f"Paket voucher '{p['profile_name']}' tidak ditemukan"}, 400
 
             execute_query(
-                "INSERT INTO vouchers (code, profile_id, duration, status, created_at) "
+                "INSERT INTO vouchers (code, profile_id, duration_hours, status, created_at) "
                 "VALUES (%s,%s,%s,'active',NOW())",
                 (p['code'], prof['id'], p['duration'])
             )

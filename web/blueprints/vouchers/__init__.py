@@ -172,12 +172,12 @@ def stats():
     ) or []
     by_profile = execute_query(
         "SELECT p.name, COUNT(v.id) as c, "
-        "SUM(v.status='used') as used_c, SUM(v.price) as revenue "
+        "SUM(v.status IN ('active','expired')) as used_c, SUM(v.price) as revenue "
         "FROM vouchers v LEFT JOIN profiles p ON v.profile_id=p.id "
         "GROUP BY v.profile_id ORDER BY used_c DESC", fetch=True
     ) or []
     by_date = execute_query(
-        "SELECT DATE(created_at) as day, COUNT(*) as c, SUM(status='used') as used_c "
+        "SELECT DATE(created_at) as day, COUNT(*) as c, SUM(status IN ('active','expired')) as used_c "
         "FROM vouchers WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) "
         "GROUP BY DATE(created_at) ORDER BY day DESC", fetch=True
     ) or []
@@ -297,8 +297,13 @@ def bulk_delete():
     ids = request.form.getlist('ids')
 
     if mode == 'used':
-        execute_query("DELETE FROM vouchers WHERE status='used'")
-        flash('Semua voucher yang sudah dipakai berhasil dihapus.', 'success')
+        # No row is ever status='used' — the lifecycle is unused -> active ->
+        # expired. Delete activated vouchers that are no longer usable only.
+        execute_query(
+            "DELETE FROM vouchers WHERE activated_at IS NOT NULL "
+            "AND (status='expired' OR (expires_at IS NOT NULL AND expires_at < NOW()))"
+        )
+        flash('Voucher terpakai yang sudah habis masa berlakunya berhasil dihapus.', 'success')
     elif mode == 'expired':
         execute_query("DELETE FROM vouchers WHERE status='expired' OR (expires_at IS NOT NULL AND expires_at < NOW() AND status='unused')")
         flash('Semua voucher expired berhasil dihapus.', 'success')
@@ -656,9 +661,11 @@ def coa_disconnect(id):
 
     nas_ip = v.get('router_ip')
     
-    # Auto-fetch RADIUS secret from settings (default: testing123)
+    # RADIUS secret from settings, falling back to the configured one — never to
+    # the old public 'testing123' literal.
+    from web.config import RADIUS_SECRET
     secret_row = execute_query("SELECT setting_value FROM settings WHERE setting_key='radius_secret'", fetch_one=True)
-    nas_secret = secret_row['setting_value'] if secret_row and secret_row.get('setting_value') else 'testing123'
+    nas_secret = secret_row['setting_value'] if secret_row and secret_row.get('setting_value') else RADIUS_SECRET
 
     session_id = v.get('session_id') or ''
     username   = v.get('code') or ''

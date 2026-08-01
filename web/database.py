@@ -346,6 +346,39 @@ def ensure_schema_updates():
             )
         """)
 
+        # CREATE TABLE IF NOT EXISTS is a no-op when the table already exists, so
+        # installs that got the older income_ledger from database_schema.sql kept
+        # a table without these columns. Every ledger INSERT then failed with
+        # "Unknown column 'ref_number'" and the cash book stayed empty while
+        # payments still went through. Add the columns explicitly.
+        for col, defn in [
+            ('source_id',   'INT DEFAULT NULL'),
+            ('ref_number',  'VARCHAR(100) DEFAULT NULL'),
+            ('party_name',  'VARCHAR(100) DEFAULT NULL'),
+            ('category',    "ENUM('voucher','subscription','deposit') NOT NULL DEFAULT 'voucher'"),
+            ('recorded_by', "VARCHAR(100) DEFAULT 'system'"),
+        ]:
+            cur.execute("SHOW COLUMNS FROM income_ledger LIKE %s", (col,))
+            if not cur.fetchone():
+                cur.execute(f"ALTER TABLE income_ledger ADD COLUMN {col} {defn}")
+                print(f"Added '{col}' to income_ledger")
+
+        # Auth audit trail. The AI NOC "auth failure spike" check and
+        # diagnosis.py both query radpostauth, but nothing ever created it, so
+        # those queries errored hourly and the detection never ran.
+        # Deliberately no `pass` column — never persist submitted passwords.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS radpostauth (
+                id       BIGINT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(64) NOT NULL DEFAULT '',
+                reply    VARCHAR(32) NOT NULL DEFAULT '',
+                authdate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                nasip    VARCHAR(45) DEFAULT NULL,
+                INDEX idx_pa_username (username),
+                INDEX idx_pa_authdate (authdate)
+            )
+        """)
+
         cur.execute("""
             CREATE TABLE IF NOT EXISTS wa_templates (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -509,6 +542,25 @@ def ensure_schema_updates():
             cur.execute("ALTER TABLE income_ledger ADD COLUMN tax_amount DECIMAL(15,2) DEFAULT 0")
             print("Added 'tax_amount' to income_ledger")
 
+        # Hash any staff password still stored as plaintext. These accounts are
+        # only ever checked through web.security.verify_password, which accepts
+        # both forms, so this is invisible to the user but stops the raw
+        # password sitting in the database until they happen to log in.
+        # customers.password is deliberately NOT touched here: it also feeds
+        # RADIUS, and that upgrade already happens per-user on a successful auth.
+        try:
+            from web.security import looks_hashed
+            from werkzeug.security import generate_password_hash
+            cur.execute("SELECT id, password FROM users")
+            for row in cur.fetchall():
+                uid, pw = (row['id'], row['password']) if isinstance(row, dict) else (row[0], row[1])
+                if pw and not looks_hashed(pw):
+                    cur.execute("UPDATE users SET password=%s WHERE id=%s",
+                                (generate_password_hash(pw), uid))
+                    print(f"Hashed plaintext password for user id={uid}")
+        except Exception as e:
+            print(f"Password hashing migration skipped: {e}")
+
         conn.commit()
         cur.close()
         conn.close()
@@ -535,7 +587,7 @@ def migrate_historical_ledger():
 
         migrated = 0
 
-        # â”€â”€ 1. Tagihan Pelanggan (payments approved) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── 1. Tagihan Pelanggan (payments approved) ──────────────────────
         cur.execute("""
             SELECT p.id, p.amount, p.sender_bank, p.payment_date,
                    c.name as cname
@@ -553,12 +605,12 @@ def migrate_historical_ledger():
                 "gross_amount,cost_amount,net_profit,party_name,category,recorded_by,created_at) "
                 "VALUES ('client_payment',%s,%s,%s,%s,0,%s,%s,'subscription','migrate',%s)",
                 (r['id'], str(r['id']),
-                 f"[Historis] Tagihan [{r.get('cname') or '-'}] â€” {ch}",
+                 f"[Historis] Tagihan [{r.get('cname') or '-'}] — {ch}",
                  amt, amt, r.get('cname') or '-', r.get('payment_date'))
             )
             migrated += 1
 
-        # â”€â”€ 2. Deposit Mitra (reseller_transactions topup) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── 2. Deposit Mitra (reseller_transactions topup) ────────────────
         cur.execute("""
             SELECT rt.id, rt.reseller_id, rt.amount, rt.description, rt.created_at,
                    u.username as rname
@@ -576,12 +628,12 @@ def migrate_historical_ledger():
                 "gross_amount,cost_amount,net_profit,party_name,category,recorded_by,created_at) "
                 "VALUES ('mitra_deposit',%s,%s,%s,%s,0,%s,%s,'deposit','migrate',%s)",
                 (r['id'], f"TOPUP-{r['reseller_id']}",
-                 f"[Historis] Deposit Mitra [{name}] â€” {r.get('description') or '-'}",
+                 f"[Historis] Deposit Mitra [{name}] — {r.get('description') or '-'}",
                  amt, amt, name, r.get('created_at'))
             )
             migrated += 1
 
-        # â”€â”€ 3. Pembelian Voucher Mitra (reseller_transactions purchase) â”€â”€â”€
+        # ── 3. Pembelian Voucher Mitra (reseller_transactions purchase) ───
         cur.execute("""
             SELECT rt.id, rt.reseller_id, rt.amount, rt.description, rt.created_at,
                    u.username as rname
@@ -599,12 +651,12 @@ def migrate_historical_ledger():
                 "gross_amount,cost_amount,net_profit,party_name,category,recorded_by,created_at) "
                 "VALUES ('mitra_voucher',%s,%s,%s,%s,%s,%s,%s,'voucher','migrate',%s)",
                 (r['id'], f"MITRA-{r['id']}",
-                 f"[Historis] Mitra [{name}] beli Voucher â€” {r.get('description') or '-'}",
+                 f"[Historis] Mitra [{name}] beli Voucher — {r.get('description') or '-'}",
                  cost, cost, 0, name, r.get('created_at'))
             )
             migrated += 1
 
-        # â”€â”€ 4. Voucher Admin (dikelompok per batch/hari/profil) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── 4. Voucher Admin (dikelompok per batch/hari/profil) ───────────
         cur.execute("""
             SELECT COALESCE(v.batch_id, 0) as bid, v.profile_id,
                    DATE(v.created_at) as cdate,
@@ -632,7 +684,7 @@ def migrate_historical_ledger():
                 "gross_amount,cost_amount,net_profit,party_name,category,recorded_by,created_at) "
                 "VALUES ('admin_voucher',%s,%s,%s,%s,0,%s,'Admin ISP','voucher','migrate',%s)",
                 (syn_id, key,
-                 f"[Historis] Admin Generate {qty}Ã— [{r.get('pname') or '-'}] @ Rp {price:,.0f}",
+                 f"[Historis] Admin Generate {qty}× [{r.get('pname') or '-'}] @ Rp {price:,.0f}",
                  gross, gross, r.get('cat'))
             )
             migrated += 1

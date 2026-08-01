@@ -13,11 +13,12 @@ import sys
 import mysql.connector
 from web.mikrotik_api import MikrotikApi
 
-# Config (Should match simple_radius.py)
-DB_HOST = 'localhost'
-DB_USER = 'radius'
-DB_PASS = 'radiuspass123'
-DB_NAME = 'radius_db'
+# Config comes from web.config (env-backed) — never hardcode credentials here.
+from web.config import DB_CONFIG
+DB_HOST = DB_CONFIG['host']
+DB_USER = DB_CONFIG['user']
+DB_PASS = DB_CONFIG['password']
+DB_NAME = DB_CONFIG['database']
 
 # Logging
 logging.basicConfig(

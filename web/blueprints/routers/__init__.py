@@ -14,13 +14,11 @@ routers_bp = Blueprint('routers', __name__)
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('auth.login'))
-    # Explicit columns: SELECT * pulled api_password / vpn_password into the
-    # template context, one careless template edit away from being rendered.
-    routers = execute_query(
-        "SELECT id, name, ip_address, vpn_ip, vpn_type, api_user, api_port, status, "
-        "last_seen, created_at FROM routers ORDER BY created_at DESC",
-        fetch=True
-    ) or []
+    # SELECT * (installs vary in which optional columns exist), then strip the
+    # secrets in Python so they never reach the template context.
+    SECRET_COLS = {'api_password', 'vpn_password', 'vpn_private_key'}
+    routers = execute_query("SELECT * FROM routers ORDER BY created_at DESC", fetch=True) or []
+    routers = [{k: v for k, v in r.items() if k not in SECRET_COLS} for r in routers]
     return render_template('routers/list.html', routers=routers)
 
 @routers_bp.route('/refresh_status', methods=['POST'])

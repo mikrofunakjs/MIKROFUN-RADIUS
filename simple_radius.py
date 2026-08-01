@@ -391,7 +391,7 @@ class RadiusServer:
                 # Check Limit Login for MAC Auth
                 if not check_simultaneous_use(username, mac_user.get('shared_users'), mac):
                     log.warning(f"REJECT MAC {username}: Simultaneous-Use limit reached")
-                    self._send_reject(pkt_id, authenticator, addr, "Batas Login Perangkat Tercapai")
+                    self._send_reject(pkt_id, authenticator, addr, "Batas Login Perangkat Tercapai", username=username)
                     return
 
                 log.info(f"ACCEPT MAC Auth: {username}")
@@ -403,7 +403,7 @@ class RadiusServer:
         # Decode PAP password for PPPoE/Hotspot
         enc_pw = attrs.get(ATTR_USER_PASSWORD)
         if not enc_pw:
-            self._send_reject(pkt_id, authenticator, addr, "PAP required")
+            self._send_reject(pkt_id, authenticator, addr, "PAP required", username=username)
             return
 
         current_secret = get_secret()
@@ -434,7 +434,7 @@ class RadiusServer:
                 # Check Limit Login
                 if not check_simultaneous_use(username, user.get('shared_users'), mac):
                     log.warning(f"REJECT {username}: Simultaneous-Use limit reached")
-                    self._send_reject(pkt_id, authenticator, addr, "Batas Login Terlampaui")
+                    self._send_reject(pkt_id, authenticator, addr, "Batas Login Terlampaui", username=username)
                     return
 
                 log.info(f"ACCEPT customer: {username}")
@@ -444,7 +444,7 @@ class RadiusServer:
                 return
             else:
                 log.warning(f"REJECT {username}: wrong password")
-                self._send_reject(pkt_id, authenticator, addr, "Wrong password")
+                self._send_reject(pkt_id, authenticator, addr, "Wrong password", username=username)
                 return
 
         # 2. Try voucher lookup (code = username = password)
@@ -454,7 +454,7 @@ class RadiusServer:
                 # CHECK SIMULTANEOUS USE (NEW)
                 if not check_simultaneous_use(username, voucher.get('shared_users'), mac):
                     log.warning(f"REJECT Voucher {username}: Simultaneous-Use limit reached")
-                    self._send_reject(pkt_id, authenticator, addr, "Batas Perangkat Tercapai")
+                    self._send_reject(pkt_id, authenticator, addr, "Batas Perangkat Tercapai", username=username)
                     return
 
                 # CHECK VALIDITY
@@ -465,7 +465,7 @@ class RadiusServer:
                 if voucher['status'] == 'active':
                     if voucher.get('expires_at') and voucher['expires_at'] < now:
                         log.warning(f"REJECT voucher {username}: expired at {voucher['expires_at']}")
-                        self._send_reject(pkt_id, authenticator, addr, "Voucher Expired")
+                        self._send_reject(pkt_id, authenticator, addr, "Voucher Expired", username=username)
                         # Update status to expired
                         try:
                             conn = get_db()
@@ -496,7 +496,7 @@ class RadiusServer:
                 
                 if quota_limit > 0 and quota_used >= quota_limit:
                     log.warning(f"REJECT voucher {username}: Quota exceeded ({quota_used}/{quota_limit})")
-                    self._send_reject(pkt_id, authenticator, addr, "Quota Habis")
+                    self._send_reject(pkt_id, authenticator, addr, "Quota Habis", username=username)
                     return
                 
                 # Send Accept with Profile, Timeout & Quota  
@@ -510,11 +510,31 @@ class RadiusServer:
 
         # 3. Not found
         log.warning(f"REJECT {username}: user not found")
-        self._send_reject(pkt_id, authenticator, addr, "User not found")
+        self._send_reject(pkt_id, authenticator, addr, "User not found", username=username)
 
-    def _send_reject(self, pkt_id, authenticator, addr, message="Authentication failed"):
+    def _log_postauth(self, username, reply, nas_ip):
+        """Record the auth outcome so the AI NOC spike check has data to read."""
+        if not username:
+            return
+        try:
+            conn = get_db()
+            if not conn:
+                return
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO radpostauth (username, reply, nasip) VALUES (%s, %s, %s)",
+                (username.strip().lower(), reply, nas_ip)
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            log.warning(f"radpostauth insert failed: {e}")
+
+    def _send_reject(self, pkt_id, authenticator, addr, message="Authentication failed", username=None):
         """Send Access-Reject with Message-Authenticator"""
         log.info(f"  📤 Sending Access-REJECT to {addr[0]}:{addr[1]}")
+        self._log_postauth(username, "Access-Reject", addr[0])
         self._send_response(CODE_ACCESS_REJECT, pkt_id, authenticator, addr, 
                            [(ATTR_REPLY_MESSAGE, message)])
     
@@ -593,6 +613,7 @@ class RadiusServer:
 
     def _send_accept(self, pkt_id, authenticator, addr, user, static_ip=None):
         """Build and send Access-Accept with Message-Authenticator for Mikrotik"""
+        self._log_postauth(user.get('username'), "Access-Accept", addr[0])
         rate_limit = self._assemble_rate_limit(user)
         pool_name = user.get('pool_name')
         log.info(f"  📤 Sending Access-ACCEPT to {addr[0]}:{addr[1]} rate={rate_limit} pool={pool_name} ip={static_ip}")
@@ -653,6 +674,7 @@ class RadiusServer:
         self.auth_sock.sendto(final_pkt, addr)
     def _send_accept_voucher(self, pkt_id, authenticator, addr, voucher, session_timeout=0, quota_limit=0, quota_used=0):
         """Build Access-Accept specifically for Vouchers with Session-Timeout & Quota"""
+        self._log_postauth(voucher.get('code'), "Access-Accept", addr[0])
         rate_limit = self._assemble_rate_limit(voucher)
         pool_name = voucher.get('pool_name')
         

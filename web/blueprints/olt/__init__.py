@@ -8,12 +8,11 @@ olt_bp = Blueprint('olt', __name__)
 @staff_required
 def index():
     if not session.get('logged_in'): return redirect(url_for('auth.login'))
-    # Never pull the OLT password into the listing context.
-    olts = execute_query(
-        "SELECT id, name, brand, model, ip_address, api_port, username, total_ports, "
-        "description, created_at FROM olts ORDER BY name ASC",
-        fetch=True
-    ) or []
+    # Keep SELECT * — installs differ in which optional columns exist (model,
+    # description are only in the newer definition) — and drop the credential
+    # in Python so it never reaches the template context.
+    olts = execute_query("SELECT * FROM olts ORDER BY name ASC", fetch=True) or []
+    olts = [{k: v for k, v in o.items() if k != 'password'} for o in olts]
     return render_template('olt/list.html', olts=olts)
 
 @olt_bp.route('/add', methods=['GET', 'POST'])
