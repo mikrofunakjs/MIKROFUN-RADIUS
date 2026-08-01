@@ -10,3 +10,8 @@ venv/
 node_modules/
 cookie.txt
 wa-service/auth_info_baileys/
+
+# Working notes — drafts and concepts stay local, only production code ships.
+/issue_*.txt
+/draftissues.md
+/ROADMAPS/
