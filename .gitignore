@@ -8,3 +8,5 @@ venv/
 *.db
 *.spec
 node_modules/
+cookie.txt
+wa-service/auth_info_baileys/

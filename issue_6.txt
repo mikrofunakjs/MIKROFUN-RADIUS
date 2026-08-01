@@ -1,0 +1,50 @@
+title:	[MEDIUM] Deteksi password hash fragile — plaintext dengan karakter ':' gagal login
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	bug
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	6
+--
+## Bug: Password Hash Detection Fragile
+
+**Severity:** MEDIUM — user dengan password mengandung `:` tidak bisa login jika masih plaintext
+
+**File:** `web/blueprints/auth/__init__.py` line 63-74, `web/blueprints/reseller/__init__.py`
+
+### Root Cause
+Deteksi apakah password tersimpan sebagai hash atau plaintext menggunakan pengecekan karakter `:`:
+
+```python
+stored_pw = user['password']
+
+# Werkzeug hashes typically contain a colon (e.g., method:salt$hash)
+if ':' in stored_pw:
+    try:
+        is_valid = check_password_hash(stored_pw, password)
+    except Exception as e:
+        is_valid = (stored_pw == password)  # fallback ke plaintext
+else:
+    # Definitely plain text (legacy)
+    is_valid = (stored_pw == password)
+```
+
+### Masalah
+1. **False positive hash**: Beberapa format hash (seperti bcrypt `$2b$...`) TIDAK mengandung `:` — akan dianggap plaintext
+2. **False negative plaintext**: User dengan password mengandung `:` (misal `admin:oke:123`) akan dianggap hash → `check_password_hash` gagal → fallback ke `stored_pw == password` masih berfungsi, tapi fragile
+3. **No differentiation**: Tidak bisa membedakan "hash tanpa colon" vs "plaintext dengan colon" dengan reliable
+
+### Fix
+1. Gunakan format prefix: simpan hash dengan prefix (misal `werkzeug:` atau `hash:`) lalu cek prefix, bukan karakter `:`
+2. Atau: migrasi seluruh password ke hash sekaligus via script, hapus fallback plaintext
+3. Atau: gunakan kolom baru `password_hash_method` untuk menandai format
+
+**Labels:** bug

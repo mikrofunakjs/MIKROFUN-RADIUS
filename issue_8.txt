@@ -1,0 +1,56 @@
+title:	[MEDIUM] Missing security headers — tidak ada CSP, HSTS, dan session cookie flags
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	bug
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	8
+--
+## Bug: Missing Security Headers
+
+**Severity:** MEDIUM — aplikasi kurang perlindungan header keamanan standar
+
+**File:** `web/app.py` line 218-230
+
+### Status Saat Ini
+Security headers yang SUDAH ada:
+- `X-Frame-Options: SAMEORIGIN` (kecuali `/portal/`)
+- `X-Content-Type-Options: nosniff`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+
+### Yang HILANG
+1. **Content-Security-Policy (CSP)** — mencegah XSS, inline script injection. Tanpa CSP, custom HTML di landing page bisa inject malicious script ke halaman lain.
+2. **Strict-Transport-Security (HSTS)** — memaksa browser selalu HTTPS. Tanpa ini, user rentan MITM downgrade attack.
+3. **Session cookie security flags:**
+   - `SESSION_COOKIE_HTTPONLY` tidak diset → cookie session bisa dibaca JavaScript (XSS risk)
+   - `SESSION_COOKIE_SECURE` tidak diset → cookie dikirim via HTTP (MITM risk)
+   - `SESSION_COOKIE_SAMESITE` tidak diset → rentan CSRF
+
+### Impact
+- XSS lebih mudah dieksploitasi tanpa CSP
+- Session hijacking via XSS karena cookie tidak HttpOnly
+- MITM attack pada koneksi HTTP
+
+### Fix
+```python
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' cdn.jsdelivr.net cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data:"
+    ...
+```
+
+**Labels:** security

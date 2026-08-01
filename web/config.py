@@ -2,15 +2,22 @@ import os
 import sys
 
 # Database Configuration
+_db_password = os.environ.get('DB_PASSWORD')
+if not _db_password:
+    raise RuntimeError("DB_PASSWORD environment variable not set")
+
 DB_CONFIG = {
     'host': os.environ.get('DB_HOST', 'localhost'),
     'user': os.environ.get('DB_USER', 'radius'),
-    'password': os.environ.get('DB_PASSWORD', 'radiuspass123'),
+    'password': _db_password,
     'database': os.environ.get('DB_NAME', 'radius_db')
 }
 
 # RADIUS Configuration
-RADIUS_SECRET = os.environ.get('RADIUS_SECRET', 'testing123')
+_radius_secret = os.environ.get('RADIUS_SECRET')
+if not _radius_secret:
+    raise RuntimeError("RADIUS_SECRET environment variable not set")
+RADIUS_SECRET = _radius_secret
 AUTH_PORT = 1812
 ACCT_PORT = 1813
 

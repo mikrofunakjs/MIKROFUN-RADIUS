@@ -108,12 +108,100 @@ def run():
     return sent_count
 
 
+def _ai_noc_check():
+    """AI NOC — proactive: detect anomalies, diagnose, auto-fix if confident."""
+    try:
+        from ai_noc.diagnosis import diagnose as ai_diag
+    except Exception:
+        return
+
+    issues = []
+
+    # 1. Router offline >30 min
+    dead = execute_query(
+        """SELECT name, vpn_ip, status FROM routers
+           WHERE status='offline'
+             AND last_seen < DATE_SUB(NOW(), INTERVAL 30 MINUTE)""",
+        fetch=True
+    ) or []
+    for r in dead:
+        rpt = ai_diag(f"Router {r['name']} ({r['vpn_ip']}) offline >30 menit")
+        issues.append(f"[ROUTER DOWN] {r['name']}: {rpt.get('diagnosis', '?')[:200]}")
+
+    # 2. Users active session but zero traffic 30min
+    zombies = execute_query(
+        """SELECT a.username FROM active_sessions a
+           WHERE NOT EXISTS (
+               SELECT 1 FROM radacct_snapshots s
+               WHERE s.username = a.username
+                 AND s.snapshot_time >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+           )
+           LIMIT 10""",
+        fetch=True
+    ) or []
+    for z in zombies:
+        rpt = ai_diag("User aktif tapi nol traffic 30 menit", username=z['username'])
+        issues.append(f"[ZOMBIE SESSION] {z['username']}: {rpt.get('diagnosis', '?')[:200]}")
+
+    # 3. Auth failure spike
+    spike = execute_query(
+        """SELECT username, COUNT(*) as cnt FROM radpostauth
+           WHERE reply='Access-Reject' AND authdate >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+           GROUP BY username HAVING cnt >= 5""",
+        fetch=True
+    ) or []
+    for s in spike:
+        rpt = ai_diag(f"Auth failure spike: {s['cnt']}x dalam 1 jam", username=s['username'])
+        issues.append(f"[AUTH SPIKE] {s['username']} ({s['cnt']}x): {rpt.get('diagnosis', '?')[:200]}")
+
+    if issues:
+        print(f"[AI NOC] {len(issues)} issues detected:")
+        for i in issues:
+            print(f"  {i}")
+    return len(issues)
+
+
+def _daily_ai_report():
+    """Ponytail: daily DeepSeek report, runs once per day after 06:00."""
+    import datetime as _dt
+    now = _dt.datetime.now()
+    if now.hour != 6:
+        return
+
+    try:
+        from ai_noc.deepseek_client import chat as ai_chat
+    except Exception:
+        return
+
+    total_users = execute_query("SELECT COUNT(*) as cnt FROM active_sessions", fetch_one=True)
+    total_customers = execute_query("SELECT COUNT(*) as cnt FROM customers WHERE status='active'", fetch_one=True)
+    today_income = execute_query(
+        "SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE created_at >= CURDATE() AND status='paid'",
+        fetch_one=True
+    )
+
+    stats = f"User online: {total_users.get('cnt', 0) if total_users else 0}\n" \
+            f"Pelanggan: {total_customers.get('cnt', 0) if total_customers else 0}\n" \
+            f"Pendapatan: Rp {today_income.get('total', 0) if today_income else 0:,}"
+
+    report = ai_chat(
+        "Anda AI NOC reporter MikroFun. Buat laporan harian singkat Bahasa Indonesia. "
+        "Format: ringkasan, insiden, rekomendasi. Maks 300 kata.",
+        f"Data MikroFun hari ini ({_dt.date.today()}):\n{stats}\n\nBuat laporan harian."
+    )
+
+    if report:
+        print(f"[AI Report] {report[:200]}...")
+
+
 def start_wa_reminder():
     """Background loop — check every 3600 seconds (1 hour)"""
     print("[WA Reminder] Service started (checks every hour)...")
     while True:
         try:
             run()
+            _ai_noc_check()
+            _daily_ai_report()
         except Exception as e:
             print(f"[WA Reminder] Error: {e}")
         time.sleep(3600)

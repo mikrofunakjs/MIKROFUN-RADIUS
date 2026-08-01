@@ -1,0 +1,33 @@
+title:	[HIGH] Portal checkout: payment_channel tidak diset, salah klasifikasi di billing
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	15
+--
+## Deskripsi
+Di portal/__init__.py line 258-261, INSERT payments TIDAK menyertakan kolom payment_channel. Semua transaksi dari captive portal hotspot muncul di bagian Pembayaran Manual pada halaman billing.
+
+## Lokasi
+web/blueprints/portal/__init__.py, baris 258-261:
+INSERT INTO payments (amount, payment_type, status, sender_bank, guest_phone, profile_id, payment_date)
+VALUES (%s, 'voucher', 'pending', %s, %s, %s, NOW())
+
+## Masalah
+- Kolom payment_channel tidak diset -> tetap NULL di database
+- Billing page filter: WHERE p.payment_channel IS NULL OR ... -> semua gateway payment dari portal masuk ke manual pending
+- Admin tidak bisa membedakan payment gateway dari captive portal
+
+## Perbaikan Saran
+Tambahkan payment_channel ke INSERT, set ke 'TRIPAY' atau 'MIDTRANS' sesuai gateway aktif.
+
+## Severity: HIGH

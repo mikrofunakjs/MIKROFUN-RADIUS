@@ -1,0 +1,34 @@
+title:	[HIGH] Portal checkout: payment_date diset NOW() sebelum pembayaran selesai
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	16
+--
+## Deskripsi
+Di portal/__init__.py line 260, payment_date diset ke NOW() saat INSERT payment dengan status pending. payment_date seharusnya mencerminkan waktu pembayaran benar-benar selesai (approved), bukan waktu record dibuat.
+
+## Lokasi
+web/blueprints/portal/__init__.py, baris 260:
+INSERT INTO payments (... payment_date) VALUES (... NOW())
+
+## Dampak
+- Data payment_date tidak akurat untuk payment yang akhirnya gagal/expired
+- Bisa mempengaruhi laporan keuangan harian (revenue report) — payment gagal terhitung di tanggal yang salah
+
+## Catatan
+Di process_successful_payment, payment_date di-set ulang ke NOW() saat approved. Tapi untuk payment yang expire/fail, payment_date tetap tercatat.
+
+## Perbaikan Saran
+Hilangkan payment_date dari INSERT awal, set saat approved saja (di process_successful_payment).
+
+## Severity: HIGH

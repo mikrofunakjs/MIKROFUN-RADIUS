@@ -1,0 +1,37 @@
+title:	[LOW] Reseller login: deteksi password hash fragile — 'bcrypt' tanpa colon
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	21
+--
+## Deskripsi
+Login reseller menggunakan logika deteksi hash yang sama dengan admin login versi lama:
+if user.get('password', '').startswith(('scrypt:', 'pbkdf2:', 'bcrypt', 'argon2'))
+
+Prefix 'bcrypt' tanpa colon — password plaintext yang diawali 'bcryptXXX' akan dianggap sebagai hash dan gagal diverifikasi.
+
+## Lokasi
+web/blueprints/reseller/__init__.py, line 63
+
+## Dampak
+- False positive: user dengan password 'bcrypt123' gagal login
+- Isu minor karena kemungkinan kecil
+
+## Perbaikan Saran
+Gunakan 'bcrypt$' atau lebih baik pakai pendekatan try-except dengan check_password_hash:
+try:
+    is_valid = check_password_hash(user['password'], password)
+except ValueError:
+    is_valid = (user['password'] == password)
+
+## Severity: LOW

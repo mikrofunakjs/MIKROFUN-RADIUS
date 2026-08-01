@@ -5,7 +5,12 @@ import os
 import traceback
 from web.database import execute_query
 
-WA_API_KEY = os.environ.get('WA_API_KEY', 'mikrofun-wa-secret-key')
+def _get_wa_api_key():
+    """Get WA_API_KEY from env, fail if not set."""
+    key = os.environ.get('WA_API_KEY')
+    if not key:
+        raise RuntimeError("WA_API_KEY environment variable not set")
+    return key
 
 def get_setting(key, default=None):
     """Fetch setting value from DB"""
@@ -86,7 +91,12 @@ def _send_baileys_once(target, message):
 
     url = f"{endpoint.rstrip('/')}/send"
     data = {"target": target, "message": message}
-    headers = {"Content-Type": "application/json", "X-API-Key": WA_API_KEY}
+    try:
+        wa_api_key = _get_wa_api_key()
+    except RuntimeError as e:
+        print(f"WA Error: {e}")
+        return False, False
+    headers = {"Content-Type": "application/json", "X-API-Key": wa_api_key}
 
     try:
         response = requests.post(url, json=data, headers=headers, timeout=10)

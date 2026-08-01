@@ -42,11 +42,14 @@ def ensure_system_config():
     
     # MSS Clamping (MTU Fix for L2TP)
     # We use -I to ensure it is at the top of the FORWARD chain
-    # Check if rule already exists to avoid duplicates
+    # MSS Clamping (MTU Fix for L2TP)
     exists, _ = _run_cmd("iptables -C FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu")
     if not exists:
         _run_cmd("iptables -I FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu")
-    
+
+    # Restore tunnel iptables rules from disk (survive reboot)
+    restore_iptables()
+
     return True
 
 
@@ -168,6 +171,16 @@ def teardown_tunnel_nat(internal_ip, winbox_port, web_port, api_port, mk_winbox_
 def save_iptables():
     """Persist iptables rules so they survive reboot."""
     _run_cmd("netfilter-persistent save 2>/dev/null || iptables-save > /etc/iptables.rules")
+
+
+def restore_iptables():
+    """Restore iptables rules from disk — survive reboot."""
+    if os.name == 'nt':
+        return
+    # netfilter-persistent if installed, fallback to raw iptables-restore
+    ok, _ = _run_cmd("netfilter-persistent reload 2>/dev/null")
+    if not ok:
+        _run_cmd("iptables-restore < /etc/iptables/rules 2>/dev/null || true")
 
 
 # ─── L2TP/IPsec Secret Management ──────────────────────────

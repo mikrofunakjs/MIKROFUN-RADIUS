@@ -1,0 +1,61 @@
+title:	[MEDIUM] Error information disclosure — 500 handler mengekspos str(e) ke end user
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	bug
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	7
+--
+## Bug: Error Information Disclosure
+
+**Severity:** MEDIUM — informasi internal server bocor ke end user
+
+**File:** `web/app.py` line 325-343
+
+### Root Cause
+Error handler 500 dan unhandled exception handler melempar `str(error)` langsung ke template:
+
+```python
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('errors/500.html', error=str(error)), 500
+
+@app.errorhandler(Exception)
+def unhandled_exception(e):
+    return render_template('errors/500.html', error=str(e)), 500
+```
+
+### Confirmed
+Live test di `/api/callback/tripay` menampilkan di HTML:
+
+> `'NoneType' object has no attribute 'encode'`
+
+Ini mengekspos:
+- Nama tipe Python (NoneType)
+- Nama method yang dipanggil (encode)
+- Struktur internal aplikasi ke attacker
+
+### Impact
+- Attacker bisa profiling aplikasi (bahasa, library, struktur) untuk targeted attack
+- User tidak perlu melihat detail error — cukup generic message
+
+### Fix
+Ganti dengan error message generik:
+```python
+@app.errorhandler(500)
+def internal_error(error):
+    # Log the real error internally
+    log_error(f'HTTP 500: {str(error)}')
+    return render_template('errors/500.html', 
+        error='Terjadi kesalahan internal. Tim teknis sudah diberitahu.'), 500
+```
+
+**Labels:** bug, security

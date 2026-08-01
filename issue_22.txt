@@ -1,0 +1,37 @@
+title:	[LOW] Settings update_admin: password disimpan plaintext tanpa hashing
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	22
+--
+## Deskripsi
+Endpoint settings/update-admin menyimpan password admin baru sebagai plaintext, tanpa memanggil generate_password_hash. Ini berbeda dengan flow login yang sudah support auto-upgrade ke hash.
+
+## Lokasi
+web/blueprints/settings/__init__.py, baris 134-139:
+if password:
+    ...
+    updates.append(password=%s)
+    params.append(password)
+
+## Dampak
+- Admin mengubah password via Settings -> password disimpan plaintext
+- Next login akan mendeteksi plaintext (tidak ada prefix hash) dan login dengan perbandingan langsung
+- Meskipun auto-upgrade akan meng-hash saat login berikutnya, masa jeda ini vulnerability
+
+## Perbaikan Saran
+Hash password sebelum disimpan:
+from werkzeug.security import generate_password_hash
+params.append(generate_password_hash(password))
+
+## Severity: LOW

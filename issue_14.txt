@@ -1,0 +1,57 @@
+title:	Audit Summary: 11 bugs & celah keamanan ditemukan (7 Jul 2026)
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	bug
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	14
+--
+## Audit Keamanan & Bug — MikroFun RADIUS v7.5.0
+
+**Tanggal Audit:** 7 Juli 2026
+**Target:** 103.253.213.111 + source code lokal
+**Metodologi:** Black-box (live site) + White-box (source code review)
+
+### Ringkasan Temuan
+
+| # | Severity | Issue |
+|---|----------|-------|
+| #3 | CRITICAL | Tripay callback crash saat private_key None |
+| #4 | HIGH | Moota callback matching by amount only |
+| #5 | HIGH | SSTI sandbox escape via format_rupiah filter |
+| #13 | HIGH | Portal hotspot render_template_string tanpa sandbox |
+| #6 | MEDIUM | Deteksi password hash fragile (colon check) |
+| #7 | MEDIUM | Error information disclosure di 500 handler |
+| #8 | MEDIUM | Missing CSP, HSTS, session cookie flags |
+| #9 | MEDIUM | No rate limiting di login (brute force) |
+| #10 | MEDIUM | No CSRF protection di form |
+| #11 | LOW | DB credentials & RADIUS secret hardcoded |
+| #12 | LOW | Landing page custom HTML dirender sebagai Jinja2 |
+
+### Area yang SUDAH AMAN
+- **SQL Injection**: Semua query menggunakan parameterized queries (`%s`) via `database.py` — TIDAK ditemukan SQL injection
+- **X-Frame-Options**: Sudah diset SAMEORIGIN (kecuali /portal/ yang memang perlu diframe MikroTik)
+- **Setup protection**: Endpoint /auth/setup hanya bisa diakses jika tabel users kosong
+- **Password hashing**: Menggunakan werkzeug `generate_password_hash` untuk user baru
+- **Payment signature verification**: Tripay, Midtrans, Moota, Duitku semua verifikasi signature sebelum proses
+- **Secret key**: Disimpan di database, bukan hardcoded
+
+### Rekomendasi Prioritas
+1. **Fix #13 & #5 dulu** — SSTI public endpoint + sandbox escape adalah celah paling serius
+2. **Fix #3** — Tripay callback harus handle null key, saat ini crash
+3. **Fix #4** — Moota matching harus pakai unique code
+4. **Fix #8** — Tambah CSP + HSTS + cookie flags untuk hardening
+5. **Fix #9** — Rate limiting pada login
+
+### Detail per issue
+Lihat masing-masing issue untuk root cause, impact, dan suggested fix.
+
+**Labels:** audit

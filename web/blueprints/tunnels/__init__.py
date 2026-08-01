@@ -22,7 +22,11 @@ def index():
         "SELECT * FROM tunnels ORDER BY created_at DESC",
         fetch=True
     ) or []
-    
+
+    # Check alive status (ping internal IP)
+    for t in tunnels:
+        t['alive'] = check_tunnel_alive(t.get('internal_ip', '')) if t.get('internal_ip') else False
+
     server_ip = get_server_public_ip()
     
     return render_template('tunnels/list.html', tunnels=tunnels, server_ip=server_ip)

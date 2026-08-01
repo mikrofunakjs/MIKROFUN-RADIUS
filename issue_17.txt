@@ -1,0 +1,34 @@
+title:	[HIGH] Reseller topup: nomor telepon hardcoded '08123456789'
+state:	OPEN
+author:	mikrofunakjs (Mikrofun AKJS)
+labels:	
+comments:	0
+assignees:	
+projects:	
+milestone:	
+issue-type:	
+parent:	
+sub-issues:	
+sub-issues-completed:	
+blocked-by:	
+blocking:	
+number:	17
+--
+## Deskripsi
+Di reseller/__init__.py, saat reseller tidak memiliki nomor telepon di database, customer_data.phone diisi dengan '08123456789' (hardcoded literal). Ini dikirim ke Tripay/Duitku sebagai data pelanggan.
+
+## Lokasi
+web/blueprints/reseller/__init__.py:
+- Line 247: customer_phone = '08123456789'
+- Line 290: 'phone': '08123456789'
+
+## Dampak
+- Duitku bisa menolak atau flag transaksi sebagai fraud karena nomor tidak valid
+- Nomor hardcoded bisa jadi milik orang lain yang menerima notifikasi
+- Data customer tidak akurat di laporan gateway
+
+## Perbaikan Saran
+1. Wajibkan reseller mengisi nomor telepon sebelum bisa topup
+2. Atau kosongkan phone jika tidak ada, jangan pakai dummy number
+
+## Severity: HIGH
