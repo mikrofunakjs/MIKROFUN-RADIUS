@@ -16,3 +16,9 @@ wa-service/auth_info_baileys/
 /draftissues.md
 /ROADMAPS/
 /dialog/
+.claude/
+
+# Catatan knowledge milik owner bisa memuat kredensial perangkat — repo ini publik.
+# Hanya template README yang ikut.
+/ai_noc/knowledge/*
+!/ai_noc/knowledge/README.md

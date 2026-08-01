@@ -154,6 +154,10 @@ isolate_thread.start()
 reminder_thread = threading.Thread(target=start_wa_reminder, daemon=True)
 reminder_thread.start()
 
+# Telegram Bot inbound (owner chat tanpa login web)
+from web.telegram_bot_helper import telegram_poll_loop
+threading.Thread(target=telegram_poll_loop, daemon=True).start()
+
 # Start Node.js WA service (runs as subprocess, not thread)
 start_wa_service()
 
