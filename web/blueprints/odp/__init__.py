@@ -210,12 +210,14 @@ def import_excel():
             flash('No selected file', 'error')
             return redirect(request.url)
             
-        if file and file.filename.endswith('.xlsx'):
+        if file and file.filename.lower().endswith('.xlsx'):
             import os
             from openpyxl import load_workbook
+            from werkzeug.utils import secure_filename
             from web.app import UPLOAD_FOLDER
-            
-            filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+
+            safe_name = secure_filename(file.filename) or 'import.xlsx'
+            filepath = os.path.join(UPLOAD_FOLDER, safe_name)
             file.save(filepath)
             
             try:

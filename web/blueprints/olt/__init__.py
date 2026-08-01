@@ -47,21 +47,25 @@ def edit(id):
         return redirect(url_for('olt.index'))
     return render_template('olt/form.html', olt=olt)
 
-@olt_bp.route('/delete/<int:id>')
+@olt_bp.route('/delete/<int:id>', methods=['POST'])
+@admin_required
 def delete(id):
     execute_query("DELETE FROM olts WHERE id=%s", (id,))
     flash('OLT dihapus.', 'success')
     return redirect(url_for('olt.index'))
 
 @olt_bp.route('/import', methods=['GET', 'POST'])
+@admin_required
 def import_excel():
     if request.method == 'POST':
         file = request.files.get('file')
-        if file and file.filename.endswith('.xlsx'):
+        if file and file.filename and file.filename.lower().endswith('.xlsx'):
             import os
             from openpyxl import load_workbook
+            from werkzeug.utils import secure_filename
             from web.app import UPLOAD_FOLDER
-            filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+            safe_name = secure_filename(file.filename) or 'import.xlsx'
+            filepath = os.path.join(UPLOAD_FOLDER, safe_name)
             file.save(filepath)
             try:
                 wb = load_workbook(filepath)

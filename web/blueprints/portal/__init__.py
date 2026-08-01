@@ -315,10 +315,14 @@ def check_payment():
     ref = request.args.get('invoice_id')
     if not ref:
         return jsonify({'paid': False}), 400
-        
-    # Check if transaction is PAID and optionally if voucher was generated
-    payment = execute_query("SELECT status, voucher_code FROM payments WHERE external_ref=%s OR id=%s LIMIT 1", (ref, ref), fetch_one=True)
-    
+
+    # Match on external_ref ONLY. Matching on the numeric primary key would let
+    # anyone enumerate ids and harvest other buyers' voucher codes.
+    payment = execute_query(
+        "SELECT status, voucher_code FROM payments WHERE external_ref=%s LIMIT 1",
+        (ref,), fetch_one=True
+    )
+
     if payment:
         status = payment['status']
         if status in ('paid', 'settlement', 'approved'):

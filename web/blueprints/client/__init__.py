@@ -120,32 +120,47 @@ def dashboard():
             pass
 
         return render_template('client/dashboard.html', user=user_data, active=active, payments=payments, usage=usage, today=datetime.date.today())
-    except Exception as e:
+    except Exception:
+        # Log the trace server-side; never expose it to the customer's browser.
         import traceback
-        return f"<h3>Client Portal Error</h3><pre>{traceback.format_exc()}</pre>"
+        print(f"[client.dashboard] error: {traceback.format_exc()}")
+        return render_template('errors/500.html', error='Terjadi kesalahan internal. Silakan coba lagi.'), 500
+
+def _get_customer_bill(customer_id):
+    """Authoritative bill amount for a customer (package price + PPN), server-side only."""
+    info = execute_query(
+        "SELECT p.price, p.tax_percent FROM customers c JOIN profiles p ON c.profile_id = p.id WHERE c.id = %s",
+        (customer_id,), fetch_one=True
+    )
+    if not info:
+        return 0
+    base_price = float(info.get('price', 0) or 0)
+    tax_percent = float(info.get('tax_percent', 0) or 0)
+    return int(base_price + (base_price * tax_percent / 100))
+
 
 @client_bp.route('/pay', methods=['GET', 'POST'])
 def pay():
     user = session.get('client_user')
     if not user: return redirect(url_for('client.login'))
-    
+
     # Get Settings
     settings_rows = execute_query("SELECT * FROM settings", fetch=True) or []
     settings = {row['setting_key']: row['setting_value'] for row in settings_rows}
-    
+
     active_gateway = settings.get('active_gateway', 'manual')
 
     if request.method == 'POST':
         payment_method = request.form.get('payment_method', 'manual')
-        raw_amount = request.form.get('amount', '0')
-        
-        # Safe amount cleaning for all methods
-        try:
-            amount = int(float(raw_amount))
-        except (ValueError, TypeError):
-            flash('Nominal pembayaran tidak valid.', 'error')
+
+        # The amount is NEVER taken from the form. The form field is read-only in
+        # the UI, but a crafted POST could otherwise pay Rp 1 for a full month
+        # since activate_customer extends the due date regardless of amount.
+        amount = _get_customer_bill(user['id'])
+        if amount <= 0:
+            flash('Tagihan tidak tersedia. Hubungi admin.', 'error')
             return redirect(url_for('client.pay'))
-        
+
         # --- TRIPAY PAYMENT ---
         if payment_method == 'tripay':
             method_code = request.form.get('method_code')
@@ -300,19 +315,10 @@ def pay():
         
     # Get Bank Accounts
     banks = execute_query("SELECT * FROM bank_accounts WHERE is_active=1", fetch=True) or []
-    
+
     # Get Customer Bill (Profile Price + PPN)
-    customer_info = execute_query(
-        "SELECT c.id, p.price, p.tax_percent FROM customers c JOIN profiles p ON c.profile_id = p.id WHERE c.id = %s",
-        (user['id'],), fetch_one=True
-    )
-    if customer_info:
-        base_price = float(customer_info.get('price', 0) or 0)
-        tax_percent = float(customer_info.get('tax_percent', 0) or 0)
-        total_bill = int(base_price + (base_price * tax_percent / 100))
-    else:
-        total_bill = 0
-    
+    total_bill = _get_customer_bill(user['id'])
+
     # Get Payment History
     payments = execute_query("SELECT * FROM payments WHERE customer_id=%s ORDER BY created_at DESC LIMIT 20", (user['id'],), fetch=True) or []
     
@@ -645,16 +651,12 @@ def ticket_view(id):
 def midtrans_token():
     user = session.get('client_user')
     if not user: return {'error': 'Unauthorized'}, 401
-    
-    amount = request.json.get('amount')
-    if not amount: return {'error': 'Invalid amount'}, 400
-    
-    # Safe conversion: handle strings like '500000.00'
-    try:
-        amount_int = int(float(amount))
-    except (ValueError, TypeError):
-        return {'error': 'Invalid amount format'}, 400
-    
+
+    # Amount is derived server-side, never trusted from the request body.
+    amount_int = _get_customer_bill(user['id'])
+    if amount_int <= 0:
+        return {'error': 'Tagihan tidak tersedia'}, 400
+
     # Generate Order ID
     import time
     order_id = f"M-{user['id']}-{int(time.time())}"

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <i class="bi bi-robot text-3xl text-primary"></i>
+        <div>
+            <h2 class="text-2xl font-bold">AI NOC Assistant</h2>
+            <p class="text-sm opacity-60">Tanya apa saja soal jaringan {{ app_name }} — AI akan jawab berdasarkan data real-time.</p>
+        </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-0">
+            <!-- Messages -->
+            <div id="chat-messages" class="p-6 space-y-4 h-[60vh] overflow-y-auto" style="max-height: 60vh;">
+                <div class="chat chat-start">
+                    <div class="chat-bubble chat-bubble-primary">
+                        Halo! Saya AI NOC {{ app_name }}. Tanya apa saja — status router, user bermasalah, billing, troubleshooting. Saya lihat data real-time dari database.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div class="border-t border-base-200 p-4">
+                <div class="flex gap-2">
+                    <input type="text" id="chat-input"
+                        class="input input-bordered flex-1"
+                        placeholder="Contoh: router mana yang offline? siapa user paling banyak traffic hari ini?"
+                        onkeydown="if(event.key==='Enter') sendMessage()">
+                    <button onclick="sendMessage()" id="chat-send" class="btn btn-primary">
+                        <i class="bi bi-send-fill"></i> Kirim
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saran cepat -->
+    <div class="mt-4 flex flex-wrap gap-2">
+        <button onclick="quickAsk('Router mana yang sedang offline?')" class="btn btn-xs btn-outline">Router offline?</button>
+        <button onclick="quickAsk('Ada user yang isolir hari ini?')" class="btn btn-xs btn-outline">User isolir hari ini?</button>
+        <button onclick="quickAsk('Siapa user paling banyak traffic?')" class="btn btn-xs btn-outline">Top traffic user?</button>
+        <button onclick="quickAsk('Ada masalah apa di jaringan sekarang?')" class="btn btn-xs btn-outline">Apa masalah saat ini?</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const messages = document.getElementById('chat-messages');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send');
+
+    function addMessage(text, isUser) {
+        const div = document.createElement('div');
+        div.className = 'chat ' + (isUser ? 'chat-end' : 'chat-start');
+        div.innerHTML = '<div class="chat-bubble ' + (isUser ? 'chat-bubble-accent' : 'chat-bubble-primary') + '">' + text.replace(/\n/g, '<br>') + '</div>';
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function quickAsk(q) {
+        input.value = q;
+        sendMessage();
+    }
+
+    async function executeAction(action, params) {
+        try {
+            const res = await fetch('/api/ai/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, params })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                if (data.result) {
+                    // READ_MIKROTIK: show raw result
+                    const resultText = JSON.stringify(data.result, null, 2).substring(0, 3000);
+                    addMessage('📡 Data MikroTik:\n<pre style="font-size:11px;max-height:300px;overflow:auto;white-space:pre-wrap">' + resultText + '</pre>', false);
+                } else {
+                    addMessage('✅ ' + data.message, false);
+                }
+            } else {
+                addMessage('❌ Gagal: ' + (data.error || 'unknown'), false);
+            }
+        } catch (e) {
+            addMessage('❌ Error eksekusi: ' + e.message, false);
+        }
+    }
+
+    async function sendMessage() {
+        const q = input.value.trim();
+        if (!q) return;
+
+        addMessage(q, true);
+        input.value = '';
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+
+        const aiDiv = document.createElement('div');
+        aiDiv.className = 'chat chat-start';
+        aiDiv.innerHTML = '<div class="chat-bubble chat-bubble-primary"><span class="loading loading-dots loading-sm"></span></div>';
+        messages.appendChild(aiDiv);
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            // Collect last 5 messages as history
+            const bubbles = messages.querySelectorAll('.chat-bubble');
+            const history = [];
+            const recent = Array.from(bubbles).slice(-6); // last 6 = 3 turns
+            for (let i = 0; i < recent.length; i++) {
+                const txt = recent[i].textContent.replace(/\n\s*/g, ' ').trim();
+                if (!txt || txt.includes('loading')) continue;
+                const role = recent[i].classList.contains('chat-bubble-accent') ? 'user' : 'assistant';
+                history.push({ role, content: txt.substring(0, 500) });
+            }
+
+            const res = await fetch('/api/ai/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: q, history: history.slice(-5) })
+            });
+            const data = await res.json();
+            const raw = data.answer || data.error || 'AI tidak merespon.';
+
+            // Detect [ACTION] block
+            const actionMatch = raw.match(/\[ACTION\]\s*([\s\S]*?)\s*\[\/ACTION\]/);
+            if (actionMatch) {
+                const actionJson = JSON.parse(actionMatch[1].trim());
+                const displayText = raw.replace(/\[ACTION\][\s\S]*\[\/ACTION\]/, '').trim();
+                const bubble = aiDiv.querySelector('.chat-bubble');
+                bubble.innerHTML = (displayText || 'Konfirmasi aksi:') + '<br><br>';
+
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-success btn-sm';
+                btn.textContent = '✅ Jalankan: ' + actionJson.action.replace('CREATE_', '');
+                btn.onclick = function() {
+                    this.disabled = true;
+                    this.textContent = 'Menjalankan...';
+                    executeAction(actionJson.action, actionJson.params);
+                };
+                bubble.appendChild(btn);
+            } else {
+                aiDiv.querySelector('.chat-bubble').innerHTML = raw.replace(/\n/g, '<br>');
+            }
+        } catch (e) {
+            aiDiv.querySelector('.chat-bubble').innerHTML = '⚠️ Gagal konek ke AI. Cek API key di Pengaturan > DeepSeek AI.';
+        }
+
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="bi bi-send-fill"></i> Kirim';
+        input.focus();
+    }
+</script>
+{% endblock %}

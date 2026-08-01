@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify, Response
 from web.database import execute_query
-import random, string, math, io, socket, struct, hashlib, os
+import random, string, math, io, socket, struct, hashlib, os, secrets
 from web.decorators import cs_or_admin_required
 from web.license_service import is_premium
 
@@ -12,7 +12,9 @@ def generate_code(length=6, prefix='', mode='mixed'):
     elif mode == 'upper':     chars = string.ascii_uppercase + string.digits
     elif mode == 'lower':     chars = string.ascii_lowercase + string.digits
     else:                     chars = string.ascii_letters + string.digits
-    return f"{prefix}{''.join(random.choice(chars) for _ in range(length))}"
+    # secrets, not random: voucher codes are bearer credentials worth money, and
+    # Mersenne Twister output is predictable once enough codes are observed.
+    return f"{prefix}{''.join(secrets.choice(chars) for _ in range(length))}"
 
 
 def format_duration(dur):
@@ -730,9 +732,10 @@ def import_excel():
             flash('Nama file kosong.', 'error')
             return redirect(request.url)
             
-        if file and file.filename.endswith('.xlsx'):
+        if file and file.filename.lower().endswith('.xlsx'):
             import os
             from openpyxl import load_workbook
+            from werkzeug.utils import secure_filename
             from web.app import app
             
             # CHECK LIMIT
@@ -746,7 +749,8 @@ def import_excel():
             upload_dir = app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'web', 'static', 'uploads'))
             if not os.path.exists(upload_dir): os.makedirs(upload_dir)
             
-            filepath = os.path.join(upload_dir, file.filename)
+            safe_name = secure_filename(file.filename) or 'import.xlsx'
+            filepath = os.path.join(upload_dir, safe_name)
             file.save(filepath)
             
             try:

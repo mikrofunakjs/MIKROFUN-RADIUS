@@ -3,6 +3,7 @@ MikroFun Web Panel
 """
 from flask import Flask, render_template, session, redirect, url_for, render_template_string, request
 from jinja2.sandbox import SandboxedEnvironment
+from jinja2 import TemplateNotFound
 import os
 import sys
 
@@ -50,7 +51,10 @@ if not verify_integrity():
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
-    from flask import send_from_directory
+    from flask import send_from_directory, abort
+    # This folder holds customer payment proofs; only staff may read it.
+    if not session.get('logged_in'):
+        abort(403)
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
@@ -414,8 +418,8 @@ def landing():
     # Only expose safe settings to the landing page and custom templates
     PUBLIC_SETTINGS_KEYS = [
         'app_name', 'company_name', 'company_address', 'company_phone', 'company_email',
-        'company_logo', 'company_background', 'landing_page_template', 
-        'landing_page_packages', 'active_gateway'
+        'company_logo', 'company_background', 'landing_page_template',
+        'landing_page_custom_html', 'landing_page_packages', 'active_gateway'
     ]
     
     settings_rows = execute_query("SELECT setting_key, setting_value FROM settings", fetch=True) or []
@@ -473,8 +477,12 @@ def landing():
     # Otherwise render standard themes 1, 2, 3
     if template_choice not in ['1', '2', '3']:
         template_choice = '1'
-        
-    return render_template(f'landing_{template_choice}.html', company=company, packages=packages, voucher_profiles=voucher_profiles, active_gateway=active_gateway, tripay_channels=tripay_channels, duitku_channels=duitku_channels, xendit_available=xendit_available, settings=settings_dict)
+
+    try:
+        return render_template(f'landing_{template_choice}.html', company=company, packages=packages, voucher_profiles=voucher_profiles, active_gateway=active_gateway, tripay_channels=tripay_channels, duitku_channels=duitku_channels, xendit_available=xendit_available, settings=settings_dict)
+    except TemplateNotFound:
+        # Built-in landing themes are optional; fall back instead of a 500.
+        return redirect(url_for('client.login'))
 
 @app.route('/')
 def index():
@@ -620,11 +628,404 @@ def index():
 
     return render_template('dashboard.html', stats=stats, title='Dashboard')
 
+# ── AI NOC API ──────────────────────────────────────
+def _ai_admin_guard():
+    """AI NOC exposes network/customer/billing data and can mutate the system,
+    so it is restricted to administrators, not every logged-in role."""
+    if not session.get('logged_in'):
+        return {"error": "unauthorized"}, 401
+    if session.get('role') != 'admin':
+        return {"error": "forbidden"}, 403
+    return None
+
+@app.route('/api/ai/diagnose', methods=['POST'])
+def api_ai_diagnose():
+    """POST JSON: {"symptom": "...", "username": "(optional)"} """
+    denied = _ai_admin_guard()
+    if denied:
+        return denied
+
+    from ai_noc.diagnosis import diagnose
+    try:
+        data = request.get_json(force=True)
+        symptom = data.get('symptom', '').strip()
+        username = data.get('username', '').strip() or None
+        if not symptom:
+            return {"error": "symptom required"}, 400
+        result = diagnose(symptom, username=username)
+        return result, 200
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+@app.route('/api/ai/wa-reply', methods=['POST'])
+def api_ai_wa_reply():
+    """
+    Baileys forwards incoming WA here. AI checks customer context and auto-replies.
+    POST: {"sender": "62812xxx", "text": "pak internet saya mati"}
+    """
+    from web.database import execute_query
+    from ai_noc.deepseek_client import chat as ai_chat
+    from web.wa_helper import send_wa
+
+    api_key = request.headers.get('X-API-Key', '')
+    wa_api_key = os.environ.get('WA_API_KEY')
+    if not wa_api_key:
+        return {"error": "WA_API_KEY not configured"}, 503
+    if api_key != wa_api_key:
+        return {"error": "unauthorized"}, 401
+
+    try:
+        data = request.get_json(force=True)
+        sender = data.get('sender', '')
+        text = data.get('text', '').strip()
+
+        if not sender or not text:
+            return {"error": "sender and text required"}, 400
+
+        # Find customer by phone
+        customer = execute_query(
+            """SELECT c.username, c.full_name, c.status, c.due_date,
+                      p.name AS profile, p.rate_limit
+               FROM customers c LEFT JOIN profiles p ON c.profile_id = p.id
+               WHERE REPLACE(REPLACE(c.phone, '+', ''), ' ', '') LIKE %s
+               LIMIT 1""",
+            (f"%{sender[-8:]}",), fetch_one=True
+        )
+
+        if not customer:
+            # Unknown number, AI still replies politely
+            reply = ai_chat(
+                "Anda CS MikroFun ISP. Orang ini bukan pelanggan terdaftar. "
+                "Balas singkat, tanya keperluan, tawarkan daftar. Maks 100 kata. Bahasa Indonesia.",
+                f"Nomor: {sender}\nPesan: {text}"
+            )
+            if reply:
+                send_wa(sender, reply)
+            return {"status": "replied", "customer": None}, 200
+
+        # Build context for AI
+        ctx = (
+            f"Pelanggan: {customer['full_name']} ({customer['username']})\n"
+            f"Status: {customer['status']}, Due: {customer['due_date']}\n"
+            f"Paket: {customer['profile']} ({customer['rate_limit']})\n"
+            f"Pesan pelanggan: {text}"
+        )
+
+        reply = ai_chat(
+            "Anda CS MikroFun ISP. Jawab pelanggan dengan cepat dan membantu. "
+            "Jika internet mati — cek status (isolir/jatuh tempo/aktif). "
+            "Jika billing — jelaskan cara bayar (TriPay, transfer bank). "
+            "Jika lainnya — bantu semampunya. Maks 150 kata. Bahasa Indonesia.",
+            ctx
+        )
+
+        if reply:
+            send_wa(sender, reply)
+        return {"status": "replied", "customer": customer['username']}, 200
+
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+@app.route('/api/ai/health')
+def api_ai_health():
+    """Check if AI NOC module is functional."""
+    denied = _ai_admin_guard()
+    if denied:
+        return denied
+
+    try:
+        from ai_noc.deepseek_client import chat
+        return {"status": "ok", "key_loaded": bool(os.environ.get("DEEPSEEK_API_KEY"))}, 200
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
+
+@app.route('/api/ai/ask', methods=['POST'])
+def api_ai_ask():
+    """General AI ask — natural language + ability to create (profiles, customers, vouchers)."""
+    denied = _ai_admin_guard()
+    if denied:
+        return denied
+
+    from web.database import execute_query
+    from ai_noc.deepseek_client import chat as ai_chat
+
+    try:
+        data = request.get_json(force=True)
+        question = data.get('question', '').strip()
+        if not question:
+            return {"error": "question required"}, 400
+
+        # ── Collect ALL system context for the AI ──
+        profiles  = execute_query("SELECT id, name, rate_limit, price, type, validity, validity_unit FROM profiles ORDER BY name", fetch=True) or []
+        routers   = execute_query("SELECT id, name, status, vpn_ip, ip_address, api_user, api_password FROM routers ORDER BY name", fetch=True) or []
+
+        cust_active = execute_query("SELECT COUNT(*) as c FROM customers WHERE status='active'", fetch_one=True)
+        cust_isolir = execute_query("SELECT COUNT(*) as c FROM customers WHERE status='isolated'", fetch_one=True)
+        users_online = execute_query("SELECT COUNT(*) as c FROM active_sessions", fetch_one=True)
+        routers_off = sum(1 for r in routers if r['status'] == 'offline')
+
+        # Payments today
+        pay_today = execute_query(
+            "SELECT COALESCE(SUM(amount),0) as total, COUNT(*) as cnt FROM payments WHERE DATE(created_at)=CURDATE() AND status='paid'",
+            fetch_one=True
+        )
+        pay_month = execute_query(
+            "SELECT COALESCE(SUM(amount),0) as total, COUNT(*) as cnt FROM payments WHERE YEAR(created_at)=YEAR(CURDATE()) AND MONTH(created_at)=MONTH(CURDATE()) AND status='paid'",
+            fetch_one=True
+        )
+
+        # Vouchers
+        vouch_active = execute_query("SELECT COUNT(*) as c FROM vouchers WHERE status='active'", fetch_one=True)
+        vouch_used = execute_query("SELECT COUNT(*) as c FROM vouchers WHERE status='used'", fetch_one=True)
+
+        # Per-user data (top traffic, online, due dates)
+        top_traffic = execute_query(
+            "SELECT username, ROUND(SUM(acctoutputoctets+acctinputoctets)/1048576,1) AS mb "
+            "FROM radacct_snapshots WHERE snapshot_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR) "
+            "GROUP BY username ORDER BY mb DESC LIMIT 5", fetch=True) or []
+
+        online_users = execute_query(
+            "SELECT a.username, a.framedipaddress, a.nas_ip, "
+            "TIMESTAMPDIFF(MINUTE, a.updated_at, NOW()) AS idle_min "
+            "FROM active_sessions a ORDER BY a.updated_at DESC LIMIT 10", fetch=True) or []
+
+        due_soon = execute_query(
+            "SELECT name, username, due_date, DATEDIFF(due_date, CURDATE()) AS days_left "
+            "FROM customers WHERE status='active' AND due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) "
+            "ORDER BY due_date LIMIT 10", fetch=True) or []
+
+        recent_pay = execute_query(
+            "SELECT c.name, p.amount, p.created_at FROM payments p "
+            "JOIN customers c ON p.customer_id=c.id WHERE p.status='paid' "
+            "ORDER BY p.created_at DESC LIMIT 5", fetch=True) or []
+
+        # ── Eager MikroTik data (light commands from online routers) ──
+        mikrotik_ctx = ""
+        for r in routers:
+            if r['status'] != 'online':
+                continue
+            try:
+                from web.mikrotik_api import MikrotikApi
+                ip = r.get('vpn_ip') or r.get('ip_address')
+                if not ip:
+                    continue
+                api = MikrotikApi(ip, timeout=3)
+                api.login(r.get('api_user', 'admin'), r.get('api_password', ''))
+                res = api.query(['/system/resource/print'])
+                if res:
+                    s = res[0]
+                    mikrotik_ctx += (
+                        f"  {r['name']} ({ip}): ROS {s.get('version','?')}, "
+                        f"CPU {s.get('cpu-load','?')}%, "
+                        f"RAM {int(s.get('free-memory',0))//1048576}MB free, "
+                        f"uptime {s.get('uptime','?')}\n"
+                    )
+            except Exception:
+                pass
+        if mikrotik_ctx:
+            mikrotik_ctx = "DATA MIKROTIK (real-time):\n" + mikrotik_ctx + "\n"
+        # ── End MikroTik context ──
+
+        profile_list = "\n".join(
+            f"  - {p['name']} ({p['type']}): {p['rate_limit']}, Rp{p['price']:,}, {p['validity']} {p['validity_unit']}"
+            for p in profiles
+        )
+        router_list = "\n".join(f"  - {r['name']} ({r['status']})" for r in routers)
+
+        # ── Build data-dense context string ──
+        top_traffic_str = "\n".join(
+            f"    {t['username']}: {t['mb']}MB" for t in top_traffic) if top_traffic else "    (tidak ada)"
+
+        online_str = "\n".join(
+            f"    {o['username']} @ {o['framedipaddress']} (NAS: {o['nas_ip']}, idle: {o['idle_min']}m)"
+            for o in online_users) if online_users else "    (tidak ada)"
+
+        due_str = "\n".join(
+            f"    {d['username']}: {d['due_date']} ({d['days_left']} hari lagi)"
+            for d in due_soon) if due_soon else "    (tidak ada)"
+
+        pay_str = "\n".join(
+            f"    {p['name']} Rp{p['amount']:,.0f} ({p['created_at']})"
+            for p in recent_pay) if recent_pay else "    (tidak ada)"
+
+        data_ctx = (
+            f"PELANGGAN: {cust_active.get('c',0) if cust_active else 0} aktif"
+            f", {cust_isolir.get('c',0) if cust_isolir else 0} isolir"
+            f", {users_online.get('c',0) if users_online else 0} online\n"
+            f"ROUTER: {len(routers)} total, {routers_off} offline\n"
+            f"PAKET: {len(profiles)} tersedia\n"
+            f"VOUCHER: {vouch_active.get('c',0) if vouch_active else 0} aktif"
+            f", {vouch_used.get('c',0) if vouch_used else 0} terpakai\n"
+            f"KEUANGAN: hari ini Rp{pay_today.get('total',0) if pay_today else 0:,.0f}"
+            f" ({pay_today.get('cnt',0) if pay_today else 0} tx), "
+            f"bulan ini Rp{pay_month.get('total',0) if pay_month else 0:,.0f}"
+            f" ({pay_month.get('cnt',0) if pay_month else 0} tx)\n"
+            f"TOP TRAFIK (1 jam):\n{top_traffic_str}\n"
+            f"USER ONLINE:\n{online_str}\n"
+            f"JATUH TEMPO (7 hari):\n{due_str}\n"
+            f"PEMBAYARAN TERBARU:\n{pay_str}\n"
+            f"{mikrotik_ctx}"
+        )
+
+        system = (
+            "Anda AI Operator MikroFun ISP. Anda punya akses penuh ke data real-time.\n\n"
+            f"DATA REAL-TIME:\n{data_ctx}\n"
+            "HAL YANG BISA ANDA LAKUKAN:\n"
+            "- Jawab pertanyaan PAKAI data di atas (jumlah pelanggan, keuangan, router, dll)\n"
+            "- Buat paket/pelanggan/voucher (CREATE_PROFILE, CREATE_CUSTOMER, CREATE_VOUCHER)\n"
+            "- Baca data MikroTik via API (READ_MIKROTIK) — perintah RouterOS:\n"
+            "  /interface/print .proplist=name,type,disabled,comment,running\n"
+            "  /ppp/active/print\n"
+            "  /ip/hotspot/active/print\n"
+            "  /ip/dhcp-server/lease/print\n"
+            "  /queue/simple/print\n"
+            "  /log/print\n"
+            "  /system/resource/print\n\n"
+            "ATURAN:\n"
+            "- Ditanya data → JAWAB pakai angka dari DATA REAL-TIME di atas.\n"
+            "- Data tidak ada → bilang 'saya belum punya data itu', jangan mengarang.\n"
+            "- Diminta BUAT → kumpulkan field, kalau lengkap balas:\n"
+            "  [ACTION]\n"
+            "  {\"action\": \"CREATE_...\", \"params\": {...}}\n"
+            "  [/ACTION]\n"
+            "- Bahasa Indonesia, ringkas.\n\n"
+            f"DAFTAR PAKET:\n{profile_list}\n\n"
+            f"DAFTAR ROUTER:\n{router_list}"
+        )
+
+        # Build conversation prefix from history
+        history = data.get('history', [])
+        history_prefix = ""
+        if history:
+            lines = []
+            for h in history[-10:]:  # max 10 messages
+                role = "Operator" if h.get('role') == 'user' else "AI"
+                lines.append(f"{role}: {h.get('content', '')}")
+            history_prefix = "RIWAYAT PERCAKAPAN:\n" + "\n".join(lines) + "\n\n"
+
+        answer = ai_chat(system, f"{history_prefix}Pesan operator: {question}", max_tokens=800)
+        return {"answer": answer or "AI tidak tersedia (API key belum diset?)"}, 200
+
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+
+@app.route('/api/ai/execute', methods=['POST'])
+def api_ai_execute():
+    """Execute AI-suggested action: create profile, customer, or voucher."""
+    denied = _ai_admin_guard()
+    if denied:
+        return denied
+
+    from web.database import execute_query
+    from werkzeug.security import generate_password_hash
+
+    try:
+        data = request.get_json(force=True)
+        action = data.get('action', '')
+        params = data.get('params', {})
+
+        if action == 'CREATE_PROFILE':
+            p = params
+            required = ['name', 'rate_limit', 'price', 'type', 'validity', 'validity_unit']
+            missing = [f for f in required if not p.get(f)]
+            if missing:
+                return {"error": f"Field kurang: {', '.join(missing)}"}, 400
+
+            execute_query(
+                "INSERT INTO profiles (name, rate_limit, price, type, validity, validity_unit) "
+                "VALUES (%s,%s,%s,%s,%s,%s)",
+                (p['name'], p['rate_limit'], p['price'], p['type'], p['validity'], p['validity_unit'])
+            )
+            return {"ok": True, "message": f"Paket '{p['name']}' berhasil dibuat"}, 200
+
+        elif action == 'CREATE_CUSTOMER':
+            p = params
+            required = ['name', 'username', 'password', 'profile_name']
+            missing = [f for f in required if not p.get(f)]
+            if missing:
+                return {"error": f"Field kurang: {', '.join(missing)}"}, 400
+
+            # Resolve profile name to ID
+            prof = execute_query("SELECT id FROM profiles WHERE name=%s", (p['profile_name'],), fetch_one=True)
+            if not prof:
+                return {"error": f"Paket '{p['profile_name']}' tidak ditemukan"}, 400
+
+            hashed = generate_password_hash(p['password'])
+            execute_query(
+                "INSERT INTO customers (name, username, password, service_type, profile_id, phone, address, due_date, status, billing_type) "
+                "VALUES (%s,%s,%s,'pppoe',%s,%s,%s,%s,'active','prepaid')",
+                (p['name'], p['username'], hashed, prof['id'],
+                 p.get('phone', ''), p.get('address', ''), p.get('due_date'))
+            )
+            return {"ok": True, "message": f"Pelanggan '{p['name']}' ({p['username']}) berhasil dibuat"}, 200
+
+        elif action == 'CREATE_VOUCHER':
+            p = params
+            required = ['code', 'profile_name', 'duration']
+            missing = [f for f in required if not p.get(f)]
+            if missing:
+                return {"error": f"Field kurang: {', '.join(missing)}"}, 400
+
+            prof = execute_query("SELECT id FROM profiles WHERE name=%s AND type='voucher'", (p['profile_name'],), fetch_one=True)
+            if not prof:
+                return {"error": f"Paket voucher '{p['profile_name']}' tidak ditemukan"}, 400
+
+            execute_query(
+                "INSERT INTO vouchers (code, profile_id, duration, status, created_at) "
+                "VALUES (%s,%s,%s,'active',NOW())",
+                (p['code'], prof['id'], p['duration'])
+            )
+            return {"ok": True, "message": f"Voucher '{p['code']}' berhasil dibuat"}, 200
+
+        elif action == 'READ_MIKROTIK':
+            p = params
+            required = ['router', 'command']
+            missing = [f for f in required if not p.get(f)]
+            if missing:
+                return {"error": f"Field kurang: {', '.join(missing)}"}, 400
+
+            # This action is read-only by contract: refuse anything that could
+            # add/set/remove state on the router, even if the model asks for it.
+            command = str(p['command']).strip()
+            if not command.endswith('/print') and '/print ' not in command:
+                return {"error": "READ_MIKROTIK hanya mengizinkan perintah '/print'"}, 400
+
+            rtr = execute_query(
+                "SELECT vpn_ip, ip_address, api_user, api_password FROM routers WHERE name=%s LIMIT 1",
+                (p['router'],), fetch_one=True
+            )
+            if not rtr:
+                return {"error": f"Router '{p['router']}' tidak ditemukan"}, 400
+
+            ip = rtr.get('vpn_ip') or rtr.get('ip_address')
+            if not ip:
+                return {"error": f"Router '{p['router']}' tidak punya IP"}, 400
+
+            from web.mikrotik_api import MikrotikApi
+            api = MikrotikApi(ip)
+            if not api.login(rtr.get('api_user', 'admin'), rtr.get('api_password', '')):
+                return {"error": f"Login ke router {ip} gagal"}, 400
+            result = api.query([command])
+            return {"ok": True, "result": result}, 200
+
+        return {"error": f"Unknown action: {action}"}, 400
+
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+@app.route('/ai-chat')
+def ai_chat_page():
+    if not session.get('logged_in'):
+        return redirect(url_for('auth.login'))
+    if session.get('role') != 'admin':
+        return redirect(url_for('index'))
+    return render_template('ai_chat.html', title='AI NOC Chat')
+
 @app.context_processor
 def inject_premium_status():
     from web.license_service import is_premium
     return dict(is_premium=is_premium())
 
 if __name__ == '__main__':
-    # Ensure debug is False in production
     app.run(debug=False, host='0.0.0.0', port=5000)

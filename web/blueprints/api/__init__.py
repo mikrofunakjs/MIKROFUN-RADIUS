@@ -645,13 +645,14 @@ def public_track_voucher():
         
     if not ref:
         return "Reference invalid (No ref/merchant_ref provided)", 400
-        
+
     # Attempt to find by external_ref, strictly limiting columns
     payment = execute_query("SELECT external_ref, status, voucher_code FROM payments WHERE external_ref=%s", (ref,), fetch_one=True)
-    
+
     if not payment:
-        # Debugging: show what we searched for
-        return f"Transaksi tidak ditemukan untuk referensi: {ref}", 404
-        
+        # Never echo the raw reference back — it is attacker-controlled and would
+        # be reflected straight into an HTML response (XSS).
+        return "Transaksi tidak ditemukan untuk referensi tersebut.", 404
+
     from flask import render_template
     return render_template('public/track_voucher.html', payment=payment)

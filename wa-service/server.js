@@ -9,7 +9,13 @@ const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.WA_API_KEY || 'mikrofun-wa-secret-key';
+const crypto = require('crypto');
+
+if (!process.env.WA_API_KEY) {
+    console.error('FATAL: WA_API_KEY environment variable not set');
+    process.exit(1);
+}
+const API_KEY = process.env.WA_API_KEY;
 
 let sock;
 let currentQR = null;
@@ -25,6 +31,15 @@ const MAX_REQUESTS_PER_WINDOW = 30;
 const MAX_PER_TARGET_WINDOW = 5;
 const targetRateMap = new Map();
 
+function normalizePhoneNumber(target) {
+    // Normalize phone number to digits-only form for rate-limit key
+    let normalized = target.toString();
+    if (normalized.includes('@')) {
+        normalized = normalized.split('@')[0];
+    }
+    return normalized.replace(/\D/g, '');
+}
+
 function checkRateLimit(target) {
     const now = Date.now();
     const globalKey = 'global';
@@ -37,7 +52,7 @@ function checkRateLimit(target) {
     }
 
     if (target) {
-        const targetKey = target.replace(/\D/g, '');
+        const targetKey = normalizePhoneNumber(target);
         if (!targetRateMap.has(targetKey)) {
             targetRateMap.set(targetKey, []);
         }
@@ -47,9 +62,6 @@ function checkRateLimit(target) {
         }
         targetTimestamps.push(now);
         targetRateMap.set(targetKey, targetTimestamps);
-        if (targetTimestamps.length === 0) {
-            targetRateMap.delete(targetKey);
-        }
     }
 
     globalTimestamps.push(now);
@@ -57,9 +69,23 @@ function checkRateLimit(target) {
     return { allowed: true };
 }
 
+// Drop stale per-target buckets so the map does not grow unbounded over time.
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, timestamps] of targetRateMap) {
+        if (!timestamps.some(t => now - t < RATE_LIMIT_WINDOW)) {
+            targetRateMap.delete(key);
+        }
+    }
+}, RATE_LIMIT_WINDOW).unref();
+
 function authMiddleware(req, res, next) {
-    const key = req.headers['x-api-key'];
-    if (!key || key !== API_KEY) {
+    const key = req.headers['x-api-key'] || '';
+    try {
+        if (!crypto.timingSafeEqual(Buffer.from(key), Buffer.from(API_KEY))) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+    } catch (e) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
     next();
@@ -187,6 +213,40 @@ async function connectToWhatsApp() {
         });
 
         sock.ev.on('creds.update', saveCreds);
+
+        // ── AI CS: Forward incoming messages to MikroFun backend ──
+        sock.ev.on('messages.upsert', async ({ messages, type }) => {
+            if (type !== 'notify') return;
+            for (const msg of messages) {
+                const isGroup = msg.key?.remoteJid?.endsWith('@g.us');
+                const isOwn = msg.key?.fromMe;
+                if (isGroup || isOwn) continue;
+
+                const text = msg.message?.conversation
+                          || msg.message?.extendedTextMessage?.text
+                          || '';
+                if (!text || !text.trim()) continue;
+
+                const sender = msg.key?.remoteJid?.split('@')[0] || '';
+
+                // Apply rate limit to prevent financial DoS via excessive AI calls
+                const rateCheck = checkRateLimit(sender);
+                if (!rateCheck.allowed) {
+                    console.log(`AI CS: Rate limit hit for ${sender}`);
+                    continue;
+                }
+
+                try {
+                    await fetch('http://127.0.0.1:5000/api/ai/wa-reply', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+                        body: JSON.stringify({ sender, text })
+                    });
+                } catch (e) {
+                    console.log('AI CS forward error:', e.message);
+                }
+            }
+        });
     } catch (err) {
         console.error('Failed to initialize WhatsApp:', err);
         connectionStatus = 'offline';
@@ -281,6 +341,9 @@ app.post('/connect', authMiddleware, async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`WhatsApp Gateway Service running on http://127.0.0.1:${PORT}`);
+// Bind to loopback only: this service is consumed by the local Python backend,
+// it must not be reachable from the internet.
+const HOST = process.env.WA_BIND_HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => {
+    console.log(`WhatsApp Gateway Service running on http://${HOST}:${PORT}`);
 });

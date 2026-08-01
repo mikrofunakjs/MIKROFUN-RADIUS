@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from decorators import admin_required
+from web.decorators import admin_required
 from web.database import execute_query
-from web.wa_helper import WA_API_KEY
+from web.wa_helper import _get_wa_api_key
 import requests
 import socket
 import ipaddress
@@ -156,7 +156,11 @@ def get_wa_status():
 
     try:
         safe_url = _resolve_endpoint_url(endpoint, '/status')
-        resp = requests.get(safe_url, timeout=5, headers={'X-API-Key': WA_API_KEY})
+        try:
+            wa_api_key = _get_wa_api_key()
+        except RuntimeError:
+            return jsonify({'status': 'offline', 'error': 'WA_API_KEY tidak dikonfigurasi.'})
+        resp = requests.get(safe_url, timeout=5, headers={'X-API-Key': wa_api_key})
         return jsonify(resp.json())
     except requests.exceptions.ConnectionError:
         return jsonify({'status': 'offline', 'error': 'Tidak dapat terhubung ke service Node.js.'})
@@ -179,7 +183,11 @@ def logout_wa():
 
     try:
         safe_url = _resolve_endpoint_url(endpoint, '/logout')
-        resp = requests.post(safe_url, timeout=5, headers={'X-API-Key': WA_API_KEY})
+        try:
+            wa_api_key = _get_wa_api_key()
+        except RuntimeError:
+            return jsonify({'success': False, 'error': 'WA_API_KEY tidak dikonfigurasi.'})
+        resp = requests.post(safe_url, timeout=5, headers={'X-API-Key': wa_api_key})
         return jsonify(resp.json())
     except requests.exceptions.ConnectionError:
         return jsonify({'success': False, 'error': 'Tidak dapat terhubung ke service Node.js.'})

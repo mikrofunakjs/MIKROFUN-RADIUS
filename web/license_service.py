@@ -111,7 +111,7 @@ def is_premium():
     global _premium_cache
 
     now = time.time()
-    if _premium_cache['status'] is not None and (now - _premium_cache['last_checked'] < 300):
+    if _premium_cache['status'] is not None and (now - _premium_cache['last_checked'] < 2592000):  # 30 days
         return _premium_cache['status']
 
     key = get_license_from_db()
@@ -135,7 +135,10 @@ def is_premium():
 def get_isp_name():
     if is_premium():
         try:
-            from database import execute_query
+            try:
+                from web.database import execute_query
+            except ImportError:
+                from database import execute_query
             row = execute_query(
                 "SELECT setting_value FROM settings WHERE setting_key='company_name'",
                 fetch_one=True

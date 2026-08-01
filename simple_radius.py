@@ -34,14 +34,9 @@ try:
     DB_NAME = DB_CONFIG['database']
     CONFIG_STATUS = "SUCCESS: Using web.config"
 except Exception as e:
-    # Fallback or development defaults
-    DB_HOST = 'localhost'
-    DB_USER = 'radius'
-    DB_PASS = 'radiuspass123'
-    DB_NAME = 'radius_db'
-    DEFAULT_SECRET = 'testing123'
-    RADIUS_LOG_PATH = 'radius.log'
-    CONFIG_STATUS = f"WARNING: Falling back to defaults ({e})"
+    print(f"FATAL: Cannot load configuration from web.config: {e}")
+    print("FATAL: DB_PASSWORD, RADIUS_SECRET must be set via environment variables")
+    raise RuntimeError("Configuration initialization failed") from e
 
 AUTH_PORT = 1812
 ACCT_PORT = 1813
@@ -353,10 +348,9 @@ class RadiusServer:
         log.info(f"Auth listening on :{AUTH_PORT}")
         log.info(f"Acct listening on :{ACCT_PORT}")
         
-        # Log secret info untuk debugging
+        # Fingerprint only — never write the shared secret itself to the log file.
         s = get_secret()
-        log.info(f"RADIUS Secret (first 8 chars MD5): {hashlib.md5(s).hexdigest()[:8]}...")
-        log.info(f"Default secret: {DEFAULT_SECRET if isinstance(DEFAULT_SECRET, str) else DEFAULT_SECRET.decode()}")
+        log.info(f"RADIUS Secret fingerprint (MD5 prefix): {hashlib.md5(s).hexdigest()[:8]}... len={len(s)}")
 
         threading.Thread(target=self._loop, args=(self.auth_sock, self.handle_auth), daemon=True).start()
         threading.Thread(target=self._loop, args=(self.acct_sock, self.handle_acct), daemon=True).start()
@@ -845,6 +839,7 @@ class RadiusServer:
     def _update_active_session(self, status, username, nas_ip, session_id, mac_address=None, input_octets=0, output_octets=0):
         """Update active_sessions table based on Acct-Status-Type"""
         username = username.strip().lower() if username else ""
+        conn = None
         try:
             conn = get_db()
             if not conn: return
@@ -929,7 +924,7 @@ class RadiusServer:
                         "UPDATE vouchers SET quota_used = quota_used + %s WHERE code = %s",
                         (total_bytes, username)
                     )
-                    log.info(f"  📊 Quota for {username}: +{total_bytes} bytes (session {acct_session_id})")
+                    log.info(f"  📊 Quota for {username}: +{total_bytes} bytes (session {session_id})")
             
             conn.commit()
             cur.close()

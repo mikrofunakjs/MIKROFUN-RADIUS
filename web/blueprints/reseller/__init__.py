@@ -1,6 +1,6 @@
 """Reseller Portal Blueprint (Mobile First UI)"""
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
-import string, random, datetime
+import string, random, datetime, secrets
 from web.database import execute_query
 from web.mikrotik_api import MikrotikApi
 import time
@@ -147,10 +147,10 @@ def buy():
         buy_price = round(normal_price - (normal_price * discount_percent / 100), 2)
         
         # Generate kode voucher unik
-        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
         # Pastikan kode belum ada
         while execute_query("SELECT id FROM vouchers WHERE code=%s", (code,), fetch_one=True):
-            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
         try:
             duration_hours = profile.get('validity') or 24
@@ -405,9 +405,9 @@ def bulk_buy():
         try:
             codes = []
             for _ in range(qty):
-                code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
                 while execute_query("SELECT id FROM vouchers WHERE code=%s", (code,), fetch_one=True):
-                    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                    code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
                 duration_hours = profile.get('validity') or 24
                 execute_query(

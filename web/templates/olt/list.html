@@ -91,11 +91,13 @@
                         title="Edit Configuration">
                         <i class="bi bi-gear-fill"></i>
                     </a>
-                    <a href="{{ url_for('olt.delete', id=o.id) }}" class="btn btn-ghost btn-sm btn-square text-error"
-                        onclick="return confirm('Apakah Anda yakin ingin menghapus infrastruktur OLT {{ o.name }}?')"
-                        title="Decommission">
-                        <i class="bi bi-trash3-fill"></i>
-                    </a>
+                    <form method="POST" action="{{ url_for('olt.delete', id=o.id) }}" class="inline"
+                        onsubmit="return confirm('Apakah Anda yakin ingin menghapus infrastruktur OLT {{ o.name }}?')">
+                        <button type="submit" class="btn btn-ghost btn-sm btn-square text-error"
+                            title="Decommission">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
+                    </form>
                 </div>
                 <button class="btn btn-primary btn-sm px-4 rounded-xl">
                     Full Details <i class="bi bi-arrow-right-short"></i>

@@ -3,14 +3,26 @@ import subprocess
 import re
 import os
 from web.database import execute_query
+from web.decorators import admin_required
 
 settings_bp = Blueprint('settings', __name__)
 
-@settings_bp.route('/', methods=['GET', 'POST'])
-def index():
+# ZeroTier network IDs are always 16 lowercase hex characters.
+ZT_NETWORK_ID_RE = re.compile(r'^[0-9a-fA-F]{16}$')
+
+
+def _admin_api_guard():
+    """Return a JSON 403/401 response for non-admin callers on AJAX endpoints."""
     if not session.get('logged_in'):
-        return redirect(url_for('auth.login'))
-        
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'Akses ditolak. Hanya Administrator.'}), 403
+    return None
+
+
+@settings_bp.route('/', methods=['GET', 'POST'])
+@admin_required
+def index():
     if request.method == 'POST':
         radius_secret = request.form.get('radius_secret')
         
@@ -45,7 +57,16 @@ def index():
 
         # Company Profile Settings
         company_fields = ['company_name', 'company_address', 'company_phone', 'company_email']
-        
+
+        # AI/DeepSeek settings
+        deepseek_key = request.form.get('deepseek_api_key')
+        if deepseek_key is not None:
+            execute_query(
+                "INSERT INTO settings (setting_key, setting_value) VALUES ('deepseek_api_key', %s) "
+                "ON DUPLICATE KEY UPDATE setting_value=%s",
+                (deepseek_key, deepseek_key)
+            )
+
         for field in company_fields:
             val = request.form.get(field)
             if val is not None:
@@ -70,10 +91,8 @@ def index():
     return render_template('settings/index.html', settings=settings_dict)
 
 @settings_bp.route('/activate-license', methods=['POST'])
+@admin_required
 def activate_license():
-    if not session.get('logged_in'):
-        return redirect(url_for('auth.login'))
-        
     license_key = request.form.get('license_key')
     
     # 1. Online Activation
@@ -88,10 +107,8 @@ def activate_license():
     return redirect(url_for('settings.index'))
 
 @settings_bp.route('/deactivate-license')
+@admin_required
 def deactivate_license():
-    if not session.get('logged_in'):
-        return redirect(url_for('auth.login'))
-        
     from web.license_service import remove_license_from_db
     remove_license_from_db()
     import web.license_service as ls
@@ -116,51 +133,60 @@ def get_setting(key, default=None):
         return default
 
 @settings_bp.route('/update-admin', methods=['POST'])
+@admin_required
 def update_admin():
-    if not session.get('logged_in'):
-        return redirect(url_for('auth.login'))
-        
-    username = request.form.get('username')
+    username = (request.form.get('username') or '').strip()
     password = request.form.get('password')
     confirm_password = request.form.get('confirm_password')
-    
-    if not username:
-        flash('Username tidak boleh kosong.', 'error')
+
+    if len(username) < 3:
+        flash('Username minimal 3 karakter.', 'error')
         return redirect(url_for('settings.index'))
-        
+
+    # Always act on the account that is currently logged in, never a hardcoded id.
+    current_id = session.get('user_id')
+    if not current_id:
+        flash('Sesi tidak valid. Silakan login ulang.', 'error')
+        return redirect(url_for('auth.logout'))
+
     updates = ["username=%s"]
     params = [username]
-    
+
     if password:
         if password != confirm_password:
             flash('Password konfirmasi tidak cocok.', 'error')
             return redirect(url_for('settings.index'))
+        if len(password) < 8:
+            flash('Password minimal 8 karakter.', 'error')
+            return redirect(url_for('settings.index'))
         from werkzeug.security import generate_password_hash
         updates.append("password=%s")
         params.append(generate_password_hash(password))
-        
-    # Update Admin (Assuming ID 1 or current logged in user if we tracked ID)
-    # Since we only have one admin essentially in this simple version, let's update ID 1 or WHERE role='admin'
-    # Better: Update based on current session username before change?
-    # For simplicity in this project context: Update ID 1 (Default Admin)
-    
+
+    # Reject a username already taken by a different account
+    clash = execute_query(
+        "SELECT id FROM users WHERE username=%s AND id<>%s LIMIT 1",
+        (username, current_id), fetch_one=True
+    )
+    if clash:
+        flash('Username sudah dipakai akun lain.', 'error')
+        return redirect(url_for('settings.index'))
+
     try:
-        sql = f"UPDATE users SET {', '.join(updates)} WHERE id=1" # Assumes Default Admin is ID 1
-        execute_query(sql, tuple(params))
-        
+        sql = f"UPDATE users SET {', '.join(updates)} WHERE id=%s AND role='admin'"
+        execute_query(sql, tuple(params) + (current_id,))
+
         # Update Session
         session['username'] = username
         flash('Profil Admin berhasil diperbarui.', 'success')
     except Exception as e:
         flash(f'Gagal memperbarui profil: {e}', 'error')
-        
+
     return redirect(url_for('settings.index'))
 
 @settings_bp.route('/backup')
+@admin_required
 def backup():
-    if not session.get('logged_in'):
-        return redirect(url_for('auth.login'))
-        
     from web.backup_helper import backup_database
     sql_content, error = backup_database()
     
@@ -181,10 +207,8 @@ def backup():
     )
 
 @settings_bp.route('/restore', methods=['POST'])
+@admin_required
 def restore():
-    if not session.get('logged_in'):
-        return redirect(url_for('auth.login'))
-        
     file = request.files.get('backup_file')
     if not file:
         flash('Tidak ada file yang dipilih.', 'error')
@@ -210,9 +234,10 @@ def restore():
 
 @settings_bp.route('/backup-telegram', methods=['POST'])
 def backup_telegram():
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-        
+    denied = _admin_api_guard()
+    if denied:
+        return denied
+
     from web.backup_helper import backup_database
     
     # Generate the backup and send it to telegram internally
@@ -240,13 +265,14 @@ def check_zt_binary():
 
 @settings_bp.route('/zerotier/join', methods=['POST'])
 def zerotier_join():
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-    
-    network_id = request.form.get('network_id')
-    if not network_id or len(network_id) != 16:
-        return jsonify({'success': False, 'message': 'Network ID tidak valid (harus 16 karakter)'})
-    
+    denied = _admin_api_guard()
+    if denied:
+        return denied
+
+    network_id = (request.form.get('network_id') or '').strip()
+    if not ZT_NETWORK_ID_RE.match(network_id):
+        return jsonify({'success': False, 'message': 'Network ID tidak valid (harus 16 karakter hexadecimal)'})
+
     zt_bin = check_zt_binary()
     if not zt_bin:
         return jsonify({
@@ -262,10 +288,12 @@ def zerotier_join():
             (network_id, network_id)
         )
         
-        # 2. Join Network via CLI
-        cmd = f"sudo {zt_bin} join {network_id}"
-        process = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        
+        # 2. Join Network via CLI (argument list, never a shell string)
+        process = subprocess.run(
+            ["sudo", zt_bin, "join", network_id],
+            capture_output=True, text=True, timeout=15
+        )
+
         if process.returncode != 0:
             error_msg = process.stderr or process.stdout
             return jsonify({'success': False, 'message': f'Gagal join: {error_msg}'})
@@ -276,21 +304,23 @@ def zerotier_join():
 
 @settings_bp.route('/zerotier/leave', methods=['POST'])
 def zerotier_leave():
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-    
+    denied = _admin_api_guard()
+    if denied:
+        return denied
+
     try:
-        network_id = get_setting('zt_network_id')
+        network_id = (get_setting('zt_network_id') or '').strip()
         if not network_id:
             return jsonify({'success': False, 'message': 'Network ID tidak ditemukan'})
-            
+        if not ZT_NETWORK_ID_RE.match(network_id):
+            return jsonify({'success': False, 'message': 'Network ID tersimpan tidak valid.'})
+
         zt_bin = check_zt_binary()
         if not zt_bin:
             return jsonify({'success': False, 'message': 'Gagal: Perintah zerotier-cli tidak ditemukan.'})
 
-        cmd = f"sudo {zt_bin} leave {network_id}"
-        subprocess.run(cmd, shell=True)
-        
+        subprocess.run(["sudo", zt_bin, "leave", network_id], capture_output=True, timeout=15)
+
         # Clear IP from settings
         execute_query("DELETE FROM settings WHERE setting_key = 'zt_vps_ip'")
         
@@ -300,9 +330,10 @@ def zerotier_leave():
 
 @settings_bp.route('/zerotier/status')
 def zerotier_status():
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-        
+    denied = _admin_api_guard()
+    if denied:
+        return denied
+
     network_id = get_setting('zt_network_id')
     if not network_id:
         return jsonify({'status': 'none'})
@@ -313,9 +344,11 @@ def zerotier_status():
 
     try:
         # Check ZT status and IP
-        cmd = f"sudo {zt_bin} listnetworks"
-        process = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        
+        process = subprocess.run(
+            ["sudo", zt_bin, "listnetworks"],
+            capture_output=True, text=True, timeout=15
+        )
+
         status = "unknown"
         zt_ip = ""
         
@@ -331,8 +364,9 @@ def zerotier_status():
                          pass
 
         # Robust IP detection via ip addr
-        ip_cmd = "ip addr show"
-        ip_process = subprocess.run(ip_cmd, shell=True, capture_output=True, text=True)
+        ip_process = subprocess.run(
+            ["ip", "addr", "show"], capture_output=True, text=True, timeout=15
+        )
         # Search for zt interface IP
         match = re.search(r'inet\s+(\d+\.\d+\.\d+\.\d+).*zt', ip_process.stdout)
         if match:

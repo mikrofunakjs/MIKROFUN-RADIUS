@@ -646,6 +646,7 @@ def execute_query(query, params=None, fetch=False, fetch_one=False):
     conn = get_db()
     if not conn:
         return [] if fetch else (None if not fetch_one else {})
+    cur = None
     try:
         cur = conn.cursor(dictionary=True, buffered=True)
         cur.execute(query, params or ())
@@ -660,10 +661,10 @@ def execute_query(query, params=None, fetch=False, fetch_one=False):
                 result = cur.lastrowid if cur.lastrowid else None
             else:
                 result = cur.rowcount
-        cur.close()
-        conn.close()
         return result
-    except Error as e:
+    except Exception as e:
+        # Catch Exception, not just mysql Error: any escaping exception used to
+        # leak the pooled connection and eventually exhaust the pool.
         err_msg = f"Query error: {e}\n  SQL: {query}\n  Params: {params}"
         print(err_msg)
         try:
@@ -671,9 +672,9 @@ def execute_query(query, params=None, fetch=False, fetch_one=False):
                 f.write(err_msg + "\n---\n")
         except:
             pass
-        
+
         try:
-            if conn and conn.is_connected():
+            if conn.is_connected():
                 try:
                     conn.rollback()
                 except:
@@ -682,10 +683,20 @@ def execute_query(query, params=None, fetch=False, fetch_one=False):
                     conn.consume_results()
                 except:
                     pass
-                conn.close()
         except:
             pass
         return [] if fetch else (None if not fetch_one else {})
+    finally:
+        # Always return the connection to the pool.
+        try:
+            if cur is not None:
+                cur.close()
+        except:
+            pass
+        try:
+            conn.close()
+        except:
+            pass
 
 def add_performance_indexes():
     """Menambahkan index pada tabel-tabel utama agar pencarian data 'sat-set'."""
