@@ -30,6 +30,39 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+# 1b. Runtime Secrets
+# The app refuses to start without DB_PASSWORD and RADIUS_SECRET, and the WA
+# gateway exits without WA_API_KEY, so they are generated here rather than
+# shipped as defaults in the source. Written once and reused on every re-run:
+# regenerating them would reset the RADIUS secret every routers already trust.
+ENV_DIR="/etc/mikrofun"
+ENV_FILE="$ENV_DIR/mikrofun.env"
+
+mkdir -p "$ENV_DIR"
+chmod 700 "$ENV_DIR"
+
+gen_secret() { head -c 32 /dev/urandom | base64 | tr -d '/+=' | cut -c1-32; }
+
+if [ -f "$ENV_FILE" ]; then
+    echo "Reusing existing secrets from $ENV_FILE"
+    # shellcheck disable=SC1090
+    set -a; . "$ENV_FILE"; set +a
+else
+    echo "Generating runtime secrets -> $ENV_FILE"
+    cat > "$ENV_FILE" <<ENV_EOF
+DB_HOST=localhost
+DB_USER=radius
+DB_NAME=radius_db
+DB_PASSWORD=$(gen_secret)
+RADIUS_SECRET=$(gen_secret)
+WA_API_KEY=$(gen_secret)
+IPSEC_PSK=$(gen_secret)
+ENV_EOF
+    # shellcheck disable=SC1090
+    set -a; . "$ENV_FILE"; set +a
+fi
+chmod 600 "$ENV_FILE"
+
 # 2. Preparation
 echo -e "${GREEN}[1/5] Preparing System...${NC}"
 apt-get update -qq
@@ -130,9 +163,14 @@ fi
 
 # 5. Setup Database
 echo -e "${GREEN}[4/5] Configuring Database...${NC}"
-DB_NAME="radius_db"
-DB_USER="radius"
-DB_PASS="radiuspass123"
+DB_NAME="${DB_NAME:-radius_db}"
+DB_USER="${DB_USER:-radius}"
+# Comes from $ENV_FILE — never a hardcoded default.
+DB_PASS="$DB_PASSWORD"
+if [ -z "$DB_PASS" ]; then
+    echo -e "${RED}FATAL: DB_PASSWORD missing from $ENV_FILE${NC}"
+    exit 1
+fi
 
 if mysql -e "SHOW DATABASES LIKE '$DB_NAME';" | grep -q "$DB_NAME"; then
     echo -e "${YELLOW}=========================================${NC}"
@@ -422,9 +460,97 @@ echo -e "${GREEN}[6/9] Configuring Multi-VPN (L2TP)...${NC}"
 apt-get purge -y -qq libreswan || true
 apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" strongswan xl2tpd
 
-if [ -f "$INSTALL_DIR/web/vpn_server_setup.py" ]; then
-    $INSTALL_DIR/venv/bin/python $INSTALL_DIR/web/vpn_server_setup.py || echo -e "${YELLOW}Warning: Multi-VPN setup encountered issues.${NC}"
+# Configure the L2TP/IPsec server inline. MikroTunnel writes its per-router
+# users into /etc/ppp/chap-secrets and expects this server to be listening,
+# so skipping this step leaves the Tunnels feature dead.
+VPN_PUBLIC_IP=$(curl -s --max-time 10 https://api.ipify.org || hostname -I | awk '{print $1}')
+if [ -z "$VPN_PUBLIC_IP" ]; then
+    echo -e "${YELLOW}Warning: could not detect public IP, L2TP will listen on all interfaces.${NC}"
+    VPN_PUBLIC_IP="0.0.0.0"
 fi
+echo "L2TP server IP: $VPN_PUBLIC_IP"
+
+cat > /etc/ipsec.conf <<IPSEC_EOF
+config setup
+
+conn L2TP-PSK
+    authby=secret
+    auto=add
+    keyingtries=3
+    rekey=yes
+    ikelifetime=8h
+    keylife=1h
+    type=transport
+    left=$VPN_PUBLIC_IP
+    leftprotoport=17/1701
+    right=%any
+    rightprotoport=17/%any
+    forceencaps=yes
+    # Maximum compatibility for Mikrotik (includes modp1024/Group2)
+    ike=aes256-sha1-modp1024,aes128-sha1-modp1024,3des-sha1-modp1024,aes256-sha256-modp2048,aes128-sha256-modp2048
+    esp=aes256-sha1-modp1024,aes128-sha1-modp1024,3des-sha1-modp1024,aes256-sha1,aes128-sha1,3des-sha1
+    dpddelay=30s
+    dpdtimeout=120s
+    dpdaction=clear
+IPSEC_EOF
+
+mkdir -p /etc/xl2tpd
+cat > /etc/xl2tpd/xl2tpd.conf <<XL2TPD_EOF
+[global]
+port = 1701
+listen-addr = $VPN_PUBLIC_IP
+
+[lns default]
+ip range = 10.10.10.200-10.10.10.250
+local ip = 10.10.10.1
+require authentication = yes
+name = LinuxVPNserver
+ppp debug = yes
+pppoptfile = /etc/ppp/options.xl2tpd
+length bit = yes
+XL2TPD_EOF
+
+mkdir -p /etc/ppp
+cat > /etc/ppp/options.xl2tpd <<PPP_EOF
+ipcp-accept-local
+ipcp-accept-remote
+ms-dns  8.8.8.8
+ms-dns  1.1.1.1
+auth
+require-mschap-v2
+noccp
+mtu 1400
+mru 1400
+nodefaultroute
+debug
+proxyarp
+connect-delay 5000
+name LinuxVPNserver
+PPP_EOF
+
+# MikroTunnel appends its users here; only seed the header if absent.
+if [ ! -f /etc/ppp/chap-secrets ]; then
+    printf '# Secrets for authentication using CHAP\n# client\tserver\tsecret\t\t\tIP addresses\n' > /etc/ppp/chap-secrets
+fi
+chmod 600 /etc/ppp/chap-secrets
+
+# Per-install PSK from $ENV_FILE. The old build shipped the same literal
+# "mikrofun_vpn" on every deployment, published in a public repo.
+touch /etc/ipsec.secrets
+if ! grep -q "MikroFun L2TP PSK" /etc/ipsec.secrets 2>/dev/null; then
+    printf '# MikroFun L2TP PSK\n%%any %%any : PSK "%s"\n' "$IPSEC_PSK" >> /etc/ipsec.secrets
+fi
+chmod 600 /etc/ipsec.secrets
+
+systemctl restart ipsec 2>/dev/null || systemctl restart strongswan-starter 2>/dev/null || systemctl restart strongswan 2>/dev/null || echo -e "${YELLOW}Warning: could not restart the IPsec service.${NC}"
+systemctl restart xl2tpd 2>/dev/null || echo -e "${YELLOW}Warning: could not restart xl2tpd.${NC}"
+systemctl enable ipsec 2>/dev/null || systemctl enable strongswan-starter 2>/dev/null || systemctl enable strongswan 2>/dev/null || true
+systemctl enable xl2tpd 2>/dev/null || true
+
+# L2TP/IPsec firewall ports
+ufw allow 500/udp 2>/dev/null || true
+ufw allow 4500/udp 2>/dev/null || true
+ufw allow 1701/udp 2>/dev/null || true
 
 # 8. ZeroTier Setup
 echo -e "${GREEN}[7/9] Configuring ZeroTier VPN...${NC}"
@@ -470,6 +596,8 @@ ExecStartPre=/bin/bash -c "find $INSTALL_DIR -type d -name __pycache__ -exec rm 
 ExecStart=$INSTALL_DIR/venv/bin/python run_dist.py
 Restart=always
 Environment="PORT=80"
+# DB_PASSWORD / RADIUS_SECRET / WA_API_KEY — the app exits without them.
+EnvironmentFile=$ENV_FILE
 
 [Install]
 WantedBy=multi-user.target
@@ -516,6 +644,9 @@ cat > /usr/local/bin/mikrofun <<EOF
 PROJECT_DIR="/opt/mikrofun"
 VENV="\$PROJECT_DIR/venv/bin/python3"
 
+# reset_admin.py loads web/config.py, which requires DB_PASSWORD.
+[ -f "$ENV_FILE" ] && { set -a; . "$ENV_FILE"; set +a; }
+
 case "\$1" in
     "cd")
         echo "Masuk ke folder project..."
@@ -537,7 +668,7 @@ case "\$1" in
         systemctl status mikrofun
         ;;
     "mikhmon")
-        case "$2" in
+        case "\$2" in
             "restart") systemctl restart mikhmon ;;
             "status") systemctl status mikhmon ;;
             "stop") systemctl stop mikhmon ;;
@@ -560,9 +691,11 @@ npm install -g pm2
 cd $INSTALL_DIR/wa-service
 npm install
 
-# Restart PM2 gently
+# Restart PM2 gently. server.js exits immediately without WA_API_KEY, and pm2
+# captures the environment at start time, so export it before starting.
+set -a; . "$ENV_FILE"; set +a
 pm2 delete "mikrofun-wa" 2>/dev/null || true
-pm2 start server.js --name "mikrofun-wa"
+pm2 start server.js --name "mikrofun-wa" --update-env
 pm2 save
 env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root 2>/dev/null || true
 cd $INSTALL_DIR
@@ -593,6 +726,10 @@ for i in {1..20}; do
         echo -e "${BLUE}========================================${NC}"
         echo -e "Dashboard: http://$PUBLIC_IP"
         echo -e "Mikhmon:   Terintegrasi di dalam Dashboard"
+        echo -e "${BLUE}========================================${NC}"
+        echo -e "${YELLOW}Secrets  : $ENV_FILE (chmod 600 — jangan di-commit)${NC}"
+        echo -e "  RADIUS secret & IPsec PSK di-generate acak per instalasi."
+        echo -e "  Script MikroTik dari menu Routers/Tunnels sudah memakai nilai ini."
         echo -e "${BLUE}========================================${NC}"
         exit 0
     fi

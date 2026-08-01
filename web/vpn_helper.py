@@ -160,11 +160,15 @@ def remove_ipsec_secret(username):
 
 def generate_mikrotik_script(router_name, vpn_ip, private_key, server_ip, vpn_type='wireguard', vpn_password=None):
     from web.blueprints.settings import get_setting
-    rad_secret = get_setting('radius_secret', 'testing123')
+    # Fall back to the configured secret, never to the old public 'testing123'.
+    from web.config import RADIUS_SECRET
+    rad_secret = get_setting('radius_secret') or RADIUS_SECRET
     
     if vpn_type == 'l2tp':
+        from web.tunnel_helper import get_ipsec_psk
+        ipsec_psk = get_ipsec_psk()
         return f"""# L2TP script
-/interface l2tp-client add name=l2tp-nas connect-to={server_ip} user="{router_name}" password="{vpn_password}" ipsec-secret="mikrofun_vpn" use-ipsec=yes use-peer-dns=no allow=mschap2 disabled=no
+/interface l2tp-client add name=l2tp-nas connect-to={server_ip} user="{router_name}" password="{vpn_password}" ipsec-secret="{ipsec_psk}" use-ipsec=yes use-peer-dns=no allow=mschap2 disabled=no
 /ip route add distance=1 dst-address=10.66.66.1/32 gateway=l2tp-nas
 /radius add address=10.66.66.1 secret={rad_secret} service=ppp,dhcp
 /ppp aaa set use-radius=yes

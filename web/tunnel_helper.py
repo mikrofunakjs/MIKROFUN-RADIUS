@@ -254,7 +254,18 @@ def get_server_public_ip():
         return "YOUR_SERVER_IP"
 
 
-def generate_mikrotik_tunnel_script(server_ip, username, password, ipsec_secret="mikrofun_vpn"):
+def get_ipsec_psk():
+    """PSK this server was installed with.
+
+    install.sh generates a random one per deployment and exports IPSEC_PSK.
+    The literal below is the pre-generation default and is kept only so that
+    servers installed before that change keep producing working scripts.
+    """
+    return os.environ.get('IPSEC_PSK') or 'mikrofun_vpn'
+
+
+def generate_mikrotik_tunnel_script(server_ip, username, password, ipsec_secret=None):
+    ipsec_secret = ipsec_secret or get_ipsec_psk()
     """Generate MikroTik script for L2TP client connection to this VPS."""
     return f"""# ============================================
 # MikroTunnel - Remote Access Setup Script
