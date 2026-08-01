@@ -252,7 +252,23 @@ def add_security_headers(response):
     # Strict Transport Security (HSTS)
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     # Content Security Policy (CSP)
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; font-src 'self' fonts.gstatic.com cdn.jsdelivr.net; img-src 'self' data: blob: http: https:;"
+    # Every host below is one the templates actually load from. Omitting any of
+    # them does not "harden" anything — it just silently breaks the feature in
+    # the browser, which is how the ODP map/topology, voucher barcodes and the
+    # Midtrans checkout were all dead.
+    CDN = "cdn.jsdelivr.net cdn.tailwindcss.com unpkg.com cdnjs.cloudflare.com"
+    MIDTRANS = "app.midtrans.com app.sandbox.midtrans.com"
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        # unpkg: leaflet + vis-network. cdnjs: JsBarcode on the voucher print sheet.
+        f"script-src 'self' 'unsafe-inline' 'unsafe-eval' {CDN} {MIDTRANS}; "
+        f"style-src 'self' 'unsafe-inline' {CDN} fonts.googleapis.com; "
+        f"font-src 'self' fonts.gstatic.com cdn.jsdelivr.net cdnjs.cloudflare.com unpkg.com; "
+        # Snap renders its checkout in an iframe and calls the Midtrans API.
+        f"frame-src 'self' {MIDTRANS}; "
+        f"connect-src 'self' {MIDTRANS} api.midtrans.com api.sandbox.midtrans.com; "
+        "img-src 'self' data: blob: http: https:;"
+    )
     return response
 
 # --- GLOBAL CSRF PROTECTION ---
