@@ -140,6 +140,9 @@
                     <h4 class="font-bold text-error flex items-center gap-2">
                         <i class="bi bi-exclamation-triangle-fill"></i>
                         Piutang / Tagihan Belum Dibayar
+                        <span class="badge badge-ghost badge-sm font-normal">
+                            Semua tunggakan &mdash; tidak ikut filter tanggal
+                        </span>
                     </h4>
                     <div class="badge badge-error badge-lg font-bold">
                         Total: Rp {{ "{:,.0f}".format(piutang_total).replace(',','.') }}
@@ -161,7 +164,6 @@
                         </thead>
                         <tbody>
                             {% for p in piutang_list %}
-                            {% set today = now() if now is defined else none %}
                             <tr class="hover:bg-base-200/30">
                                 <td class="font-bold">{{ p.customer_name or '-' }}</td>
                                 <td class="text-xs font-mono">{{ p.customer_phone or '-' }}</td>
@@ -171,7 +173,7 @@
                                 <td class="text-xs text-base-content/60">{{ p.created_at.strftime('%d/%m/%Y') if
                                     p.created_at else '-' }}</td>
                                 <td
-                                    class="text-xs {% if p.due_date and p.due_date < namespace.today|default('') %}text-error font-bold{% endif %}">
+                                    class="text-xs {% if p.due_date and today and p.due_date < today %}text-error font-bold{% endif %}">
                                     {{ p.due_date or '-' }}</td>
                                 <td><span class="badge badge-warning badge-sm">Pending</span></td>
                             </tr>

@@ -363,6 +363,19 @@ def ensure_schema_updates():
                 cur.execute(f"ALTER TABLE income_ledger ADD COLUMN {col} {defn}")
                 print(f"Added '{col}' to income_ledger")
 
+        # Repair ledger descriptions written before the source encoding was
+        # fixed — they show up as "â€”" / "Ã—" in the finance report and CSV
+        # export. LIKE BINARY matters: the default collation is
+        # accent-insensitive, so a plain LIKE '%â%' also matches every 'a'.
+        # Idempotent: once repaired no row matches, so this becomes a no-op.
+        cur.execute(
+            "UPDATE income_ledger SET description = "
+            "REPLACE(REPLACE(REPLACE(description, 'â€”', '—'), 'â”€', '─'), 'Ã—', '×') "
+            "WHERE description LIKE BINARY '%â%' OR description LIKE BINARY '%Ã%'"
+        )
+        if cur.rowcount:
+            print(f"Repaired mojibake in {cur.rowcount} income_ledger description(s)")
+
         # Auth audit trail. The AI NOC "auth failure spike" check and
         # diagnosis.py both query radpostauth, but nothing ever created it, so
         # those queries errored hourly and the detection never ran.

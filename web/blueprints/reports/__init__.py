@@ -153,8 +153,11 @@ def index():
         chart_labels=chart_labels, chart_values=chart_values,
         # list
         transactions=transactions, mitra_summary=mitra_summary,
-        # piutang
+        # piutang — `today` is used to flag overdue rows; the template used to
+        # reference an undefined `namespace.today`, which fell back to '' and
+        # crashed on `date < str`.
         piutang_list=piutang_list, piutang_total=piutang_total,
+        today=datetime.date.today(),
         # monthly
         monthly_summary=monthly_summary,
         # expenses

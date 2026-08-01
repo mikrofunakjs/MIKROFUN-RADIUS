@@ -757,8 +757,11 @@ def api_ai_health():
         return denied
 
     try:
-        from ai_noc.deepseek_client import chat
-        return {"status": "ok", "key_loaded": bool(os.environ.get("DEEPSEEK_API_KEY"))}, 200
+        # Ask the client itself — it resolves the key from the env var and then
+        # falls back to the settings table. Checking only the env var reported
+        # key_loaded:false while the AI was in fact working from the DB key.
+        from ai_noc.deepseek_client import _get_key
+        return {"status": "ok", "key_loaded": bool(_get_key())}, 200
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
 
