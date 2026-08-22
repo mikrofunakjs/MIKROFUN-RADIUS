@@ -12,7 +12,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LICENSE_FILE = os.path.join(BASE_DIR, '.license')
 
 # Configuration
-LICENSE_SERVER_URL = "https://mikrofun.site"
+LICENSE_SERVER_URL = "https://akjsteknik.site"
 
 # HARDCODED PUBLIC KEY (Do NOT modify)
 PUBLIC_KEY_PEM = """-----BEGIN PUBLIC KEY-----
